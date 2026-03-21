@@ -1,0 +1,32 @@
+{
+  "name": "kitboga-codejam26-abk16-soulskip",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "concurrently \"npm run dev-build\" \"npm run dev-server\"",
+    "dev-build": "vite build --watch --mode development",
+    "dev-server": "serve . -p 8135",
+    "lint": "eslint --fix src",
+    "format": "prettier --write 'src/**/*.{css,htm,html,js,jsx,mjs,cjs,ts,tsx,svelte,json,less,scss}'",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^2.0.3",
+    "@eslint/js": "^10.0.1",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@prettier/plugin-oxc": "^0.1.3",
+    "@types/node": "^22.x",
+    "concurrently": "^9.2.1",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-ember-template-tag": "^2.1.3",
+    "serve": "^14.2.6",
+    "typescript": "^5.x",
+    "typescript-eslint": "^8.57.1",
+    "vite": "^6.x"
+  }
+}
