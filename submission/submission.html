@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <title>Joel</title>
+        <title>SoulSkip</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 
@@ -20,9 +20,21 @@
                 height: 540px;
             }
 
-            /* Your style here... (feel free to remove this example styling) */
-            #skip {
-                display: none; /* Hidden until ad starts */
+            .hidden {
+                display: none;
+            }
+
+            .game {
+                width: 100%;
+                height: 100%;
+                position: relative;
+                overflow: hidden;
+            }
+            .hide-mouse {
+                cursor: none;
+            }
+
+            .skip-btn {
                 position: absolute;
                 bottom: 60px;
                 right: 0;
@@ -35,14 +47,74 @@
                 color: white;
                 cursor: pointer;
             }
+
+            .player-pointer {
+                --accent-color: white;
+                position: absolute;
+                border: 2px solid var(--accent-color);
+                border-radius: 50%;
+                width: 32px;
+                height: 32px;
+                box-shadow: 0 0 12px inset color-mix(in srgb, var(--accent-color), transparent);
+                pointer-events: none;
+            }
+            .player-pointer.low-stamina {
+                --accent-color: yellow;
+            }
+
+            .hud {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+            }
+            .bar {
+                --bar-fill: 0;
+                --bar-color: white;
+                --bar-diff: 0;
+                --bar-diff-color: darkgoldenrod;
+                border: 1px solid white;
+                border-top: none;
+                background-color: hsla(0, 0%, 0%, 0.25);
+                position: absolute;
+                height: 8px;
+                width: 64px;
+            }
+            .bar-fill {
+                position: absolute;
+                left: 0;
+                width: calc(100% * var(--bar-fill));
+                height: 100%;
+                background: var(--bar-color);
+            }
+            .bar-diff {
+                position: absolute;
+                left: calc(100% * var(--bar-fill));
+                width: calc(100% * (var(--bar-diff)));
+                height: 100%;
+                background: var(--bar-diff-color);
+            }
+            .bar.stamina {
+                --bar-color: green;
+                left: 16px;
+                top: 32px;
+                width: 192px;
+            }
         </style>
       <script type="module" crossorigin src="./submission.js"></script>
     </head>
 
     <body>
         <div id="overlay-container">
-            <!-- We've added a sample button. Feel free to remove it: -->
-            <button id="skip">Skip Ad...</button>
+            <div id="game-root" class="game hidden hide-mouse">
+                <div class="skip-btn">Skip Ad...</div>
+                <div class="player-pointer"></div>
+                <div class="hud hidden">
+                    <div class="bar stamina">
+                        <div class="bar-fill"></div>
+                        <div class="bar-diff"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </body>
 </html>
