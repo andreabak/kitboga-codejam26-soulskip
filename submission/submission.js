@@ -1,6 +1,16 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+function add_shell_events_listener(listener) {
+  window.addEventListener("message", (event) => {
+    var _a;
+    if (!event || typeof event !== "object" || !((_a = event == null ? void 0 : event.data) == null ? void 0 : _a.type)) return;
+    listener(event.data);
+  });
+}
+function send_shell_request(request) {
+  window.top.postMessage(request, "*");
+}
 function get_element(selector, root) {
   root = root ?? document;
   const el = root.querySelector(selector);
@@ -94,37 +104,55 @@ class GameComponent extends Component {
 }
 class Actor extends GameComponent {
 }
-const player_root_selector = ".player-pointer";
+const player_root_selector = ".player";
 class PlayerActor extends Actor {
   constructor(game2) {
     super(game2);
     __publicField(this, "player_root_el");
     __publicField(this, "_follower");
-    __publicField(this, "acceleration", 400);
-    __publicField(this, "max_vel", 100);
+    __publicField(this, "acceleration", 500);
+    __publicField(this, "max_vel", 200);
+    __publicField(this, "health", 300);
+    __publicField(this, "max_health", 300);
     __publicField(this, "stamina", 200);
     __publicField(this, "max_stamina", 200);
-    __publicField(this, "stamina_consume_factor", 4);
-    __publicField(this, "stamina_consume_min", 21);
+    __publicField(this, "stamina_movement_consume_factor", 8);
+    __publicField(this, "stamina_movement_vel_min", 40);
     __publicField(this, "stamina_recover", 100);
     __publicField(this, "stamina_recover_delay", 500);
     __publicField(this, "last_stamina_consume_ts", 0);
     __publicField(this, "low_stamina_max_vel", 5);
     __publicField(this, "low_stamina_accel", 100);
+    __publicField(this, "low_stamina", false);
+    __publicField(this, "low_stamina_enter_threshold", 1);
+    // TODO: sanity check
+    __publicField(this, "low_stamina_exit_threshold", 200);
+    // TODO: sanity check
+    __publicField(this, "attack_requested", false);
+    __publicField(this, "attacking", false);
+    __publicField(this, "attack_stamina_consume", 30);
+    __publicField(this, "attack_duration", 150);
+    __publicField(this, "last_attack_ts", 0);
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
       { acceleration: this.acceleration, max_vel: this.max_vel, slowing_distance: 50 }
     );
-    this._on_mousemove = this._on_mousemove.bind(this);
-    this.game.game_root_el.addEventListener("mousemove", this._on_mousemove);
+    this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
+    this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this));
   }
   _on_mousemove(event) {
     const rect = this.game.game_root_el.getBoundingClientRect();
     this._follower.target = { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
+  _on_mousedown(event) {
+    this.attack_requested = true;
+  }
   _update(context) {
+    this.player_root_el.classList.toggle("hidden", this.game.state === "chill");
+    const s_delta = (context.timedelta ?? 0) / 1e3;
+    let stamina_consume = 0;
     if (context.timedelta != null) {
       this._follower.update(context.timedelta);
     } else {
@@ -132,20 +160,39 @@ class PlayerActor extends Actor {
     }
     this.player_root_el.style.top = `${this._follower.pos.y - this.player_root_el.clientHeight / 2}px`;
     this.player_root_el.style.left = `${this._follower.pos.x - this.player_root_el.clientWidth / 2}px`;
+    const vel_mag = dist_pt(this._follower.velocity);
+    if (!this.low_stamina && vel_mag > this.stamina_movement_vel_min) {
+      stamina_consume += vel_mag * this.stamina_movement_consume_factor * s_delta;
+    }
+    if (this.attack_requested) {
+      this.attack_requested = false;
+      if (!this.attacking && !this.low_stamina) {
+        this.attacking = true;
+        this.last_attack_ts = context.timestamp;
+        stamina_consume += this.attack_stamina_consume;
+        this.player_root_el.style.setProperty("--attack-duration", `${this.attack_duration / 1e3}s`);
+      }
+    }
+    if (this.attacking && context.timestamp - this.last_attack_ts >= this.attack_duration) {
+      this.attacking = false;
+    }
+    this.player_root_el.classList.toggle("attacking", this.attacking);
     if (context.timedelta && context.timedelta > 0) {
-      const s_delta = context.timedelta / 1e3;
-      const stamina_consume = dist_pt(this._follower.velocity) * this.stamina_consume_factor * s_delta;
-      if (stamina_consume / s_delta > this.stamina_consume_min) {
+      if (stamina_consume > 0) {
         this.stamina -= stamina_consume;
         this.last_stamina_consume_ts = context.timestamp;
       } else if (!this.last_stamina_consume_ts || context.timestamp - this.last_stamina_consume_ts >= this.stamina_recover_delay) {
         this.stamina += this.stamina_recover * s_delta;
       }
       this.stamina = Math.max(0, Math.min(this.stamina, this.max_stamina));
-      const low_stamina = this.stamina < 1;
-      this._follower.max_vel = low_stamina ? this.low_stamina_max_vel : this.max_vel;
-      this._follower.acceleration = low_stamina ? this.low_stamina_accel : this.acceleration;
-      this.player_root_el.classList.toggle("low-stamina", low_stamina);
+      if (!this.low_stamina && this.stamina < this.low_stamina_enter_threshold) {
+        this.low_stamina = true;
+      } else if (this.low_stamina && this.stamina >= this.low_stamina_exit_threshold) {
+        this.low_stamina = false;
+      }
+      this._follower.max_vel = this.low_stamina ? this.low_stamina_max_vel : this.max_vel;
+      this._follower.acceleration = this.low_stamina ? this.low_stamina_accel : this.acceleration;
+      this.player_root_el.classList.toggle("low-stamina", this.low_stamina);
     }
   }
 }
@@ -161,38 +208,81 @@ class EnemyActor extends Actor {
   _update(context) {
   }
 }
-const hud_root_selector = ".hud";
+class HudBar extends GameComponent {
+  constructor(game2, hud) {
+    super(game2);
+    __publicField(this, "hud");
+    __publicField(this, "max_recent", 0);
+    __publicField(this, "max_ts", 0);
+    __publicField(this, "recent_delay", 1e3);
+    this.hud = hud;
+  }
+  _update(context) {
+    const { value, max } = this._get_values();
+    if (value >= this.max_recent) {
+      this.max_recent = value;
+      this.max_ts = context.timestamp;
+    } else {
+      if (context.timestamp - this.max_ts > this.recent_delay) {
+        this.max_recent = smooth_ema(this.max_recent, value, 0.5);
+      }
+    }
+    const pct_value = value / max;
+    const pct_diff = (this.max_recent - value) / max;
+    this.bar_root_el.style.setProperty("--bar-fill", pct_value.toFixed(3));
+    this.bar_root_el.style.setProperty("--bar-diff", pct_diff.toFixed(3));
+  }
+}
+const hud_health_bar_selector = ".bar.health";
+class HealthBar extends HudBar {
+  constructor(game2, hud) {
+    super(game2, hud);
+    __publicField(this, "bar_root_el");
+    this.bar_root_el = get_element(hud_health_bar_selector, this.hud.hud_root_el);
+  }
+  _get_values() {
+    return { value: this.game.player_actor.health, max: this.game.player_actor.max_health };
+  }
+  _update(context) {
+    if (this.hud.should_show) {
+      super._update(context);
+    }
+  }
+}
 const hud_stamina_bar_selector = ".bar.stamina";
+class StaminaBar extends HudBar {
+  constructor(game2, hud) {
+    super(game2, hud);
+    __publicField(this, "bar_root_el");
+    this.bar_root_el = get_element(hud_stamina_bar_selector, this.hud.hud_root_el);
+  }
+  _get_values() {
+    return { value: this.game.player_actor.stamina, max: this.game.player_actor.max_stamina };
+  }
+  _update(context) {
+    if (this.hud.should_show) {
+      super._update(context);
+      this.bar_root_el.classList.toggle("low-stamina", this.game.player_actor.low_stamina);
+    }
+  }
+}
+const hud_root_selector = ".hud";
 const hud_hidden_class = "hidden";
 class Hud extends GameComponent {
   constructor(game2) {
     super(game2);
     __publicField(this, "hud_root_el");
-    __publicField(this, "stamina_bar_el");
-    __publicField(this, "player_stamina_max_recent", 0);
-    __publicField(this, "player_stamina_max_ts", 0);
-    __publicField(this, "bar_recent_delay", 1e3);
+    __publicField(this, "health_bar");
+    __publicField(this, "stamina_bar");
     this.hud_root_el = get_element(hud_root_selector, this.game.game_root_el);
-    this.stamina_bar_el = get_element(hud_stamina_bar_selector, this.hud_root_el);
+    this.health_bar = this.add_component(new HealthBar(game2, this));
+    this.stamina_bar = this.add_component(new StaminaBar(game2, this));
+  }
+  get should_show() {
+    return this.game.state !== "chill";
   }
   _update(context) {
-    const should_show = this.game.state !== "chill";
-    this.hud_root_el.classList.toggle(hud_hidden_class, !should_show);
-    if (should_show) {
-      const stamina = this.game.player_actor.stamina;
-      if (stamina >= this.player_stamina_max_recent) {
-        this.player_stamina_max_recent = stamina;
-        this.player_stamina_max_ts = context.timestamp;
-      } else {
-        if (context.timestamp - this.player_stamina_max_ts > this.bar_recent_delay) {
-          this.player_stamina_max_recent = smooth_ema(this.player_stamina_max_recent, stamina, 0.5);
-        }
-      }
-      const pct_stamina = stamina / this.game.player_actor.max_stamina;
-      const pct_diff = (this.player_stamina_max_recent - stamina) / this.game.player_actor.max_stamina;
-      this.stamina_bar_el.style.setProperty("--bar-fill", pct_stamina.toFixed(3));
-      this.stamina_bar_el.style.setProperty("--bar-diff", pct_diff.toFixed(3));
-    }
+    this.hud_root_el.classList.toggle(hud_hidden_class, !this.should_show);
   }
 }
 const game_root_selector = "#game-root";
@@ -200,16 +290,20 @@ class Game extends Component {
   constructor() {
     super();
     __publicField(this, "state", "chill");
+    __publicField(this, "last_state", "chill");
     __publicField(this, "game_root_el");
     __publicField(this, "_last_timestamp", null);
     __publicField(this, "player_actor");
     __publicField(this, "enemy_actor");
-    __publicField(this, "_hud");
+    __publicField(this, "hud");
     this.game_root_el = get_element(game_root_selector);
     this.game_root_el.classList.toggle("hidden", false);
     this.player_actor = this.add_component(new PlayerActor(this));
     this.enemy_actor = this.add_component(new EnemyActor(this));
-    this._hud = this.add_component(new Hud(this));
+    this.hud = this.add_component(new Hud(this));
+  }
+  get changed_state() {
+    return this.state !== this.last_state;
   }
   handle_shell_event(event) {
     if (!event || typeof event !== "object" || !("type" in event)) {
@@ -219,6 +313,10 @@ class Game extends Component {
     if (event.type === "adStarted") ;
   }
   _update(context) {
+    this.game_root_el.classList.toggle("hide-mouse", this.state !== "chill");
+    if (this.changed_state && this.last_state === "chill") {
+      send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.8)" });
+    }
   }
   step(timestamp) {
     const context = {
@@ -227,14 +325,8 @@ class Game extends Component {
     };
     this.update(context);
     this._last_timestamp = timestamp;
+    this.last_state = this.state;
   }
-}
-function add_shell_events_listener(listener) {
-  window.addEventListener("message", (event) => {
-    var _a;
-    if (!event || typeof event !== "object" || !((_a = event == null ? void 0 : event.data) == null ? void 0 : _a.type)) return;
-    listener(event.data);
-  });
 }
 let game = null;
 function handle_shell_event(event) {

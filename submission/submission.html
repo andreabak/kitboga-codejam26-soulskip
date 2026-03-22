@@ -23,6 +23,14 @@
             .hidden {
                 display: none;
             }
+            @keyframes fade-in {
+                0% {
+                    opacity: 0;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
 
             .game {
                 width: 100%;
@@ -48,33 +56,58 @@
                 cursor: pointer;
             }
 
-            .player-pointer {
-                --accent-color: white;
+            .player {
                 position: absolute;
-                border: 2px solid var(--accent-color);
-                border-radius: 50%;
-                width: 32px;
-                height: 32px;
-                box-shadow: 0 0 12px inset color-mix(in srgb, var(--accent-color), transparent);
+                width: 48px;
+                height: 48px;
                 pointer-events: none;
             }
-            .player-pointer.low-stamina {
-                --accent-color: yellow;
+            .player.low-stamina .pointer {
+                filter: contrast(0.5) sepia(1) saturate(2);
+            }
+            .player.hurt .pointer {
+                filter: contrast(0.5) sepia(1) hue-rotate(-25deg) saturate(2);
+            }
+            .player:not(.attacking) > .attack-animation {
+                display: none;
+            }
+            .player > .attack-animation {
+                --attack-duration: 0.15s;
+                animation: player-attack var(--attack-duration);
+                position: absolute;
+                left: 50%;
+                right: 50%;
+                transform: translate(-50%, -50%);
+                border-radius: 50%;
+                background-color: red;
+                mix-blend-mode: screen;
+            }
+            @keyframes player-attack {
+                0% {
+                    width: 1px;
+                    height: 1px;
+                }
+                100% {
+                    width: 128px;
+                    height: 128px;
+                }
             }
 
             .hud {
                 position: absolute;
                 width: 100%;
                 height: 100%;
+                animation: fade-in 1s;
             }
             .bar {
                 --bar-fill: 0;
                 --bar-color: white;
                 --bar-diff: 0;
-                --bar-diff-color: darkgoldenrod;
-                border: 1px solid white;
+                --bar-diff-color: hsla(50deg, 70%, 37.5%, 0.75);
+                border: 2px solid #909274;
                 border-top: none;
-                background-color: hsla(0, 0%, 0%, 0.25);
+                border-right: none;
+                background-color: hsla(0, 0%, 0%, 0.5);
                 position: absolute;
                 height: 8px;
                 width: 64px;
@@ -84,20 +117,37 @@
                 left: 0;
                 width: calc(100% * var(--bar-fill));
                 height: 100%;
-                background: var(--bar-color);
+                box-sizing: border-box;
+                background-clip: border-box;
+                border-right: 2px solid hsla(64deg, 10%, 80%, 0.85);
+                background-color: var(--bar-color);
+                background-image:
+                    linear-gradient(to bottom, transparent 60%, hsla(0, 0%, 100%, 0.25) 100%),
+                    linear-gradient(to left, hsla(0, 0%, 100%, 0.25) 0%, transparent 16px);
             }
             .bar-diff {
                 position: absolute;
                 left: calc(100% * var(--bar-fill));
                 width: calc(100% * (var(--bar-diff)));
-                height: 100%;
+                top: 1px;
+                height: calc(100% - 2px);
                 background: var(--bar-diff-color);
             }
-            .bar.stamina {
-                --bar-color: green;
+            .bar.health {
+                --bar-color: #551213;
                 left: 16px;
-                top: 32px;
-                width: 192px;
+                top: 16px;
+                width: 256px;
+            }
+            .bar.stamina {
+                --bar-color: #1e4731;
+                left: 16px;
+                top: 30px;
+                width: 128px;
+            }
+            .bar.stamina.low-stamina .bar-fill,
+            .bar.stamina.low-stamina .bar-diff {
+                --bar-color: var(--bar-diff-color);
             }
         </style>
       <script type="module" crossorigin src="./submission.js"></script>
@@ -105,13 +155,20 @@
 
     <body>
         <div id="overlay-container">
-            <div id="game-root" class="game hidden hide-mouse">
+            <div id="game-root" class="game hidden">
                 <div class="skip-btn">Skip Ad...</div>
-                <div class="player-pointer"></div>
+                <div class="player hidden">
+                    <div class="attack-animation"></div>
+                    <img class="pointer" src="./assets/mouse-pointer.svg" />
+                </div>
                 <div class="hud hidden">
-                    <div class="bar stamina">
-                        <div class="bar-fill"></div>
+                    <div class="bar health">
                         <div class="bar-diff"></div>
+                        <div class="bar-fill"></div>
+                    </div>
+                    <div class="bar stamina">
+                        <div class="bar-diff"></div>
+                        <div class="bar-fill"></div>
                     </div>
                 </div>
             </div>
