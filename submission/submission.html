@@ -21,7 +21,7 @@
             }
 
             .hidden {
-                display: none;
+                display: none !important;
             }
             @keyframes fade-in {
                 0% {
@@ -37,22 +37,29 @@
                 height: 100%;
                 position: relative;
                 overflow: hidden;
+                user-select: none;
             }
             .hide-mouse {
                 cursor: none;
+            }
+            .game.hide-mouse > * {
+                pointer-events: none;
+                user-select: none;
             }
 
             .skip-btn {
                 position: absolute;
                 bottom: 60px;
-                right: 0;
-                padding: 10px 18px;
-                background: rgba(0, 0, 0, 0.6);
-                border: 1px solid black;
-                border-right-width: 0;
+                width: max-content;
+                height: 1em;
+                right: -4px;
+                padding: 0.5em 1em;
+                background: hsla(0, 0%, 100%, 0.85);
+                border: 1px solid white;
+                box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
                 font-size: 1.2rem;
-                border-radius: 4px 0 0 4px;
-                color: white;
+                border-radius: 4px;
+                color: black;
                 cursor: pointer;
             }
 
@@ -60,7 +67,6 @@
                 position: absolute;
                 width: 48px;
                 height: 48px;
-                pointer-events: none;
             }
             .player.low-stamina .pointer {
                 filter: contrast(0.5) sepia(1) saturate(2);
@@ -68,11 +74,14 @@
             .player.hurt .pointer {
                 filter: contrast(0.5) sepia(1) hue-rotate(-25deg) saturate(2);
             }
+
+            .skip-btn:not(.attacking) > .attack-animation,
             .player:not(.attacking) > .attack-animation {
                 display: none;
             }
-            .player > .attack-animation {
+            .attack-animation {
                 --attack-duration: 0.15s;
+                --attack-radius: 100px;
                 animation: player-attack var(--attack-duration);
                 position: absolute;
                 left: 50%;
@@ -88,8 +97,8 @@
                     height: 1px;
                 }
                 100% {
-                    width: 128px;
-                    height: 128px;
+                    width: calc(var(--attack-radius) * 2);
+                    height: calc(var(--attack-radius) * 2);
                 }
             }
 
@@ -111,6 +120,7 @@
                 position: absolute;
                 height: 8px;
                 width: 64px;
+                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
             }
             .bar-fill {
                 position: absolute;
@@ -135,19 +145,100 @@
             }
             .bar.health {
                 --bar-color: #551213;
-                left: 16px;
-                top: 16px;
-                width: 256px;
             }
             .bar.stamina {
                 --bar-color: #1e4731;
-                left: 16px;
-                top: 30px;
-                width: 128px;
             }
             .bar.stamina.low-stamina .bar-fill,
             .bar.stamina.low-stamina .bar-diff {
                 --bar-color: var(--bar-diff-color);
+            }
+
+            .player-bar.health {
+                left: 16px;
+                top: 16px;
+                width: 256px;
+            }
+            .player-bar.stamina {
+                left: 16px;
+                top: 30px;
+                width: 128px;
+            }
+
+            .boss-info {
+                position: absolute;
+                display: grid;
+                grid-template:
+                    " name   damage"
+                    " health health"
+                    / 1fr auto;
+                bottom: 64px;
+                width: 320px;
+                left: 0;
+                right: 0;
+                color: white;
+                margin: 0 auto;
+                gap: 0.25em;
+                font-size: 0.9em;
+            }
+            .boss-name {
+                grid-area: name;
+                font-family: serif;
+                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            }
+            .enemy-bar.health {
+                position: relative;
+                grid-area: health;
+                width: 100%;
+            }
+
+            .defeat-screen,
+            .victory-screen {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                margin: auto;
+                width: 100%;
+                height: 2em;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: serif;
+                font-size: 48px;
+                text-transform: uppercase;
+                text-align: center;
+                background-image: linear-gradient(
+                    to bottom,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.75) 25%,
+                    rgba(0, 0, 0, 0.75) 75%,
+                    transparent 100%
+                );
+                animation: fade-in 2s;
+            }
+            .defeat-screen {
+                color: #680612;
+            }
+            .victory-screen {
+                color: #f2c338;
+            }
+            .victory-screen::before,
+            .victory-screen::after {
+                content: attr(title);
+                display: block;
+                position: absolute;
+            }
+            .victory-screen::before {
+                opacity: 0.25;
+                animation: 2s cubic-bezier(0, 0, 0.1, 1) 0.5s both letters-spread;
+                letter-spacing: 4%;
+            }
+            @keyframes letters-spread {
+                0% {
+                    letter-spacing: normal;
+                }
             }
         </style>
       <script type="module" crossorigin src="./submission.js"></script>
@@ -156,21 +247,33 @@
     <body>
         <div id="overlay-container">
             <div id="game-root" class="game hidden">
-                <div class="skip-btn">Skip Ad...</div>
+                <div class="skip-btn">
+                    <div class="attack-animation"></div>
+                    Skip Ad...
+                </div>
                 <div class="player hidden">
                     <div class="attack-animation"></div>
                     <img class="pointer" src="./assets/mouse-pointer.svg" />
                 </div>
                 <div class="hud hidden">
-                    <div class="bar health">
+                    <div class="player-bar bar health">
                         <div class="bar-diff"></div>
                         <div class="bar-fill"></div>
                     </div>
-                    <div class="bar stamina">
+                    <div class="player-bar bar stamina">
                         <div class="bar-diff"></div>
                         <div class="bar-fill"></div>
+                    </div>
+                    <div class="boss-info">
+                        <div class="boss-name">Skipgard, Keeper of Discontinuity</div>
+                        <div class="enemy-bar bar health">
+                            <div class="bar-diff"></div>
+                            <div class="bar-fill"></div>
+                        </div>
                     </div>
                 </div>
+                <div class="defeat-screen hidden">You Died</div>
+                <div class="victory-screen hidden" title="Great Enemy Felled"></div>
             </div>
         </div>
     </body>
