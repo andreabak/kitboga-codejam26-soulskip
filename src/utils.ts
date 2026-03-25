@@ -1,8 +1,45 @@
+export async function delay(ms: number): Promise<void> {
+    return await new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export function get_element(selector: string, root?: Element): Element {
     root = (root ?? document) as Element
     const el = root.querySelector(selector)
     if (!el) throw new Error(`Could not find element with selector "${selector}"`)
     return el as Element
+}
+
+export function play_audio_element(selector: string, root?: Element): Promise<void> {
+    const el = get_element(selector, root)
+    if (!(el instanceof HTMLMediaElement)) {
+        throw new Error(`Element with selector "${selector}" doesn't look like an audio element.`)
+    }
+    return el.play()
+}
+
+export async function fade_audio(
+    audio_el: HTMLMediaElement,
+    {
+        duration,
+        volume,
+        fps = 60,
+        exponential = true,
+        stop_after = false,
+    }: {duration: number; volume: number; fps?: number; exponential?: boolean; stop_after?: boolean},
+) {
+    const start_volume = audio_el.volume
+    const step_delay = 1000 / fps
+    const steps = Math.ceil(duration / step_delay)
+    for (let i = 0; i < steps; i++) {
+        const progress = (i + 1) / steps
+        audio_el.volume = Math.max(
+            0,
+            Math.min(start_volume + (volume - start_volume) * (exponential ? Math.pow(progress, 0.5) : progress), 1),
+        )
+        await delay(step_delay)
+    }
+    audio_el.volume = volume
+    if (stop_after) audio_el.pause()
 }
 
 export function random_pick<T>(items: Array<T>): T {

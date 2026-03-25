@@ -1,5 +1,15 @@
 import {send_shell_request, ShellEvent} from "./shell"
-import {dist, dist_pt, get_element, Point, smooth_ema, TargetFollower} from "./utils"
+import {
+    delay,
+    dist,
+    dist_pt,
+    fade_audio,
+    get_element,
+    play_audio_element,
+    Point,
+    smooth_ema,
+    TargetFollower,
+} from "./utils"
 
 export type GameState = "chill" | "battle" | "defeat" | "victory"
 
@@ -262,7 +272,7 @@ class Player extends Character {
         super._update(context)
 
         if (this.game.state === "battle" && this.dead) {
-            this.game.state = "defeat"
+            this.game.change_state_soon("defeat")
         }
 
         this.player_root_el.classList.toggle("hidden", this.game.state === "chill")
@@ -290,8 +300,8 @@ class Enemy extends Character {
     base_acceleration: number = 10
     base_max_vel: number = 2
 
-    health: number = 1000.0
-    max_health: number = 1000.0
+    health: number = 500.0
+    max_health: number = 500.0
 
     attacking_acceleration: number = 100
     attacking_max_vel: number = 200
@@ -339,7 +349,7 @@ class Enemy extends Character {
             }
 
             if (this.dead) {
-                this.game.state = "victory"
+                this.game.change_state_soon("victory")
             }
         }
 
@@ -377,7 +387,7 @@ class Enemy extends Character {
 
     _aggro_trigger() {
         if (this.game.state === "chill") {
-            this.game.state = "battle"
+            this.game.change_state_soon("battle")
 
             // move to center of screen
             const game_rect = this.game.rect
@@ -411,7 +421,7 @@ abstract class HudBar extends GameComponent {
             this.max_ts = context.timestamp
         } else {
             if (context.timestamp - this.max_ts > this.recent_delay) {
-                this.max_recent = smooth_ema(this.max_recent, value, 0.5)
+                this.max_recent = smooth_ema(this.max_recent, value, 0.25)
             }
         }
         const pct_value = value / max
@@ -550,10 +560,14 @@ class VictoryScreen extends GameComponent {
 }
 
 const game_root_selector = "#game-root"
+const battle_start_audio_selector = ".sound.battle-start"
+const defeat_audio_selector = ".sound.defeat"
+const victory_audio_selector = ".sound.victory"
 
 export class Game extends Component<GameUpdateContext> {
-    state: GameState = "chill"
-    last_state: GameState = "chill"
+    private _state: GameState = "chill"
+    private _last_state: GameState = "chill"
+    private _next_state: GameState | null = null
     game_root_el: HTMLDivElement
 
     private _last_timestamp: number | null = null
@@ -588,7 +602,13 @@ export class Game extends Component<GameUpdateContext> {
     }
 
     get changed_state(): boolean {
-        return this.state !== this.last_state
+        return this.state !== this._last_state
+    }
+    get state(): GameState {
+        return this._state
+    }
+    change_state_soon(new_state: GameState): void {
+        this._next_state = new_state
     }
 
     handle_shell_event(event: ShellEvent | unknown): void {
@@ -603,8 +623,24 @@ export class Game extends Component<GameUpdateContext> {
 
     _update(context: GameUpdateContext): void {
         this.game_root_el.classList.toggle("hide-mouse", this.state !== "chill")
-        if (this.changed_state && this.last_state === "chill") {
-            send_shell_request({type: "setVideoFilter", value: "blur(3px) brightness(0.8)"})
+        if (this.changed_state) {
+            if (this.state === "battle") {
+                send_shell_request({type: "setVideoFilter", value: "blur(3px) brightness(0.8)"})
+                play_audio_element(battle_start_audio_selector, this.game_root_el).then(async () => {
+                    await delay(3500)
+                    const battle_start_audio_el = get_element(
+                        battle_start_audio_selector,
+                        this.game_root_el,
+                    ) as HTMLAudioElement
+                    await fade_audio(battle_start_audio_el, {duration: 15000, volume: 0, stop_after: true})
+                })
+            } else if (this.state === "defeat") {
+                play_audio_element(defeat_audio_selector, this.game_root_el)
+                setTimeout(() => send_shell_request({type: "fail"}), 7000)
+            } else if (this.state === "victory") {
+                play_audio_element(victory_audio_selector, this.game_root_el)
+                setTimeout(() => send_shell_request({type: "success"}), 7000)
+            }
         }
     }
 
@@ -613,9 +649,13 @@ export class Game extends Component<GameUpdateContext> {
             timestamp: timestamp,
             timedelta: this._last_timestamp != null ? timestamp - this._last_timestamp : null,
         } as GameUpdateContext
+        if (this._next_state != null) {
+            this._state = this._next_state
+            this._next_state = null
+        }
         this.update(context)
         this._last_timestamp = timestamp
-        this.last_state = this.state
+        this._last_state = this._state
     }
 
     get rect(): DOMRect {

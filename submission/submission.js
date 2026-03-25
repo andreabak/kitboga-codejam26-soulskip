@@ -11,11 +11,42 @@ function add_shell_events_listener(listener) {
 function send_shell_request(request) {
   window.top.postMessage(request, "*");
 }
+async function delay(ms) {
+  return await new Promise((resolve) => setTimeout(resolve, ms));
+}
 function get_element(selector, root) {
   root = root ?? document;
   const el = root.querySelector(selector);
   if (!el) throw new Error(`Could not find element with selector "${selector}"`);
   return el;
+}
+function play_audio_element(selector, root) {
+  const el = get_element(selector, root);
+  if (!(el instanceof HTMLMediaElement)) {
+    throw new Error(`Element with selector "${selector}" doesn't look like an audio element.`);
+  }
+  return el.play();
+}
+async function fade_audio(audio_el, {
+  duration,
+  volume,
+  fps = 60,
+  exponential = true,
+  stop_after = false
+}) {
+  const start_volume = audio_el.volume;
+  const step_delay = 1e3 / fps;
+  const steps = Math.ceil(duration / step_delay);
+  for (let i = 0; i < steps; i++) {
+    const progress = (i + 1) / steps;
+    audio_el.volume = Math.max(
+      0,
+      Math.min(start_volume + (volume - start_volume) * (exponential ? Math.pow(progress, 0.5) : progress), 1)
+    );
+    await delay(step_delay);
+  }
+  audio_el.volume = volume;
+  if (stop_after) audio_el.pause();
 }
 function dist(x, y) {
   return Math.sqrt(x * x + y * y);
@@ -292,7 +323,7 @@ class Player extends Character {
   _update(context) {
     super._update(context);
     if (this.game.state === "battle" && this.dead) {
-      this.game.state = "defeat";
+      this.game.change_state_soon("defeat");
     }
     this.player_root_el.classList.toggle("hidden", this.game.state === "chill");
     this.player_root_el.style.top = `${this.pos.y - this.player_root_el.clientHeight / 2}px`;
@@ -313,8 +344,8 @@ class Enemy extends Character {
     __publicField(this, "enemy_root_el");
     __publicField(this, "base_acceleration", 10);
     __publicField(this, "base_max_vel", 2);
-    __publicField(this, "health", 1e3);
-    __publicField(this, "max_health", 1e3);
+    __publicField(this, "health", 500);
+    __publicField(this, "max_health", 500);
     __publicField(this, "attacking_acceleration", 100);
     __publicField(this, "attacking_max_vel", 200);
     __publicField(this, "attack_damage", 50);
@@ -348,7 +379,7 @@ class Enemy extends Character {
         this.attack_requested = true;
       }
       if (this.dead) {
-        this.game.state = "victory";
+        this.game.change_state_soon("victory");
       }
     }
     this.enemy_root_el.style.top = `${this.pos.y - this.enemy_root_el.clientHeight / 2}px`;
@@ -375,7 +406,7 @@ class Enemy extends Character {
   }
   _aggro_trigger() {
     if (this.game.state === "chill") {
-      this.game.state = "battle";
+      this.game.change_state_soon("battle");
       const game_rect = this.game.rect;
       this.target = { x: game_rect.x + game_rect.width / 2, y: game_rect.y + game_rect.height / 2 };
       this.next_attack_ts = this.calc_next_attack_ts(performance.now());
@@ -398,7 +429,7 @@ class HudBar extends GameComponent {
       this.max_ts = context.timestamp;
     } else {
       if (context.timestamp - this.max_ts > this.recent_delay) {
-        this.max_recent = smooth_ema(this.max_recent, value, 0.5);
+        this.max_recent = smooth_ema(this.max_recent, value, 0.25);
       }
     }
     const pct_value = value / max;
@@ -500,11 +531,15 @@ class VictoryScreen extends GameComponent {
   }
 }
 const game_root_selector = "#game-root";
+const battle_start_audio_selector = ".sound.battle-start";
+const defeat_audio_selector = ".sound.defeat";
+const victory_audio_selector = ".sound.victory";
 class Game extends Component {
   constructor() {
     super();
-    __publicField(this, "state", "chill");
-    __publicField(this, "last_state", "chill");
+    __publicField(this, "_state", "chill");
+    __publicField(this, "_last_state", "chill");
+    __publicField(this, "_next_state", null);
     __publicField(this, "game_root_el");
     __publicField(this, "_last_timestamp", null);
     __publicField(this, "player");
@@ -526,7 +561,13 @@ class Game extends Component {
     return character;
   }
   get changed_state() {
-    return this.state !== this.last_state;
+    return this.state !== this._last_state;
+  }
+  get state() {
+    return this._state;
+  }
+  change_state_soon(new_state) {
+    this._next_state = new_state;
   }
   handle_shell_event(event) {
     if (!event || typeof event !== "object" || !("type" in event)) {
@@ -537,8 +578,24 @@ class Game extends Component {
   }
   _update(context) {
     this.game_root_el.classList.toggle("hide-mouse", this.state !== "chill");
-    if (this.changed_state && this.last_state === "chill") {
-      send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.8)" });
+    if (this.changed_state) {
+      if (this.state === "battle") {
+        send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.8)" });
+        play_audio_element(battle_start_audio_selector, this.game_root_el).then(async () => {
+          await delay(3500);
+          const battle_start_audio_el = get_element(
+            battle_start_audio_selector,
+            this.game_root_el
+          );
+          await fade_audio(battle_start_audio_el, { duration: 15e3, volume: 0, stop_after: true });
+        });
+      } else if (this.state === "defeat") {
+        play_audio_element(defeat_audio_selector, this.game_root_el);
+        setTimeout(() => send_shell_request({ type: "fail" }), 7e3);
+      } else if (this.state === "victory") {
+        play_audio_element(victory_audio_selector, this.game_root_el);
+        setTimeout(() => send_shell_request({ type: "success" }), 7e3);
+      }
     }
   }
   step(timestamp) {
@@ -546,9 +603,13 @@ class Game extends Component {
       timestamp,
       timedelta: this._last_timestamp != null ? timestamp - this._last_timestamp : null
     };
+    if (this._next_state != null) {
+      this._state = this._next_state;
+      this._next_state = null;
+    }
     this.update(context);
     this._last_timestamp = timestamp;
-    this.last_state = this.state;
+    this._last_state = this._state;
   }
   get rect() {
     return this.game_root_el.getBoundingClientRect();
