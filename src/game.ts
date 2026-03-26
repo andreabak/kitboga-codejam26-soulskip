@@ -76,6 +76,7 @@ abstract class Character extends Actor {
 
     health: number = 100.0
     max_health: number = 100.0 // TODO: sanity check
+    last_damage_ts: number = -Infinity
 
     stamina: number = 100.0
     max_stamina: number = 100.0 // TODO: sanity check
@@ -83,7 +84,7 @@ abstract class Character extends Actor {
     stamina_movement_vel_min: number = 40.0
     stamina_recover: number = 100.0
     stamina_recover_delay: number = 1000
-    last_stamina_consume_ts: number = 0
+    last_stamina_consume_ts: number = -Infinity
     low_stamina_max_vel: number = 5
     low_stamina_accel: number = 100
     low_stamina: boolean = false
@@ -101,11 +102,11 @@ abstract class Character extends Actor {
     attack_radius: number = 100
     attack_damage: number = 20
     last_attack_hits: Array<Character> = []
-    last_attack_ts: number = 0
+    last_attack_ts: number = -Infinity
     abstract attack_hitbox_def: HitBox
 
     defend_requested: boolean = false
-    defend_request_ts: number = 0
+    defend_request_ts: number = -Infinity
     defend_damage_reduction: number = 0.75
     defend_stamina_consume_factor: number = 3.0
     defending: boolean = false
@@ -313,6 +314,7 @@ abstract class Character extends Actor {
         }
         if (health_damage >= 0) {
             this.health -= health_damage
+            this.last_damage_ts = context.timeref
             if (this.health < 0) this.health = 0
         }
     }
@@ -338,7 +340,7 @@ class Player extends Character {
     stamina_movement_vel_min: number = 40.0
     stamina_recover: number = 100.0
     stamina_recover_delay: number = 500
-    last_stamina_consume_ts: number = 0
+    last_stamina_consume_ts: number = -Infinity
     low_stamina_max_vel: number = 5
     low_stamina_accel: number = 100
     low_stamina: boolean = false
@@ -352,7 +354,7 @@ class Player extends Character {
     attack_stamina_consume: number = 30
     attack_duration: number = 150
     attack_scale: number = 3.0
-    last_attack_ts: number = 0
+    last_attack_ts: number = -Infinity
     attack_hitbox_def: HitBox = {
         shape: {
             points: [
@@ -419,6 +421,7 @@ class Player extends Character {
         this.player_root_el.classList.toggle("defending", this.defending)
 
         this.player_root_el.classList.toggle("low-stamina", this.low_stamina)
+        this.player_root_el.classList.toggle("hurt", context.timeref - this.last_damage_ts < 500)
     }
 
     _attack_start(context: GameUpdateContext) {
@@ -560,7 +563,7 @@ abstract class HudBar extends GameComponent {
     abstract bar_root_el: HTMLDivElement
 
     max_recent: number = 0
-    max_ts: number = 0
+    max_ts: number = -Infinity
 
     recent_delay: number = 1000
 

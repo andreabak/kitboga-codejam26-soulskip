@@ -245,6 +245,7 @@ class Character extends Actor {
     __publicField(this, "health", 100);
     __publicField(this, "max_health", 100);
     // TODO: sanity check
+    __publicField(this, "last_damage_ts", -Infinity);
     __publicField(this, "stamina", 100);
     __publicField(this, "max_stamina", 100);
     // TODO: sanity check
@@ -252,7 +253,7 @@ class Character extends Actor {
     __publicField(this, "stamina_movement_vel_min", 40);
     __publicField(this, "stamina_recover", 100);
     __publicField(this, "stamina_recover_delay", 1e3);
-    __publicField(this, "last_stamina_consume_ts", 0);
+    __publicField(this, "last_stamina_consume_ts", -Infinity);
     __publicField(this, "low_stamina_max_vel", 5);
     __publicField(this, "low_stamina_accel", 100);
     __publicField(this, "low_stamina", false);
@@ -268,9 +269,9 @@ class Character extends Actor {
     __publicField(this, "attack_radius", 100);
     __publicField(this, "attack_damage", 20);
     __publicField(this, "last_attack_hits", []);
-    __publicField(this, "last_attack_ts", 0);
+    __publicField(this, "last_attack_ts", -Infinity);
     __publicField(this, "defend_requested", false);
-    __publicField(this, "defend_request_ts", 0);
+    __publicField(this, "defend_request_ts", -Infinity);
     __publicField(this, "defend_damage_reduction", 0.75);
     __publicField(this, "defend_stamina_consume_factor", 3);
     __publicField(this, "defending", false);
@@ -449,6 +450,7 @@ class Character extends Actor {
     }
     if (health_damage >= 0) {
       this.health -= health_damage;
+      this.last_damage_ts = context.timeref;
       if (this.health < 0) this.health = 0;
     }
   }
@@ -470,7 +472,7 @@ class Player extends Character {
     __publicField(this, "stamina_movement_vel_min", 40);
     __publicField(this, "stamina_recover", 100);
     __publicField(this, "stamina_recover_delay", 500);
-    __publicField(this, "last_stamina_consume_ts", 0);
+    __publicField(this, "last_stamina_consume_ts", -Infinity);
     __publicField(this, "low_stamina_max_vel", 5);
     __publicField(this, "low_stamina_accel", 100);
     __publicField(this, "low_stamina", false);
@@ -484,7 +486,7 @@ class Player extends Character {
     __publicField(this, "attack_stamina_consume", 30);
     __publicField(this, "attack_duration", 150);
     __publicField(this, "attack_scale", 3);
-    __publicField(this, "last_attack_ts", 0);
+    __publicField(this, "last_attack_ts", -Infinity);
     __publicField(this, "attack_hitbox_def", {
       shape: {
         points: [
@@ -539,6 +541,7 @@ class Player extends Character {
     this.player_root_el.classList.toggle("attacking", this.attacking);
     this.player_root_el.classList.toggle("defending", this.defending);
     this.player_root_el.classList.toggle("low-stamina", this.low_stamina);
+    this.player_root_el.classList.toggle("hurt", context.timeref - this.last_damage_ts < 500);
   }
   _attack_start(context) {
     super._attack_start(context);
@@ -646,7 +649,7 @@ class HudBar extends GameComponent {
     super(game2);
     __publicField(this, "hud");
     __publicField(this, "max_recent", 0);
-    __publicField(this, "max_ts", 0);
+    __publicField(this, "max_ts", -Infinity);
     __publicField(this, "recent_delay", 1e3);
     this.hud = hud;
   }
@@ -920,7 +923,11 @@ let game = null;
 function handle_shell_event(event) {
   if (event.type === "adStarted" && game == null) {
     game = new Game();
-    setInterval(() => game == null ? void 0 : game.step(performance.now()), 1e3 / 60);
+    const request_animation = () => {
+      game == null ? void 0 : game.step(performance.now());
+      requestAnimationFrame(request_animation);
+    };
+    request_animation();
   }
   if (game != null) {
     game.handle_shell_event(event);
