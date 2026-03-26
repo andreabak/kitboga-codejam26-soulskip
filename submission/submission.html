@@ -85,7 +85,7 @@
                 animation: player-attack var(--attack-duration);
                 position: absolute;
                 left: 50%;
-                right: 50%;
+                top: 50%;
                 transform: translate(-50%, -50%);
                 border-radius: 50%;
                 background-color: red;
@@ -100,6 +100,23 @@
                     width: calc(var(--attack-radius) * 2);
                     height: calc(var(--attack-radius) * 2);
                 }
+            }
+
+            .skip-btn:not(.defending) > .defend-animation,
+            .player:not(.defending) > .defend-animation {
+                display: none;
+            }
+            .defend-animation {
+                position: absolute;
+                width: 56px;
+                height: 56px;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                border-radius: 50%;
+                background-color: cyan;
+                mix-blend-mode: screen;
+                opacity: 0.5;
             }
 
             .hud {
@@ -254,6 +271,7 @@
                 <div class="player hidden">
                     <div class="attack-animation"></div>
                     <img class="pointer" src="./assets/mouse-pointer.svg" />
+                    <div class="defend-animation"></div>
                 </div>
                 <div class="hud hidden">
                     <div class="player-bar bar health">

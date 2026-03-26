@@ -82,7 +82,7 @@ abstract class Character extends Actor {
     stamina_movement_consume_factor: number = 8.0
     stamina_movement_vel_min: number = 40.0
     stamina_recover: number = 100.0
-    stamina_recover_delay: number = 500
+    stamina_recover_delay: number = 1000
     last_stamina_consume_ts: number = 0
     low_stamina_max_vel: number = 5
     low_stamina_accel: number = 100
@@ -103,6 +103,12 @@ abstract class Character extends Actor {
     last_attack_hits: Array<Character> = []
     last_attack_ts: number = 0
     abstract attack_hitbox_def: HitBox
+
+    defend_requested: boolean = false
+    defend_request_ts: number = 0
+    defend_damage_reduction: number = 0.75
+    defend_stamina_consume_factor: number = 3.0
+    defending: boolean = false
 
     constructor(game: Game) {
         super(game)
@@ -194,6 +200,10 @@ abstract class Character extends Actor {
         return !this.attacking && !this.low_stamina && !this.dead
     }
 
+    get can_defend(): boolean {
+        return !this.attacking && !this.low_stamina && !this.dead
+    }
+
     _update(context: GameUpdateContext) {
         const s_delta = (context.timedelta ?? 0) / 1000
 
@@ -224,6 +234,17 @@ abstract class Character extends Actor {
                 this._attack_end(context)
             } else {
                 this._check_attack_hits(context)
+            }
+        }
+
+        if (this.defend_requested) {
+            if (this.can_defend) {
+                this.defending = true
+            }
+        }
+        if (this.defending) {
+            if (!this.defend_requested || !this.can_defend) {
+                this.defending = false
             }
         }
 
@@ -269,7 +290,7 @@ abstract class Character extends Actor {
                 aabb_overlap(character_hurtbox_bbox, attack_hitbox_bbox) &&
                 sat_overlap(attack_hitbox_abs, character_hurtbox_abs)
             ) {
-                character.attack_hit({attacking_character: this, damage: this.attack_damage})
+                character.attack_hit(context, {attacking_character: this, damage: this.attack_damage})
                 this.last_attack_hits.push(character)
             }
         }
@@ -278,9 +299,22 @@ abstract class Character extends Actor {
         this.last_attack_hits = []
     }
     _attack_end(context: GameUpdateContext) {}
-    attack_hit({attacking_character, damage}: {attacking_character: Character; damage: number}) {
-        this.health -= damage
-        if (this.health < 0) this.health = 0
+    attack_hit(
+        context: GameUpdateContext,
+        {attacking_character, damage}: {attacking_character: Character; damage: number},
+    ) {
+        let health_damage = damage
+        if (this.defending && !this.low_stamina) {
+            const stamina_consume = damage * this.defend_stamina_consume_factor
+            this.stamina -= stamina_consume
+            this.last_stamina_consume_ts = context.timeref
+            if (this.stamina < 0) this.stamina = 0
+            health_damage *= 1.0 - this.defend_damage_reduction
+        }
+        if (health_damage >= 0) {
+            this.health -= health_damage
+            if (this.health < 0) this.health = 0
+        }
     }
 }
 
@@ -341,6 +375,11 @@ class Player extends Character {
 
         this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this))
         this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this))
+        this.game.game_root_el.addEventListener("mouseup", this._on_mouseup.bind(this))
+        this.game.game_root_el.addEventListener("contextmenu", (e) => {
+            e.preventDefault()
+            return false
+        })
     }
 
     _on_mousemove(event: MouseEvent): void {
@@ -349,9 +388,19 @@ class Player extends Character {
             this.target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
         }
     }
-
     _on_mousedown(event: MouseEvent): void {
-        this.attack_requested = true
+        if (event.button === 0) {
+            this.attack_requested = true
+        } else if (event.button === 2) {
+            this.defend_request_ts = this.game.timeref
+            this.defend_requested = true
+        }
+    }
+    _on_mouseup(event: MouseEvent): void {
+        if (event.button === 2) {
+            this.defend_request_ts = this.game.timeref
+            this.defend_requested = false
+        }
     }
 
     _update(context: GameUpdateContext) {
@@ -367,6 +416,7 @@ class Player extends Character {
         this.player_root_el.style.left = `${this.pos.x - this.player_root_el.clientWidth / 2}px`
 
         this.player_root_el.classList.toggle("attacking", this.attacking)
+        this.player_root_el.classList.toggle("defending", this.defending)
 
         this.player_root_el.classList.toggle("low-stamina", this.low_stamina)
     }
@@ -417,7 +467,7 @@ class Enemy extends Character {
     // TODO: AI
     next_attack_ts: number = 1e10
     auto_attack_dist: number = 200
-    auto_attack_interval: [number, number] = [2000, 4000]
+    auto_attack_interval: [number, number] = [1000, 3000]
 
     constructor(game: Game) {
         super(game)
@@ -691,7 +741,7 @@ export class Game extends Component<GameUpdateContext> {
     defeat_screen: DefeatScreen
     victory_screen: VictoryScreen
 
-    private debug_hitboxes: boolean = true
+    private debug_hitboxes: boolean = false
 
     constructor() {
         super()

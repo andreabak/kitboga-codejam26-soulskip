@@ -251,7 +251,7 @@ class Character extends Actor {
     __publicField(this, "stamina_movement_consume_factor", 8);
     __publicField(this, "stamina_movement_vel_min", 40);
     __publicField(this, "stamina_recover", 100);
-    __publicField(this, "stamina_recover_delay", 500);
+    __publicField(this, "stamina_recover_delay", 1e3);
     __publicField(this, "last_stamina_consume_ts", 0);
     __publicField(this, "low_stamina_max_vel", 5);
     __publicField(this, "low_stamina_accel", 100);
@@ -269,6 +269,11 @@ class Character extends Actor {
     __publicField(this, "attack_damage", 20);
     __publicField(this, "last_attack_hits", []);
     __publicField(this, "last_attack_ts", 0);
+    __publicField(this, "defend_requested", false);
+    __publicField(this, "defend_request_ts", 0);
+    __publicField(this, "defend_damage_reduction", 0.75);
+    __publicField(this, "defend_stamina_consume_factor", 3);
+    __publicField(this, "defending", false);
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
@@ -349,6 +354,9 @@ class Character extends Actor {
   get can_attack() {
     return !this.attacking && !this.low_stamina && !this.dead;
   }
+  get can_defend() {
+    return !this.attacking && !this.low_stamina && !this.dead;
+  }
   _update(context) {
     const s_delta = (context.timedelta ?? 0) / 1e3;
     let stamina_consume = 0;
@@ -376,6 +384,16 @@ class Character extends Actor {
         this._attack_end(context);
       } else {
         this._check_attack_hits(context);
+      }
+    }
+    if (this.defend_requested) {
+      if (this.can_defend) {
+        this.defending = true;
+      }
+    }
+    if (this.defending) {
+      if (!this.defend_requested || !this.can_defend) {
+        this.defending = false;
       }
     }
     if (context.timedelta && context.timedelta > 0) {
@@ -410,7 +428,7 @@ class Character extends Actor {
       const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs);
       const character_hurtbox_bbox = shape_bbox(character_hurtbox_abs);
       if (aabb_overlap(character_hurtbox_bbox, attack_hitbox_bbox) && sat_overlap(attack_hitbox_abs, character_hurtbox_abs)) {
-        character.attack_hit({ attacking_character: this, damage: this.attack_damage });
+        character.attack_hit(context, { attacking_character: this, damage: this.attack_damage });
         this.last_attack_hits.push(character);
       }
     }
@@ -420,9 +438,19 @@ class Character extends Actor {
   }
   _attack_end(context) {
   }
-  attack_hit({ attacking_character, damage }) {
-    this.health -= damage;
-    if (this.health < 0) this.health = 0;
+  attack_hit(context, { attacking_character, damage }) {
+    let health_damage = damage;
+    if (this.defending && !this.low_stamina) {
+      const stamina_consume = damage * this.defend_stamina_consume_factor;
+      this.stamina -= stamina_consume;
+      this.last_stamina_consume_ts = context.timeref;
+      if (this.stamina < 0) this.stamina = 0;
+      health_damage *= 1 - this.defend_damage_reduction;
+    }
+    if (health_damage >= 0) {
+      this.health -= health_damage;
+      if (this.health < 0) this.health = 0;
+    }
   }
 }
 const player_root_selector = ".player";
@@ -474,6 +502,11 @@ class Player extends Character {
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
     this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
     this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this));
+    this.game.game_root_el.addEventListener("mouseup", this._on_mouseup.bind(this));
+    this.game.game_root_el.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      return false;
+    });
   }
   _on_mousemove(event) {
     const rect = this.game.game_root_el.getBoundingClientRect();
@@ -482,7 +515,18 @@ class Player extends Character {
     }
   }
   _on_mousedown(event) {
-    this.attack_requested = true;
+    if (event.button === 0) {
+      this.attack_requested = true;
+    } else if (event.button === 2) {
+      this.defend_request_ts = this.game.timeref;
+      this.defend_requested = true;
+    }
+  }
+  _on_mouseup(event) {
+    if (event.button === 2) {
+      this.defend_request_ts = this.game.timeref;
+      this.defend_requested = false;
+    }
   }
   _update(context) {
     super._update(context);
@@ -493,6 +537,7 @@ class Player extends Character {
     this.player_root_el.style.top = `${this.pos.y - this.player_root_el.clientHeight / 2}px`;
     this.player_root_el.style.left = `${this.pos.x - this.player_root_el.clientWidth / 2}px`;
     this.player_root_el.classList.toggle("attacking", this.attacking);
+    this.player_root_el.classList.toggle("defending", this.defending);
     this.player_root_el.classList.toggle("low-stamina", this.low_stamina);
   }
   _attack_start(context) {
@@ -535,7 +580,7 @@ class Enemy extends Character {
     // TODO: AI
     __publicField(this, "next_attack_ts", 1e10);
     __publicField(this, "auto_attack_dist", 200);
-    __publicField(this, "auto_attack_interval", [2e3, 4e3]);
+    __publicField(this, "auto_attack_interval", [1e3, 3e3]);
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     const rel_rect = this.game.get_relative_rect(this.enemy_root_el);
     this.enemy_root_el.style.top = `${rel_rect.y}px`;
@@ -733,7 +778,7 @@ class Game extends Component {
     __publicField(this, "hud");
     __publicField(this, "defeat_screen");
     __publicField(this, "victory_screen");
-    __publicField(this, "debug_hitboxes", true);
+    __publicField(this, "debug_hitboxes", false);
     this.game_root_el = get_element(game_root_selector);
     this.game_root_el.classList.toggle("hidden", false);
     this.player = this.add_character(this.add_component(new Player(this)));
