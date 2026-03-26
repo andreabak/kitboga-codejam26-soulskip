@@ -48,11 +48,99 @@ async function fade_audio(audio_el, {
   audio_el.volume = volume;
   if (stop_after) audio_el.pause();
 }
+function rect_to_shape(rect) {
+  return {
+    points: [
+      { x: rect.x, y: rect.y },
+      { x: rect.x + rect.width, y: rect.y },
+      { x: rect.x + rect.width, y: rect.y + rect.height },
+      { x: rect.x, y: rect.y + rect.height }
+    ]
+  };
+}
+function shape_bbox(shape) {
+  if (!shape.points.length) {
+    throw new Error("Shape has no points!");
+  }
+  let [min_x, max_x, min_y, max_y] = [Infinity, -Infinity, Infinity, -Infinity];
+  for (const p of shape.points) {
+    min_x = Math.min(min_x, p.x);
+    max_x = Math.max(max_x, p.x);
+    min_y = Math.min(min_y, p.y);
+    max_y = Math.max(max_y, p.y);
+  }
+  return {
+    x: min_x,
+    y: min_y,
+    width: max_x - min_x,
+    height: max_y - min_y
+  };
+}
+function transform(points, {
+  translate,
+  rotate,
+  scale,
+  origin
+}) {
+  translate = translate ?? { x: 0, y: 0 };
+  rotate = rotate ?? 0;
+  const rvec = { x: Math.cos(rotate), y: Math.sin(rotate) };
+  scale = scale ?? 1;
+  scale = typeof scale === "number" ? { x: scale, y: scale } : scale;
+  origin = origin ?? { x: 0, y: 0 };
+  const result = [];
+  for (const p of points) {
+    let x = p.x + translate.x - origin.x;
+    let y = p.y + translate.y - origin.y;
+    const rx = x * rvec.x - y * rvec.y;
+    const ry = x * rvec.y + y * rvec.x;
+    x = rx;
+    y = ry;
+    x *= scale.x;
+    y *= scale.y;
+    x += origin.x;
+    y += origin.y;
+    result.push({ x, y });
+  }
+  return result;
+}
+function transform_shape(shape, {
+  translate,
+  rotate,
+  scale,
+  origin
+}) {
+  return { points: transform(shape.points, { translate, rotate, scale, origin }) };
+}
 function dist(x, y) {
   return Math.sqrt(x * x + y * y);
 }
 function dist_pt(p) {
   return dist(p.x, p.y);
+}
+function aabb_overlap(a, b) {
+  return !(a.x > b.x + b.width || a.x + a.width < b.x || a.y > b.y + b.height || a.y + a.height < b.y);
+}
+function sat_overlap(a, b) {
+  const get_axes = (points) => points.map((p0, i) => {
+    const p1 = points[(i + 1) % points.length];
+    return { x: -p1.y + p0.y, y: p1.x - p0.x };
+  });
+  const projected_range = (points, axis) => {
+    let [min, max] = [Infinity, -Infinity];
+    for (const p of points) {
+      const proj = p.x * axis.x + p.y * axis.y;
+      min = Math.min(min, proj);
+      max = Math.max(max, proj);
+    }
+    return [min, max];
+  };
+  const axes = [...get_axes(a.points), ...get_axes(b.points)];
+  return !axes.some((axis) => {
+    const [a_min, a_max] = projected_range(a.points, axis);
+    const [b_min, b_max] = projected_range(b.points, axis);
+    return a_max < b_min || b_max < a_min;
+  });
 }
 function smooth_ema(v0, v1, sf) {
   return (1 - sf) * v0 + sf * v1;
@@ -67,6 +155,7 @@ class TargetFollower {
     __publicField(this, "target");
     __publicField(this, "acceleration");
     __publicField(this, "_vel", { x: 0, y: 0 });
+    __publicField(this, "_direction", -90 / 180 * Math.PI);
     __publicField(this, "max_vel");
     __publicField(this, "slowing_distance");
     this.pos = pos;
@@ -77,6 +166,12 @@ class TargetFollower {
   }
   get velocity() {
     return { ...this._vel };
+  }
+  get direction() {
+    return this._direction;
+  }
+  get direction_vector() {
+    return { x: Math.cos(this._direction), y: Math.sin(this._direction) };
   }
   update(timestep, { target } = {}) {
     if (target != null) {
@@ -97,7 +192,7 @@ class TargetFollower {
       this._vel.x *= 1 - this.slowing_distance / (d + this.slowing_distance);
       this._vel.y *= 1 - this.slowing_distance / (d + this.slowing_distance);
     }
-    const vel = dist(this._vel.x, this._vel.y);
+    let vel = dist(this._vel.x, this._vel.y);
     if (d > 0) {
       this._vel.x = vel * (dx / d);
       this._vel.y = vel * (dy / d);
@@ -105,6 +200,10 @@ class TargetFollower {
     if (this.max_vel != null && vel >= this.max_vel) {
       this._vel.x = this.max_vel * (this._vel.x / vel);
       this._vel.y = this.max_vel * (this._vel.y / vel);
+    }
+    vel = dist(this._vel.x, this._vel.y);
+    if (vel > 0.1) {
+      this._direction = Math.atan2(this._vel.y, this._vel.x);
     }
     this.pos.x += this._vel.x;
     this.pos.y += this._vel.y;
@@ -141,6 +240,8 @@ class Character extends Actor {
     __publicField(this, "_follower");
     __publicField(this, "base_acceleration", 250);
     __publicField(this, "base_max_vel", 100);
+    __publicField(this, "origin", { x: 24, y: 24 });
+    __publicField(this, "rotates", false);
     __publicField(this, "health", 100);
     __publicField(this, "max_health", 100);
     // TODO: sanity check
@@ -158,12 +259,12 @@ class Character extends Actor {
     __publicField(this, "low_stamina_enter_threshold", 1);
     // TODO: sanity check
     __publicField(this, "low_stamina_exit_threshold", 200);
-    // TODO: sanity check
     __publicField(this, "attack_characters", []);
     __publicField(this, "attack_requested", false);
     __publicField(this, "attacking", false);
     __publicField(this, "attack_stamina_consume", 30);
     __publicField(this, "attack_duration", 150);
+    __publicField(this, "attack_scale", 2);
     __publicField(this, "attack_radius", 100);
     __publicField(this, "attack_damage", 20);
     __publicField(this, "last_attack_hits", []);
@@ -197,6 +298,50 @@ class Character extends Actor {
   }
   set target(value) {
     this._follower.target = value;
+  }
+  get direction() {
+    return this._follower.direction;
+  }
+  _transform_shape(rel_shape, {
+    rotation_ref = 0,
+    rotates = true,
+    scale_ref = 1,
+    keep_aspect_ratio = false
+  } = {}) {
+    let shape = rel_shape;
+    if (!("points" in shape)) {
+      shape = rect_to_shape(shape);
+    }
+    let scale = { x: this.width / 2, y: this.height / 2 };
+    if (keep_aspect_ratio) {
+      const uniform_scale = (scale.x + scale.y) / 2;
+      scale = { x: uniform_scale, y: uniform_scale };
+    }
+    shape = transform_shape(shape, {
+      rotate: (rotates ? this._follower.direction : 0) - rotation_ref,
+      scale: { x: scale.x * scale_ref, y: scale.y * scale_ref }
+    });
+    return shape;
+  }
+  get hurtbox() {
+    return this._transform_shape(this.hurtbox_def.shape, {
+      rotation_ref: this.hurtbox_def.rotation_ref,
+      rotates: this.rotates
+    });
+  }
+  get hurtbox_abs() {
+    return transform_shape(this.hurtbox, { translate: this.pos });
+  }
+  get attack_hitbox() {
+    return this._transform_shape(this.attack_hitbox_def.shape, {
+      rotation_ref: this.attack_hitbox_def.rotation_ref,
+      rotates: true,
+      scale_ref: this.attack_scale,
+      keep_aspect_ratio: true
+    });
+  }
+  get attack_hitbox_abs() {
+    return transform_shape(this.attack_hitbox, { translate: this.pos });
   }
   get dead() {
     return this.health <= 0;
@@ -260,9 +405,12 @@ class Character extends Actor {
     for (const character of this.game.characters) {
       if (character === this) continue;
       if (this.last_attack_hits.some((c) => c === character)) continue;
-      const distance = dist(this.pos.x - character.pos.x, this.pos.y - character.pos.y);
-      if (distance < this.attack_radius) {
-        character.attack_hit({ attacking_character: this, damage: this.attack_damage, distance });
+      const attack_hitbox_abs = this.attack_hitbox_abs;
+      const character_hurtbox_abs = character.hurtbox_abs;
+      const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs);
+      const character_hurtbox_bbox = shape_bbox(character_hurtbox_abs);
+      if (aabb_overlap(character_hurtbox_bbox, attack_hitbox_bbox) && sat_overlap(attack_hitbox_abs, character_hurtbox_abs)) {
+        character.attack_hit({ attacking_character: this, damage: this.attack_damage });
         this.last_attack_hits.push(character);
       }
     }
@@ -272,11 +420,7 @@ class Character extends Actor {
   }
   _attack_end(context) {
   }
-  attack_hit({
-    attacking_character,
-    damage,
-    distance
-  }) {
+  attack_hit({ attacking_character, damage }) {
     this.health -= damage;
     if (this.health < 0) this.health = 0;
   }
@@ -286,6 +430,8 @@ class Player extends Character {
   constructor(game2) {
     super(game2);
     __publicField(this, "player_root_el");
+    __publicField(this, "width", 48);
+    __publicField(this, "height", 48);
     __publicField(this, "base_acceleration", 500);
     __publicField(this, "base_max_vel", 200);
     __publicField(this, "health", 300);
@@ -304,18 +450,36 @@ class Player extends Character {
     // TODO: sanity check
     __publicField(this, "low_stamina_exit_threshold", 200);
     // TODO: sanity check
+    __publicField(this, "hurtbox_def", { shape: { x: 0, y: 0, width: 0.75, height: 1 }, rotation_ref: 0 });
     __publicField(this, "attack_requested", false);
     __publicField(this, "attacking", false);
     __publicField(this, "attack_stamina_consume", 30);
     __publicField(this, "attack_duration", 150);
+    __publicField(this, "attack_scale", 3);
     __publicField(this, "last_attack_ts", 0);
+    __publicField(this, "attack_hitbox_def", {
+      shape: {
+        points: [
+          { x: -1, y: 0 },
+          { x: -0.71, y: -0.71 },
+          { x: 0, y: -1 },
+          { x: 0.71, y: -0.71 },
+          { x: 1, y: 0 },
+          { x: 0.25, y: 0.25 },
+          { x: -0.25, y: 0.25 }
+        ]
+      },
+      rotation_ref: -90 / 180 * Math.PI
+    });
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
     this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
     this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this));
   }
   _on_mousemove(event) {
     const rect = this.game.game_root_el.getBoundingClientRect();
-    this.target = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    if (!this.attacking) {
+      this.target = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
   }
   _on_mousedown(event) {
     this.attack_requested = true;
@@ -342,14 +506,31 @@ class Enemy extends Character {
   constructor(game2) {
     super(game2);
     __publicField(this, "enemy_root_el");
+    __publicField(this, "width");
+    __publicField(this, "height");
     __publicField(this, "base_acceleration", 10);
     __publicField(this, "base_max_vel", 2);
     __publicField(this, "health", 500);
     __publicField(this, "max_health", 500);
+    __publicField(this, "hurtbox_def", { shape: { x: -1, y: -1, width: 2, height: 2 }, rotation_ref: 0 });
     __publicField(this, "attacking_acceleration", 100);
     __publicField(this, "attacking_max_vel", 200);
     __publicField(this, "attack_damage", 50);
     __publicField(this, "attack_duration", 500);
+    __publicField(this, "attack_hitbox_def", {
+      shape: {
+        points: [
+          { x: -1, y: 0 },
+          { x: -0.71, y: -0.71 },
+          { x: 0, y: -1 },
+          { x: 0.71, y: -0.71 },
+          { x: 1, y: 0 },
+          { x: 0.25, y: 0.25 },
+          { x: -0.25, y: 0.25 }
+        ]
+      },
+      rotation_ref: -90 / 180 * Math.PI
+    });
     // TODO: aggro: number = 0.0
     // TODO: AI
     __publicField(this, "next_attack_ts", 1e10);
@@ -362,6 +543,8 @@ class Enemy extends Character {
     this.enemy_root_el.style.bottom = "unset";
     this.enemy_root_el.style.right = "unset";
     this.target = this.pos = this.display_pos;
+    this.width = rel_rect.width;
+    this.height = rel_rect.height;
     this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this));
   }
   get display_pos() {
@@ -548,6 +731,7 @@ class Game extends Component {
     __publicField(this, "hud");
     __publicField(this, "defeat_screen");
     __publicField(this, "victory_screen");
+    __publicField(this, "debug_hitboxes", true);
     this.game_root_el = get_element(game_root_selector);
     this.game_root_el.classList.toggle("hidden", false);
     this.player = this.add_character(this.add_component(new Player(this)));
@@ -608,6 +792,7 @@ class Game extends Component {
       this._next_state = null;
     }
     this.update(context);
+    this._debug_hitboxes();
     this._last_timestamp = timestamp;
     this._last_state = this._state;
   }
@@ -618,6 +803,63 @@ class Game extends Component {
     const { x: game_x, y: game_y } = this.rect;
     const el_rect = el.getBoundingClientRect();
     return new DOMRect(el_rect.x - game_x, el_rect.y - game_y, el_rect.width, el_rect.height);
+  }
+  _debug_hitboxes() {
+    var _a;
+    const svg_id = "hitboxes";
+    const svg_els = this.game_root_el.querySelectorAll(`#${svg_id}`);
+    for (const el of svg_els) {
+      (_a = el.parentNode) == null ? void 0 : _a.removeChild(el);
+    }
+    if (this.debug_hitboxes) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.id = svg_id;
+      svg.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: ${this.rect.width}px;
+                height: ${this.rect.height}px;
+                pointer-events: none;
+            `;
+      this.game_root_el.appendChild(svg);
+      for (const character of this.characters) {
+        const create_path_from_points = (points) => {
+          if (points.length === 0) return null;
+          const d_parts = [];
+          for (let i = 0; i < points.length; i++) {
+            const ptyp = i === 0 ? "M" : "L";
+            d_parts.push(`${ptyp} ${points[i].x} ${points[i].y}`);
+          }
+          d_parts.push("Z");
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", d_parts.join(" "));
+          return path;
+        };
+        const hurtbox_path = create_path_from_points(character.hurtbox_abs.points);
+        if (hurtbox_path) {
+          hurtbox_path.style.fill = "hsla(195, 100%, 50%, 0.4)";
+          svg.appendChild(hurtbox_path);
+        }
+        const attack_hitbox_abs = character.attack_hitbox_abs;
+        const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs);
+        let attack_would_hit = false;
+        for (const other of this.characters) {
+          if (other === character) continue;
+          const other_hurtbox_abs = other.hurtbox_abs;
+          const other_hurtbox_bbox = shape_bbox(other_hurtbox_abs);
+          if (aabb_overlap(other_hurtbox_bbox, attack_hitbox_bbox) && sat_overlap(attack_hitbox_abs, other_hurtbox_abs)) {
+            attack_would_hit = true;
+            break;
+          }
+        }
+        const attack_hitbox_path = create_path_from_points(attack_hitbox_abs.points);
+        if (attack_hitbox_path) {
+          attack_hitbox_path.style.fill = attack_would_hit ? "hsla(0, 100%, 50%, 0.4)" : "hsla(322, 81%, 43%, 0.4)";
+          svg.appendChild(attack_hitbox_path);
+        }
+      }
+    }
   }
 }
 let game = null;

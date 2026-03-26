@@ -1,14 +1,22 @@
 import {send_shell_request, ShellEvent} from "./shell"
 import {
+    aabb_overlap,
     delay,
     dist,
     dist_pt,
     fade_audio,
     get_element,
+    HitBox,
     play_audio_element,
     Point,
+    Rect,
+    rect_to_shape,
+    sat_overlap,
+    Shape,
+    shape_bbox,
     smooth_ema,
     TargetFollower,
+    transform_shape,
 } from "./utils"
 
 export type GameState = "chill" | "battle" | "defeat" | "victory"
@@ -61,6 +69,11 @@ abstract class Character extends Actor {
     base_acceleration: number = 250
     base_max_vel: number = 100
 
+    abstract width: number
+    abstract height: number
+    origin: Point = {x: 24, y: 24}
+    rotates: boolean = false
+
     health: number = 100.0
     max_health: number = 100.0 // TODO: sanity check
 
@@ -77,15 +90,19 @@ abstract class Character extends Actor {
     low_stamina_enter_threshold: number = 1 // TODO: sanity check
     low_stamina_exit_threshold: number = 200 // TODO: sanity check
 
+    abstract hurtbox_def: HitBox
+
     attack_characters: Array<Character> = []
     attack_requested: boolean = false
     attacking: boolean = false
     attack_stamina_consume: number = 30
     attack_duration: number = 150
+    attack_scale: number = 2.0
     attack_radius: number = 100
     attack_damage: number = 20
     last_attack_hits: Array<Character> = []
     last_attack_ts: number = 0
+    abstract attack_hitbox_def: HitBox
 
     constructor(game: Game) {
         super(game)
@@ -119,6 +136,55 @@ abstract class Character extends Actor {
     }
     set target(value: Point) {
         this._follower.target = value
+    }
+    get direction(): number {
+        return this._follower.direction
+    }
+
+    _transform_shape(
+        rel_shape: Shape | Rect,
+        {
+            rotation_ref = 0,
+            rotates = true,
+            scale_ref = 1.0,
+            keep_aspect_ratio = false,
+        }: {rotation_ref?: number; rotates?: boolean; scale_ref?: number; keep_aspect_ratio?: boolean} = {},
+    ): Shape {
+        let shape = rel_shape
+        if (!("points" in shape)) {
+            shape = rect_to_shape(shape)
+        }
+        let scale = {x: this.width / 2, y: this.height / 2}
+        if (keep_aspect_ratio) {
+            const uniform_scale = (scale.x + scale.y) / 2
+            scale = {x: uniform_scale, y: uniform_scale}
+        }
+        shape = transform_shape(shape, {
+            rotate: (rotates ? this._follower.direction : 0) - rotation_ref,
+            scale: {x: scale.x * scale_ref, y: scale.y * scale_ref},
+        })
+        return shape
+    }
+
+    get hurtbox(): Shape {
+        return this._transform_shape(this.hurtbox_def.shape, {
+            rotation_ref: this.hurtbox_def.rotation_ref,
+            rotates: this.rotates,
+        })
+    }
+    get hurtbox_abs(): Shape {
+        return transform_shape(this.hurtbox, {translate: this.pos})
+    }
+    get attack_hitbox(): Shape {
+        return this._transform_shape(this.attack_hitbox_def.shape, {
+            rotation_ref: this.attack_hitbox_def.rotation_ref,
+            rotates: true,
+            scale_ref: this.attack_scale,
+            keep_aspect_ratio: true,
+        })
+    }
+    get attack_hitbox_abs(): Shape {
+        return transform_shape(this.attack_hitbox, {translate: this.pos})
     }
 
     get dead(): boolean {
@@ -195,9 +261,15 @@ abstract class Character extends Actor {
         for (const character of this.game.characters) {
             if (character === this) continue
             if (this.last_attack_hits.some((c) => c === character)) continue
-            const distance = dist(this.pos.x - character.pos.x, this.pos.y - character.pos.y)
-            if (distance < this.attack_radius) {
-                character.attack_hit({attacking_character: this, damage: this.attack_damage, distance})
+            const attack_hitbox_abs = this.attack_hitbox_abs
+            const character_hurtbox_abs = character.hurtbox_abs
+            const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs)
+            const character_hurtbox_bbox = shape_bbox(character_hurtbox_abs)
+            if (
+                aabb_overlap(character_hurtbox_bbox, attack_hitbox_bbox) &&
+                sat_overlap(attack_hitbox_abs, character_hurtbox_abs)
+            ) {
+                character.attack_hit({attacking_character: this, damage: this.attack_damage})
                 this.last_attack_hits.push(character)
             }
         }
@@ -206,15 +278,7 @@ abstract class Character extends Actor {
         this.last_attack_hits = []
     }
     _attack_end(context: GameUpdateContext) {}
-    attack_hit({
-        attacking_character,
-        damage,
-        distance,
-    }: {
-        attacking_character: Character
-        damage: number
-        distance: number
-    }) {
+    attack_hit({attacking_character, damage}: {attacking_character: Character; damage: number}) {
         this.health -= damage
         if (this.health < 0) this.health = 0
     }
@@ -224,6 +288,9 @@ const player_root_selector = ".player"
 
 class Player extends Character {
     player_root_el: HTMLDivElement
+
+    width: number = 48
+    height: number = 48
 
     base_acceleration: number = 500
     base_max_vel: number = 200
@@ -244,11 +311,28 @@ class Player extends Character {
     low_stamina_enter_threshold: number = 1 // TODO: sanity check
     low_stamina_exit_threshold: number = 200 // TODO: sanity check
 
+    hurtbox_def: HitBox = {shape: {x: 0, y: 0, width: 0.75, height: 1}, rotation_ref: 0}
+
     attack_requested: boolean = false
     attacking: boolean = false
     attack_stamina_consume: number = 30
     attack_duration: number = 150
+    attack_scale: number = 3.0
     last_attack_ts: number = 0
+    attack_hitbox_def: HitBox = {
+        shape: {
+            points: [
+                {x: -1.0, y: 0.0},
+                {x: -0.71, y: -0.71},
+                {x: 0.0, y: -1.0},
+                {x: 0.71, y: -0.71},
+                {x: 1.0, y: 0.0},
+                {x: 0.25, y: 0.25},
+                {x: -0.25, y: 0.25},
+            ],
+        },
+        rotation_ref: (-90 / 180) * Math.PI,
+    }
 
     constructor(game: Game) {
         super(game)
@@ -261,7 +345,9 @@ class Player extends Character {
 
     _on_mousemove(event: MouseEvent): void {
         const rect = this.game.game_root_el.getBoundingClientRect()
-        this.target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
+        if (!this.attacking) {
+            this.target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
+        }
     }
 
     _on_mousedown(event: MouseEvent): void {
@@ -297,16 +383,35 @@ const enemy_root_selector = ".skip-btn"
 class Enemy extends Character {
     enemy_root_el: HTMLDivElement
 
+    width: number
+    height: number
+
     base_acceleration: number = 10
     base_max_vel: number = 2
 
     health: number = 500.0
     max_health: number = 500.0
 
+    hurtbox_def: HitBox = {shape: {x: -1, y: -1, width: 2, height: 2}, rotation_ref: 0}
+
     attacking_acceleration: number = 100
     attacking_max_vel: number = 200
     attack_damage: number = 50
     attack_duration: number = 500
+    attack_hitbox_def: HitBox = {
+        shape: {
+            points: [
+                {x: -1.0, y: 0.0},
+                {x: -0.71, y: -0.71},
+                {x: 0.0, y: -1.0},
+                {x: 0.71, y: -0.71},
+                {x: 1.0, y: 0.0},
+                {x: 0.25, y: 0.25},
+                {x: -0.25, y: 0.25},
+            ],
+        },
+        rotation_ref: (-90 / 180) * Math.PI,
+    }
     // TODO: aggro: number = 0.0
 
     // TODO: AI
@@ -326,6 +431,8 @@ class Enemy extends Character {
         this.enemy_root_el.style.bottom = "unset"
         this.enemy_root_el.style.right = "unset"
         this.target = this.pos = this.display_pos // initial position is whatever document styling defines
+        this.width = rel_rect.width
+        this.height = rel_rect.height
 
         this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this))
     }
@@ -581,6 +688,8 @@ export class Game extends Component<GameUpdateContext> {
     defeat_screen: DefeatScreen
     victory_screen: VictoryScreen
 
+    private debug_hitboxes: boolean = true
+
     constructor() {
         super()
 
@@ -654,6 +763,7 @@ export class Game extends Component<GameUpdateContext> {
             this._next_state = null
         }
         this.update(context)
+        this._debug_hitboxes()
         this._last_timestamp = timestamp
         this._last_state = this._state
     }
@@ -666,5 +776,73 @@ export class Game extends Component<GameUpdateContext> {
         const {x: game_x, y: game_y} = this.rect
         const el_rect = el.getBoundingClientRect()
         return new DOMRect(el_rect.x - game_x, el_rect.y - game_y, el_rect.width, el_rect.height)
+    }
+
+    _debug_hitboxes() {
+        const svg_id = "hitboxes"
+        const svg_els = this.game_root_el.querySelectorAll(`#${svg_id}`)
+        for (const el of svg_els) {
+            el.parentNode?.removeChild(el)
+        }
+        if (this.debug_hitboxes) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+            svg.id = svg_id
+            svg.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: ${this.rect.width}px;
+                height: ${this.rect.height}px;
+                pointer-events: none;
+            `
+            this.game_root_el.appendChild(svg)
+
+            for (const character of this.characters) {
+                const create_path_from_points = (points: Array<Point>): SVGPathElement | null => {
+                    if (points.length === 0) return null
+
+                    const d_parts = []
+                    for (let i = 0; i < points.length; i++) {
+                        const ptyp = i === 0 ? "M" : "L"
+                        d_parts.push(`${ptyp} ${points[i].x} ${points[i].y}`)
+                    }
+                    d_parts.push("Z")
+
+                    const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+                    path.setAttribute("d", d_parts.join(" "))
+
+                    return path
+                }
+
+                const hurtbox_path = create_path_from_points(character.hurtbox_abs.points)
+                if (hurtbox_path) {
+                    hurtbox_path.style.fill = "hsla(195, 100%, 50%, 0.4)"
+                    svg.appendChild(hurtbox_path)
+                }
+
+                const attack_hitbox_abs = character.attack_hitbox_abs
+                const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs)
+                let attack_would_hit = false
+                for (const other of this.characters) {
+                    if (other === character) continue
+                    const other_hurtbox_abs = other.hurtbox_abs
+                    const other_hurtbox_bbox = shape_bbox(other_hurtbox_abs)
+                    if (
+                        aabb_overlap(other_hurtbox_bbox, attack_hitbox_bbox) &&
+                        sat_overlap(attack_hitbox_abs, other_hurtbox_abs)
+                    ) {
+                        attack_would_hit = true
+                        break
+                    }
+                }
+                const attack_hitbox_path = create_path_from_points(attack_hitbox_abs.points)
+                if (attack_hitbox_path) {
+                    attack_hitbox_path.style.fill = attack_would_hit
+                        ? "hsla(0, 100%, 50%, 0.4)"
+                        : "hsla(322, 81%, 43%, 0.4)"
+                    svg.appendChild(attack_hitbox_path)
+                }
+            }
+        }
     }
 }
