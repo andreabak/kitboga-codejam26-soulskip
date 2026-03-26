@@ -45,7 +45,7 @@ type GameUpdateContext = {
     /*
      * timestamp of update tick
      */
-    timestamp: number
+    timeref: number
 
     /*
      * update time delta since last update
@@ -213,13 +213,13 @@ abstract class Character extends Actor {
             this.attack_requested = false
             if (this.can_attack) {
                 this.attacking = true
-                this.last_attack_ts = context.timestamp
+                this.last_attack_ts = context.timeref
                 stamina_consume += this.attack_stamina_consume
                 this._attack_start(context)
             }
         }
         if (this.attacking) {
-            if (context.timestamp - this.last_attack_ts >= this.attack_duration) {
+            if (context.timeref - this.last_attack_ts >= this.attack_duration) {
                 this.attacking = false
                 this._attack_end(context)
             } else {
@@ -230,10 +230,10 @@ abstract class Character extends Actor {
         if (context.timedelta && context.timedelta > 0) {
             if (stamina_consume > 0) {
                 this.stamina -= stamina_consume
-                this.last_stamina_consume_ts = context.timestamp
+                this.last_stamina_consume_ts = context.timeref
             } else if (
                 !this.last_stamina_consume_ts ||
-                context.timestamp - this.last_stamina_consume_ts >= this.stamina_recover_delay
+                context.timeref - this.last_stamina_consume_ts >= this.stamina_recover_delay
             ) {
                 this.stamina += this.stamina_recover * s_delta
             }
@@ -451,7 +451,7 @@ class Enemy extends Character {
 
         if (this.game.state === "battle") {
             const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y)
-            if (this.can_attack && context.timestamp > this.next_attack_ts && player_dist <= this.auto_attack_dist) {
+            if (this.can_attack && context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist) {
                 this.attack_requested = true
             }
 
@@ -481,7 +481,7 @@ class Enemy extends Character {
     _attack_end(context: GameUpdateContext) {
         super._attack_end(context)
 
-        this.next_attack_ts = this.calc_next_attack_ts(context.timestamp)
+        this.next_attack_ts = this.calc_next_attack_ts(context.timeref)
     }
 
     calc_next_attack_ts(now_ts: number) {
@@ -500,7 +500,7 @@ class Enemy extends Character {
             const game_rect = this.game.rect
             this.target = {x: game_rect.x + game_rect.width / 2, y: game_rect.y + game_rect.height / 2}
 
-            this.next_attack_ts = this.calc_next_attack_ts(performance.now())
+            this.next_attack_ts = this.calc_next_attack_ts(this.game.timeref)
         }
     }
 }
@@ -525,9 +525,9 @@ abstract class HudBar extends GameComponent {
         const {value, max} = this._get_values()
         if (value >= this.max_recent) {
             this.max_recent = value
-            this.max_ts = context.timestamp
+            this.max_ts = context.timeref
         } else {
-            if (context.timestamp - this.max_ts > this.recent_delay) {
+            if (context.timeref - this.max_ts > this.recent_delay) {
                 this.max_recent = smooth_ema(this.max_recent, value, 0.25)
             }
         }
@@ -675,9 +675,12 @@ export class Game extends Component<GameUpdateContext> {
     private _state: GameState = "chill"
     private _last_state: GameState = "chill"
     private _next_state: GameState | null = null
-    game_root_el: HTMLDivElement
 
-    private _last_timestamp: number | null = null
+    private _timeref: number = 0.0
+    timescale: number = 1.0
+    private _last_step_ts: number | null = null
+
+    game_root_el: HTMLDivElement
 
     player: Player
     enemy: Enemy
@@ -720,6 +723,10 @@ export class Game extends Component<GameUpdateContext> {
         this._next_state = new_state
     }
 
+    get timeref(): number {
+        return this._timeref
+    }
+
     handle_shell_event(event: ShellEvent | unknown): void {
         if (!event || typeof event !== "object" || !("type" in event)) {
             console.warn("Received unknown event object", event)
@@ -754,9 +761,13 @@ export class Game extends Component<GameUpdateContext> {
     }
 
     step(timestamp: number): void {
+        const last_timeref = this._timeref
+        if (this._last_step_ts != null) {
+            this._timeref += (timestamp - this._last_step_ts) * this.timescale
+        }
         const context = {
-            timestamp: timestamp,
-            timedelta: this._last_timestamp != null ? timestamp - this._last_timestamp : null,
+            timeref: this._timeref,
+            timedelta: this._timeref - last_timeref,
         } as GameUpdateContext
         if (this._next_state != null) {
             this._state = this._next_state
@@ -764,8 +775,8 @@ export class Game extends Component<GameUpdateContext> {
         }
         this.update(context)
         this._debug_hitboxes()
-        this._last_timestamp = timestamp
         this._last_state = this._state
+        this._last_step_ts = timestamp
     }
 
     get rect(): DOMRect {
