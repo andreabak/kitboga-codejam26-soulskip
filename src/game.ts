@@ -64,6 +64,8 @@ abstract class GameComponent extends Component<GameUpdateContext> {
 
 abstract class Actor extends GameComponent {}
 
+const parry_audio_selector = ".sound.parry"
+
 abstract class Character extends Actor {
     private _follower: TargetFollower
     base_acceleration: number = 250
@@ -89,7 +91,7 @@ abstract class Character extends Actor {
     low_stamina_accel: number = 100
     low_stamina: boolean = false
     low_stamina_enter_threshold: number = 1 // TODO: sanity check
-    low_stamina_exit_threshold: number = 200 // TODO: sanity check
+    low_stamina_exit_threshold: number = 100 // TODO: sanity check
 
     abstract hurtbox_def: HitBox
 
@@ -110,6 +112,9 @@ abstract class Character extends Actor {
     defend_damage_reduction: number = 0.75
     defend_stamina_consume_factor: number = 3.0
     defending: boolean = false
+
+    parry_time_window: number = 200 // TODO: refactor into some Attack type
+    parry_enemy_stamina_consume_factor: number = 2.0
 
     constructor(game: Game) {
         super(game)
@@ -205,6 +210,12 @@ abstract class Character extends Actor {
         return !this.attacking && !this.low_stamina && !this.dead
     }
 
+    consume_stamina(amount: number, {context}: {context: GameUpdateContext}) {
+        this.stamina -= amount
+        if (this.stamina < 0) this.stamina = 0
+        this.last_stamina_consume_ts = context.timeref
+    }
+
     _update(context: GameUpdateContext) {
         const s_delta = (context.timedelta ?? 0) / 1000
 
@@ -251,8 +262,7 @@ abstract class Character extends Actor {
 
         if (context.timedelta && context.timedelta > 0) {
             if (stamina_consume > 0) {
-                this.stamina -= stamina_consume
-                this.last_stamina_consume_ts = context.timeref
+                this.consume_stamina(stamina_consume, {context})
             } else if (
                 !this.last_stamina_consume_ts ||
                 context.timeref - this.last_stamina_consume_ts >= this.stamina_recover_delay
@@ -291,7 +301,11 @@ abstract class Character extends Actor {
                 aabb_overlap(character_hurtbox_bbox, attack_hitbox_bbox) &&
                 sat_overlap(attack_hitbox_abs, character_hurtbox_abs)
             ) {
-                character.attack_hit(context, {attacking_character: this, damage: this.attack_damage})
+                character.attack_hit(context, {
+                    attacking_character: this,
+                    damage: this.attack_damage,
+                    attack_start_ts: this.last_attack_ts,
+                })
                 this.last_attack_hits.push(character)
             }
         }
@@ -302,14 +316,19 @@ abstract class Character extends Actor {
     _attack_end(context: GameUpdateContext) {}
     attack_hit(
         context: GameUpdateContext,
-        {attacking_character, damage}: {attacking_character: Character; damage: number},
+        {
+            attacking_character,
+            damage,
+            attack_start_ts,
+        }: {attacking_character: Character; damage: number; attack_start_ts: number},
     ) {
         let health_damage = damage
         if (this.defending && !this.low_stamina) {
             const stamina_consume = damage * this.defend_stamina_consume_factor
-            this.stamina -= stamina_consume
-            this.last_stamina_consume_ts = context.timeref
-            if (this.stamina < 0) this.stamina = 0
+            if (Math.abs(this.defend_request_ts - attack_start_ts) < this.parry_time_window) {
+                if (this.attack_parry(context, {attacking_character, damage, attack_start_ts})) return // no damage to us
+            }
+            this.consume_stamina(stamina_consume, {context})
             health_damage *= 1.0 - this.defend_damage_reduction
         }
         if (health_damage >= 0) {
@@ -317,6 +336,20 @@ abstract class Character extends Actor {
             this.last_damage_ts = context.timeref
             if (this.health < 0) this.health = 0
         }
+    }
+    attack_parry(
+        context: GameUpdateContext,
+        {
+            attacking_character,
+            damage,
+            attack_start_ts,
+        }: {attacking_character: Character; damage: number; attack_start_ts: number},
+    ): boolean {
+        attacking_character.consume_stamina(damage * this.parry_enemy_stamina_consume_factor, {context})
+        this.game.timescale = 0.1
+        setTimeout(() => (this.game.timescale = 1.0), 500)
+        play_audio_element(parry_audio_selector, this.game.game_root_el)
+        return true // no damage to us
     }
 }
 
@@ -432,6 +465,7 @@ class Player extends Character {
 }
 
 const enemy_root_selector = ".skip-btn"
+const enemy_break_audio_selector = ".sound.enemy-break"
 
 class Enemy extends Character {
     enemy_root_el: HTMLDivElement
@@ -446,6 +480,11 @@ class Enemy extends Character {
     max_health: number = 500.0
 
     hurtbox_def: HitBox = {shape: {x: -1, y: -1, width: 2, height: 2}, rotation_ref: 0}
+
+    max_stamina: number = 100.0 // TODO: sanity check
+    low_stamina_max_vel: number = 0.1
+    low_stamina_enter_threshold: number = 1 // TODO: sanity check
+    low_stamina_exit_threshold: number = 100 // TODO: sanity check
 
     attacking_acceleration: number = 100
     attacking_max_vel: number = 200
@@ -500,12 +539,17 @@ class Enemy extends Character {
             this.target = {...this.game.player.pos}
         }
 
+        const low_stamina_before = this.low_stamina
         super._update(context)
 
         if (this.game.state === "battle") {
             const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y)
             if (this.can_attack && context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist) {
                 this.attack_requested = true
+            }
+
+            if (!low_stamina_before && this.low_stamina) {
+                play_audio_element(enemy_break_audio_selector, this.game.game_root_el)
             }
 
             if (this.dead) {
@@ -730,7 +774,7 @@ export class Game extends Component<GameUpdateContext> {
     private _next_state: GameState | null = null
 
     private _timeref: number = 0.0
-    timescale: number = 1.0
+    _timescale: number = 1.0
     private _last_step_ts: number | null = null
 
     game_root_el: HTMLDivElement
@@ -778,6 +822,13 @@ export class Game extends Component<GameUpdateContext> {
 
     get timeref(): number {
         return this._timeref
+    }
+    get timescale(): number {
+        return this._timescale
+    }
+    set timescale(value: number) {
+        this._timescale = value
+        send_shell_request({type: "setPlaybackRate", value: value})
     }
 
     handle_shell_event(event: ShellEvent | unknown): void {

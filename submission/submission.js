@@ -25,6 +25,9 @@ function play_audio_element(selector, root) {
   if (!(el instanceof HTMLMediaElement)) {
     throw new Error(`Element with selector "${selector}" doesn't look like an audio element.`);
   }
+  if (el.paused) {
+    el.currentTime = 0;
+  }
   return el.play();
 }
 async function fade_audio(audio_el, {
@@ -234,6 +237,7 @@ class GameComponent extends Component {
 }
 class Actor extends GameComponent {
 }
+const parry_audio_selector = ".sound.parry";
 class Character extends Actor {
   constructor(game2) {
     super(game2);
@@ -259,7 +263,7 @@ class Character extends Actor {
     __publicField(this, "low_stamina", false);
     __publicField(this, "low_stamina_enter_threshold", 1);
     // TODO: sanity check
-    __publicField(this, "low_stamina_exit_threshold", 200);
+    __publicField(this, "low_stamina_exit_threshold", 100);
     __publicField(this, "attack_characters", []);
     __publicField(this, "attack_requested", false);
     __publicField(this, "attacking", false);
@@ -275,6 +279,9 @@ class Character extends Actor {
     __publicField(this, "defend_damage_reduction", 0.75);
     __publicField(this, "defend_stamina_consume_factor", 3);
     __publicField(this, "defending", false);
+    __publicField(this, "parry_time_window", 200);
+    // TODO: refactor into some Attack type
+    __publicField(this, "parry_enemy_stamina_consume_factor", 2);
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
@@ -358,6 +365,11 @@ class Character extends Actor {
   get can_defend() {
     return !this.attacking && !this.low_stamina && !this.dead;
   }
+  consume_stamina(amount, { context }) {
+    this.stamina -= amount;
+    if (this.stamina < 0) this.stamina = 0;
+    this.last_stamina_consume_ts = context.timeref;
+  }
   _update(context) {
     const s_delta = (context.timedelta ?? 0) / 1e3;
     let stamina_consume = 0;
@@ -399,8 +411,7 @@ class Character extends Actor {
     }
     if (context.timedelta && context.timedelta > 0) {
       if (stamina_consume > 0) {
-        this.stamina -= stamina_consume;
-        this.last_stamina_consume_ts = context.timeref;
+        this.consume_stamina(stamina_consume, { context });
       } else if (!this.last_stamina_consume_ts || context.timeref - this.last_stamina_consume_ts >= this.stamina_recover_delay) {
         this.stamina += this.stamina_recover * s_delta;
       }
@@ -429,7 +440,11 @@ class Character extends Actor {
       const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs);
       const character_hurtbox_bbox = shape_bbox(character_hurtbox_abs);
       if (aabb_overlap(character_hurtbox_bbox, attack_hitbox_bbox) && sat_overlap(attack_hitbox_abs, character_hurtbox_abs)) {
-        character.attack_hit(context, { attacking_character: this, damage: this.attack_damage });
+        character.attack_hit(context, {
+          attacking_character: this,
+          damage: this.attack_damage,
+          attack_start_ts: this.last_attack_ts
+        });
         this.last_attack_hits.push(character);
       }
     }
@@ -439,13 +454,18 @@ class Character extends Actor {
   }
   _attack_end(context) {
   }
-  attack_hit(context, { attacking_character, damage }) {
+  attack_hit(context, {
+    attacking_character,
+    damage,
+    attack_start_ts
+  }) {
     let health_damage = damage;
     if (this.defending && !this.low_stamina) {
       const stamina_consume = damage * this.defend_stamina_consume_factor;
-      this.stamina -= stamina_consume;
-      this.last_stamina_consume_ts = context.timeref;
-      if (this.stamina < 0) this.stamina = 0;
+      if (Math.abs(this.defend_request_ts - attack_start_ts) < this.parry_time_window) {
+        if (this.attack_parry(context, { attacking_character, damage, attack_start_ts })) return;
+      }
+      this.consume_stamina(stamina_consume, { context });
       health_damage *= 1 - this.defend_damage_reduction;
     }
     if (health_damage >= 0) {
@@ -453,6 +473,17 @@ class Character extends Actor {
       this.last_damage_ts = context.timeref;
       if (this.health < 0) this.health = 0;
     }
+  }
+  attack_parry(context, {
+    attacking_character,
+    damage,
+    attack_start_ts
+  }) {
+    attacking_character.consume_stamina(damage * this.parry_enemy_stamina_consume_factor, { context });
+    this.game.timescale = 0.1;
+    setTimeout(() => this.game.timescale = 1, 500);
+    play_audio_element(parry_audio_selector, this.game.game_root_el);
+    return true;
   }
 }
 const player_root_selector = ".player";
@@ -550,6 +581,7 @@ class Player extends Character {
   }
 }
 const enemy_root_selector = ".skip-btn";
+const enemy_break_audio_selector = ".sound.enemy-break";
 class Enemy extends Character {
   constructor(game2) {
     super(game2);
@@ -561,6 +593,13 @@ class Enemy extends Character {
     __publicField(this, "health", 500);
     __publicField(this, "max_health", 500);
     __publicField(this, "hurtbox_def", { shape: { x: -1, y: -1, width: 2, height: 2 }, rotation_ref: 0 });
+    __publicField(this, "max_stamina", 100);
+    // TODO: sanity check
+    __publicField(this, "low_stamina_max_vel", 0.1);
+    __publicField(this, "low_stamina_enter_threshold", 1);
+    // TODO: sanity check
+    __publicField(this, "low_stamina_exit_threshold", 100);
+    // TODO: sanity check
     __publicField(this, "attacking_acceleration", 100);
     __publicField(this, "attacking_max_vel", 200);
     __publicField(this, "attack_damage", 50);
@@ -603,11 +642,15 @@ class Enemy extends Character {
     if (this.game.state === "battle" && !this.attacking) {
       this.target = { ...this.game.player.pos };
     }
+    const low_stamina_before = this.low_stamina;
     super._update(context);
     if (this.game.state === "battle") {
       const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y);
       if (this.can_attack && context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist) {
         this.attack_requested = true;
+      }
+      if (!low_stamina_before && this.low_stamina) {
+        play_audio_element(enemy_break_audio_selector, this.game.game_root_el);
       }
       if (this.dead) {
         this.game.change_state_soon("victory");
@@ -772,7 +815,7 @@ class Game extends Component {
     __publicField(this, "_last_state", "chill");
     __publicField(this, "_next_state", null);
     __publicField(this, "_timeref", 0);
-    __publicField(this, "timescale", 1);
+    __publicField(this, "_timescale", 1);
     __publicField(this, "_last_step_ts", null);
     __publicField(this, "game_root_el");
     __publicField(this, "player");
@@ -805,6 +848,13 @@ class Game extends Component {
   }
   get timeref() {
     return this._timeref;
+  }
+  get timescale() {
+    return this._timescale;
+  }
+  set timescale(value) {
+    this._timescale = value;
+    send_shell_request({ type: "setPlaybackRate", value });
   }
   handle_shell_event(event) {
     if (!event || typeof event !== "object" || !("type" in event)) {

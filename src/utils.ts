@@ -14,6 +14,9 @@ export function play_audio_element(selector: string, root?: Element): Promise<vo
     if (!(el instanceof HTMLMediaElement)) {
         throw new Error(`Element with selector "${selector}" doesn't look like an audio element.`)
     }
+    if (el.paused) {
+        el.currentTime = 0
+    }
     return el.play()
 }
 
