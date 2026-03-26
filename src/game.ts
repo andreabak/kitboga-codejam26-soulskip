@@ -64,6 +64,31 @@ abstract class GameComponent extends Component<GameUpdateContext> {
 
 abstract class Actor extends GameComponent {}
 
+type AttackPhases = "anticipation" | "hit" | "recovery"
+const ATTACK_PHASES_SEQUENCE: Array<AttackPhases> = ["anticipation", "hit", "recovery"]
+type AttackPhaseDef = {
+    duration: number
+    acceleration?: number | null
+    max_vel?: number | null
+    animation?: unknown // TODO
+}
+type AttackDef = {
+    phases: Required<Record<AttackPhases, AttackPhaseDef>>
+    damage: number
+    stamina_consume: number
+    parry_window_duration: number
+    scale: number
+    hitbox: HitBox
+}
+type AttackPhase = AttackPhaseDef & {
+    start_ts?: number | null
+}
+type Attack = AttackDef & {
+    start_ts: number
+    phases: Required<Record<AttackPhases, AttackPhase>>
+    current_phase: AttackPhases
+}
+
 const parry_audio_selector = ".sound.parry"
 
 abstract class Character extends Actor {
@@ -95,25 +120,20 @@ abstract class Character extends Actor {
 
     abstract hurtbox_def: HitBox
 
-    attack_characters: Array<Character> = []
     attack_requested: boolean = false
-    attacking: boolean = false
-    attack_stamina_consume: number = 30
-    attack_duration: number = 150
-    attack_scale: number = 2.0
-    attack_radius: number = 100
-    attack_damage: number = 20
+    current_attack: Attack | null = null
+    attack_stamina_consume_multiplier: number = 1.0
     last_attack_hits: Array<Character> = []
-    last_attack_ts: number = -Infinity
-    abstract attack_hitbox_def: HitBox
+    abstract attacks_defs: Record<string, AttackDef>
 
     defend_requested: boolean = false
     defend_request_ts: number = -Infinity
     defend_damage_reduction: number = 0.75
     defend_stamina_consume_factor: number = 3.0
+    defend_acceleration: number = 50
+    defend_max_vel: number = 5
     defending: boolean = false
 
-    parry_time_window: number = 200 // TODO: refactor into some Attack type
     parry_enemy_stamina_consume_factor: number = 2.0
 
     constructor(game: Game) {
@@ -153,6 +173,14 @@ abstract class Character extends Actor {
         return this._follower.direction
     }
 
+    get attacking(): boolean {
+        return this.current_attack != null
+    }
+    get current_attack_phase(): AttackPhase | null {
+        if (this.current_attack == null) return null
+        return this.current_attack.phases[this.current_attack.current_phase]
+    }
+
     _transform_shape(
         rel_shape: Shape | Rect,
         {
@@ -187,15 +215,20 @@ abstract class Character extends Actor {
     get hurtbox_abs(): Shape {
         return transform_shape(this.hurtbox, {translate: this.pos})
     }
-    get attack_hitbox(): Shape {
-        return this._transform_shape(this.attack_hitbox_def.shape, {
-            rotation_ref: this.attack_hitbox_def.rotation_ref,
+    get attack_hitbox(): Shape | null {
+        if (!this.current_attack) {
+            return null
+        }
+        return this._transform_shape(this.current_attack.hitbox.shape, {
+            rotation_ref: this.current_attack.hitbox.rotation_ref,
             rotates: true,
-            scale_ref: this.attack_scale,
+            scale_ref: this.current_attack.scale,
             keep_aspect_ratio: true,
         })
     }
-    get attack_hitbox_abs(): Shape {
+    get attack_hitbox_abs(): Shape | null {
+        const attack_hitbox = this.attack_hitbox
+        if (!attack_hitbox) return null
         return transform_shape(this.attack_hitbox, {translate: this.pos})
     }
 
@@ -209,6 +242,9 @@ abstract class Character extends Actor {
     get can_defend(): boolean {
         return !this.attacking && !this.low_stamina && !this.dead
     }
+    get can_parry(): boolean {
+        return !this.attacking && !this.low_stamina && !this.dead
+    }
 
     consume_stamina(amount: number, {context}: {context: GameUpdateContext}) {
         this.stamina -= amount
@@ -219,8 +255,6 @@ abstract class Character extends Actor {
     _update(context: GameUpdateContext) {
         const s_delta = (context.timedelta ?? 0) / 1000
 
-        let stamina_consume: number = 0
-
         if (context.timedelta != null) {
             this._follower.update(context.timedelta)
         } else {
@@ -228,23 +262,42 @@ abstract class Character extends Actor {
         }
         const vel_mag = dist_pt(this._follower.velocity)
         if (!this.low_stamina && vel_mag > this.stamina_movement_vel_min) {
-            stamina_consume += vel_mag * this.stamina_movement_consume_factor * s_delta
+            this.consume_stamina(vel_mag * this.stamina_movement_consume_factor * s_delta, {context})
         }
 
         if (this.attack_requested) {
             this.attack_requested = false
             if (this.can_attack) {
-                this.attacking = true
-                this.last_attack_ts = context.timeref
-                stamina_consume += this.attack_stamina_consume
-                this._attack_start(context)
+                const attack_def = this.new_attack()
+                this.current_attack = {
+                    ...attack_def,
+                    start_ts: context.timeref,
+                    current_phase: ATTACK_PHASES_SEQUENCE[0],
+                }
+                this.current_attack.phases[this.current_attack.current_phase].start_ts = context.timeref
+                this.consume_stamina(this.current_attack.stamina_consume * this.attack_stamina_consume_multiplier, {
+                    context,
+                })
+                this.last_attack_hits = []
+                this._attack_start(this.current_attack, {context})
             }
         }
-        if (this.attacking) {
-            if (context.timeref - this.last_attack_ts >= this.attack_duration) {
-                this.attacking = false
-                this._attack_end(context)
-            } else {
+        if (this.current_attack) {
+            const current_phase = this.current_attack.phases[this.current_attack.current_phase]
+            if (current_phase.start_ts == null) {
+                current_phase.start_ts = context.timeref
+            } else if (current_phase.start_ts + current_phase.duration <= context.timeref) {
+                const phase_idx = ATTACK_PHASES_SEQUENCE.indexOf(this.current_attack.current_phase)
+                if (phase_idx + 1 < ATTACK_PHASES_SEQUENCE.length) {
+                    const next_phase_name = ATTACK_PHASES_SEQUENCE[phase_idx + 1]
+                    this.current_attack.current_phase = next_phase_name
+                    this.current_attack.phases[next_phase_name].start_ts = context.timeref
+                } else {
+                    this._attack_end(this.current_attack, {context})
+                    this.current_attack = null
+                }
+            }
+            if (this.current_attack?.current_phase === "hit") {
                 this._check_attack_hits(context)
             }
         }
@@ -261,12 +314,7 @@ abstract class Character extends Actor {
         }
 
         if (context.timedelta && context.timedelta > 0) {
-            if (stamina_consume > 0) {
-                this.consume_stamina(stamina_consume, {context})
-            } else if (
-                !this.last_stamina_consume_ts ||
-                context.timeref - this.last_stamina_consume_ts >= this.stamina_recover_delay
-            ) {
+            if (context.timeref - this.last_stamina_consume_ts >= this.stamina_recover_delay) {
                 this.stamina += this.stamina_recover * s_delta
             }
             this.stamina = Math.max(0, Math.min(this.stamina, this.max_stamina))
@@ -283,51 +331,76 @@ abstract class Character extends Actor {
     }
 
     calc_acceleration(): number {
-        return this.low_stamina ? this.low_stamina_accel : this.base_acceleration
+        return this.attacking
+            ? (this.current_attack_phase?.acceleration ?? this.base_acceleration)
+            : this.defending
+              ? this.defend_acceleration
+              : this.low_stamina
+                ? this.low_stamina_accel
+                : this.base_acceleration
     }
     calc_max_vel(): number {
-        return this.dead ? 0 : this.low_stamina ? this.low_stamina_max_vel : this.base_max_vel
+        return this.dead
+            ? 0
+            : this.attacking
+              ? (this.current_attack_phase?.max_vel ?? this.base_max_vel)
+              : this.defending
+                ? this.defend_max_vel
+                : this.low_stamina
+                  ? this.low_stamina_max_vel
+                  : this.base_max_vel
     }
 
+    abstract new_attack(): AttackDef
+    _attack_start(attack: Attack, {context}: {context: GameUpdateContext}) {}
+    _attack_end(attack: Attack, {context}: {context: GameUpdateContext}) {}
     _check_attack_hits(context: GameUpdateContext) {
+        if (this.current_attack?.current_phase !== "hit") return
         for (const character of this.game.characters) {
             if (character === this) continue
             if (this.last_attack_hits.some((c) => c === character)) continue
             const attack_hitbox_abs = this.attack_hitbox_abs
+            if (attack_hitbox_abs == null) throw new Error("expected attack hitbox with current_attack set")
             const character_hurtbox_abs = character.hurtbox_abs
             const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs)
             const character_hurtbox_bbox = shape_bbox(character_hurtbox_abs)
             if (
                 aabb_overlap(character_hurtbox_bbox, attack_hitbox_bbox) &&
-                sat_overlap(attack_hitbox_abs, character_hurtbox_abs)
+                sat_overlap(attack_hitbox_abs, character_hurtbox_abs) &&
+                character.attack_hit({attack: this.current_attack, attacking_character: this, context})
             ) {
-                character.attack_hit(context, {
-                    attacking_character: this,
-                    damage: this.attack_damage,
-                    attack_start_ts: this.last_attack_ts,
-                })
                 this.last_attack_hits.push(character)
             }
         }
     }
-    _attack_start(context: GameUpdateContext) {
-        this.last_attack_hits = []
-    }
-    _attack_end(context: GameUpdateContext) {}
-    attack_hit(
-        context: GameUpdateContext,
-        {
-            attacking_character,
-            damage,
-            attack_start_ts,
-        }: {attacking_character: Character; damage: number; attack_start_ts: number},
-    ) {
-        let health_damage = damage
-        if (this.defending && !this.low_stamina) {
-            const stamina_consume = damage * this.defend_stamina_consume_factor
-            if (Math.abs(this.defend_request_ts - attack_start_ts) < this.parry_time_window) {
-                if (this.attack_parry(context, {attacking_character, damage, attack_start_ts})) return // no damage to us
+    attack_hit({
+        attack,
+        attacking_character,
+        context,
+    }: {
+        attack: Attack
+        attacking_character: Character
+        context: GameUpdateContext
+    }): boolean {
+        console.assert(attack.current_phase === "hit")
+        if (this.can_parry) {
+            const within_parry_window =
+                Math.abs(
+                    (this.defending ? this.defend_request_ts : context.timeref) -
+                        (attack.phases["hit"].start_ts ?? Infinity),
+                ) <
+                attack.parry_window_duration / 2
+            if (within_parry_window) {
+                if (!this.defending) {
+                    return false // not parrying yet, but still in window, ignore hit this step, recheck later
+                } else if (this.attack_parry({attack, attacking_character, context})) {
+                    return true // parried, no further damage to this
+                }
             }
+        }
+        let health_damage = attack.damage
+        if (this.defending && !this.low_stamina) {
+            const stamina_consume = attack.damage * this.defend_stamina_consume_factor
             this.consume_stamina(stamina_consume, {context})
             health_damage *= 1.0 - this.defend_damage_reduction
         }
@@ -336,16 +409,18 @@ abstract class Character extends Actor {
             this.last_damage_ts = context.timeref
             if (this.health < 0) this.health = 0
         }
+        return true
     }
-    attack_parry(
-        context: GameUpdateContext,
-        {
-            attacking_character,
-            damage,
-            attack_start_ts,
-        }: {attacking_character: Character; damage: number; attack_start_ts: number},
-    ): boolean {
-        attacking_character.consume_stamina(damage * this.parry_enemy_stamina_consume_factor, {context})
+    attack_parry({
+        attack,
+        attacking_character,
+        context,
+    }: {
+        attack: Attack
+        attacking_character: Character
+        context: GameUpdateContext
+    }): boolean {
+        attacking_character.consume_stamina(attack.damage * this.parry_enemy_stamina_consume_factor, {context})
         this.game.timescale = 0.1
         setTimeout(() => (this.game.timescale = 1.0), 500)
         play_audio_element(parry_audio_selector, this.game.game_root_el)
@@ -362,7 +437,7 @@ class Player extends Character {
     height: number = 48
 
     base_acceleration: number = 500
-    base_max_vel: number = 200
+    base_max_vel: number = 100
 
     health: number = 300.0
     max_health: number = 300.0
@@ -382,25 +457,32 @@ class Player extends Character {
 
     hurtbox_def: HitBox = {shape: {x: 0, y: 0, width: 0.75, height: 1}, rotation_ref: 0}
 
-    attack_requested: boolean = false
-    attacking: boolean = false
-    attack_stamina_consume: number = 30
-    attack_duration: number = 150
-    attack_scale: number = 3.0
-    last_attack_ts: number = -Infinity
-    attack_hitbox_def: HitBox = {
-        shape: {
-            points: [
-                {x: -1.0, y: 0.0},
-                {x: -0.71, y: -0.71},
-                {x: 0.0, y: -1.0},
-                {x: 0.71, y: -0.71},
-                {x: 1.0, y: 0.0},
-                {x: 0.25, y: 0.25},
-                {x: -0.25, y: 0.25},
-            ],
+    attacks_defs = {
+        fast: {
+            phases: {
+                anticipation: {duration: 100, acceleration: 20},
+                hit: {duration: 250, acceleration: 10},
+                recovery: {duration: 150, acceleration: 50},
+            },
+            damage: 20,
+            stamina_consume: 30,
+            parry_window_duration: 200,
+            scale: 3.0,
+            hitbox: {
+                shape: {
+                    points: [
+                        {x: -1.0, y: 0.0},
+                        {x: -0.71, y: -0.71},
+                        {x: 0.0, y: -1.0},
+                        {x: 0.71, y: -0.71},
+                        {x: 1.0, y: 0.0},
+                        {x: 0.25, y: 0.25},
+                        {x: -0.25, y: 0.25},
+                    ],
+                },
+                rotation_ref: (-90 / 180) * Math.PI,
+            },
         },
-        rotation_ref: (-90 / 180) * Math.PI,
     }
 
     constructor(game: Game) {
@@ -419,9 +501,7 @@ class Player extends Character {
 
     _on_mousemove(event: MouseEvent): void {
         const rect = this.game.game_root_el.getBoundingClientRect()
-        if (!this.attacking) {
-            this.target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
-        }
+        this.target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
     }
     _on_mousedown(event: MouseEvent): void {
         if (event.button === 0) {
@@ -451,16 +531,21 @@ class Player extends Character {
         this.player_root_el.style.left = `${this.pos.x - this.player_root_el.clientWidth / 2}px`
 
         this.player_root_el.classList.toggle("attacking", this.attacking)
+        for (const phase of ATTACK_PHASES_SEQUENCE) {
+            this.player_root_el.classList.toggle(`attack-phase-${phase}`, this.current_attack?.current_phase == phase)
+        }
         this.player_root_el.classList.toggle("defending", this.defending)
 
         this.player_root_el.classList.toggle("low-stamina", this.low_stamina)
         this.player_root_el.classList.toggle("hurt", context.timeref - this.last_damage_ts < 500)
     }
 
-    _attack_start(context: GameUpdateContext) {
-        super._attack_start(context)
-        this.player_root_el.style.setProperty("--attack-duration", `${this.attack_duration / 1000}s`)
-        this.player_root_el.style.setProperty("--attack-radius", `${this.attack_radius}px`)
+    new_attack(): AttackDef {
+        return this.attacks_defs["fast"]
+    }
+    _attack_start(attack: Attack, {context}: {context: GameUpdateContext}) {
+        super._attack_start(attack, {context})
+        this.player_root_el.style.setProperty("--attack-scale", attack.scale.toString())
     }
 }
 
@@ -486,29 +571,38 @@ class Enemy extends Character {
     low_stamina_enter_threshold: number = 1 // TODO: sanity check
     low_stamina_exit_threshold: number = 100 // TODO: sanity check
 
-    attacking_acceleration: number = 100
-    attacking_max_vel: number = 200
-    attack_damage: number = 50
-    attack_duration: number = 500
-    attack_hitbox_def: HitBox = {
-        shape: {
-            points: [
-                {x: -1.0, y: 0.0},
-                {x: -0.71, y: -0.71},
-                {x: 0.0, y: -1.0},
-                {x: 0.71, y: -0.71},
-                {x: 1.0, y: 0.0},
-                {x: 0.25, y: 0.25},
-                {x: -0.25, y: 0.25},
-            ],
+    attacks_defs = {
+        slash: {
+            phases: {
+                anticipation: {duration: 300, acceleration: 100, max_vel: 100},
+                hit: {duration: 200, acceleration: 20, max_vel: 5},
+                recovery: {duration: 500},
+            },
+            damage: 50,
+            stamina_consume: 30,
+            parry_window_duration: 100,
+            scale: 2.0,
+            hitbox: {
+                shape: {
+                    points: [
+                        {x: -1.0, y: 0.0},
+                        {x: -0.71, y: -0.71},
+                        {x: 0.0, y: -1.0},
+                        {x: 0.71, y: -0.71},
+                        {x: 1.0, y: 0.0},
+                        {x: 0.25, y: 0.25},
+                        {x: -0.25, y: 0.25},
+                    ],
+                },
+                rotation_ref: (-90 / 180) * Math.PI,
+            },
         },
-        rotation_ref: (-90 / 180) * Math.PI,
     }
     // TODO: aggro: number = 0.0
 
     // TODO: AI
     next_attack_ts: number = 1e10
-    auto_attack_dist: number = 200
+    auto_attack_dist: number = 400
     auto_attack_interval: [number, number] = [1000, 3000]
 
     constructor(game: Game) {
@@ -561,23 +655,20 @@ class Enemy extends Character {
         this.enemy_root_el.style.left = `${this.pos.x - this.enemy_root_el.clientWidth / 2}px`
 
         this.enemy_root_el.classList.toggle("attacking", this.attacking)
+        for (const phase of ATTACK_PHASES_SEQUENCE) {
+            this.enemy_root_el.classList.toggle(`attack-phase-${phase}`, this.current_attack?.current_phase == phase)
+        }
     }
 
-    calc_acceleration(): number {
-        return this.attacking ? this.attacking_acceleration : super.calc_acceleration()
+    new_attack(): AttackDef {
+        return this.attacks_defs["slash"] // TODO: AI
     }
-    calc_max_vel(): number {
-        return this.attacking ? this.attacking_max_vel : super.calc_max_vel()
+    _attack_start(attack: Attack, {context}: {context: GameUpdateContext}) {
+        super._attack_start(attack, {context})
+        this.enemy_root_el.style.setProperty("--attack-scale", attack.scale.toString())
     }
-
-    _attack_start(context: GameUpdateContext) {
-        super._attack_start(context)
-        this.enemy_root_el.style.setProperty("--attack-duration", `${this.attack_duration / 1000}s`)
-        this.enemy_root_el.style.setProperty("--attack-radius", `${this.attack_radius}px`)
-    }
-    _attack_end(context: GameUpdateContext) {
-        super._attack_end(context)
-
+    _attack_end(attack: Attack, {context}: {context: GameUpdateContext}) {
+        super._attack_end(attack, {context})
         this.next_attack_ts = this.calc_next_attack_ts(context.timeref)
     }
 
@@ -788,7 +879,7 @@ export class Game extends Component<GameUpdateContext> {
     defeat_screen: DefeatScreen
     victory_screen: VictoryScreen
 
-    private debug_hitboxes: boolean = false
+    private debug_hitboxes: boolean = true
 
     constructor() {
         super()
@@ -936,26 +1027,36 @@ export class Game extends Component<GameUpdateContext> {
                 }
 
                 const attack_hitbox_abs = character.attack_hitbox_abs
-                const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs)
-                let attack_would_hit = false
-                for (const other of this.characters) {
-                    if (other === character) continue
-                    const other_hurtbox_abs = other.hurtbox_abs
-                    const other_hurtbox_bbox = shape_bbox(other_hurtbox_abs)
-                    if (
-                        aabb_overlap(other_hurtbox_bbox, attack_hitbox_bbox) &&
-                        sat_overlap(attack_hitbox_abs, other_hurtbox_abs)
-                    ) {
-                        attack_would_hit = true
-                        break
+                if (attack_hitbox_abs) {
+                    const attack_hitbox_bbox = shape_bbox(attack_hitbox_abs)
+                    let attack_would_hit = false
+                    for (const other of this.characters) {
+                        if (other === character) continue
+                        const other_hurtbox_abs = other.hurtbox_abs
+                        const other_hurtbox_bbox = shape_bbox(other_hurtbox_abs)
+                        if (
+                            aabb_overlap(other_hurtbox_bbox, attack_hitbox_bbox) &&
+                            sat_overlap(attack_hitbox_abs, other_hurtbox_abs)
+                        ) {
+                            attack_would_hit = true
+                            break
+                        }
                     }
-                }
-                const attack_hitbox_path = create_path_from_points(attack_hitbox_abs.points)
-                if (attack_hitbox_path) {
-                    attack_hitbox_path.style.fill = attack_would_hit
-                        ? "hsla(0, 100%, 50%, 0.4)"
-                        : "hsla(322, 81%, 43%, 0.4)"
-                    svg.appendChild(attack_hitbox_path)
+                    const current_phase = character.current_attack?.current_phase
+                    const phase_color =
+                        current_phase === "anticipation"
+                            ? "hsl(220, 100%, 55%)"
+                            : current_phase === "hit"
+                              ? "hsl(0, 100%, 50%)"
+                              : current_phase === "recovery"
+                                ? "hsl(0, 0%, 40%)"
+                                : "hsl(322, 81%, 43%)"
+                    const attack_hitbox_path = create_path_from_points(attack_hitbox_abs.points)
+                    if (attack_hitbox_path) {
+                        attack_hitbox_path.style.fill = phase_color
+                        attack_hitbox_path.style.opacity = attack_would_hit ? "0.6" : "0.3"
+                        svg.appendChild(attack_hitbox_path)
+                    }
                 }
             }
         }

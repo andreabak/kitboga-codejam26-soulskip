@@ -3,15 +3,20 @@ import {add_shell_events_listener, ShellEvent} from "./shell"
 
 let game: Game | null = null
 let game_frame_req_id: number | null = null
+const schedule_mode: "interval" | "frame" = "frame"
 
 function handle_shell_event(event: ShellEvent) {
     if (event.type === "adStarted" && game == null) {
         game = new Game()
-        const request_animation = () => {
-            game?.step(performance.now())
-            game_frame_req_id = requestAnimationFrame(request_animation)
+        if (schedule_mode === "frame") {
+            const request_animation = () => {
+                game?.step(performance.now())
+                game_frame_req_id = requestAnimationFrame(request_animation)
+            }
+            request_animation()
+        } else {
+            game_frame_req_id = setInterval(() => game?.step(performance.now()), 1000 / 60)
         }
-        request_animation()
     }
 
     // TODO: handle ad finished
