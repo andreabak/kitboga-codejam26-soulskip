@@ -198,15 +198,25 @@
                 margin: 0 auto;
                 gap: 0.25em;
                 font-size: 0.9em;
+                font-family: serif;
+                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
             }
             .boss-name {
                 grid-area: name;
-                font-family: serif;
-                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            }
+            .boss-info.damage {
+                grid-area: damage;
+                justify-self: right;
+                text-align: right;
             }
             .enemy-bar.health {
                 position: relative;
                 grid-area: health;
+                width: 100%;
+            }
+            .enemy-bar.stamina {
+                position: relative;
+                grid-column: 1 / -1;
                 width: 100%;
             }
 
@@ -285,7 +295,12 @@
                     </div>
                     <div class="boss-info">
                         <div class="boss-name">Skipgard, Keeper of Discontinuity</div>
+                        <div class="damage"></div>
                         <div class="enemy-bar bar health">
+                            <div class="bar-diff"></div>
+                            <div class="bar-fill"></div>
+                        </div>
+                        <div class="enemy-bar bar stamina hidden">
                             <div class="bar-diff"></div>
                             <div class="bar-fill"></div>
                         </div>

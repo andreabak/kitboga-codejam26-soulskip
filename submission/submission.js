@@ -145,9 +145,6 @@ function sat_overlap(a, b) {
     return a_max < b_min || b_max < a_min;
   });
 }
-function smooth_ema(v0, v1, sf) {
-  return (1 - sf) * v0 + sf * v1;
-}
 class TargetFollower {
   constructor(pos, target, {
     acceleration,
@@ -238,7 +235,6 @@ class GameComponent extends Component {
 class Actor extends GameComponent {
 }
 const ATTACK_PHASES_SEQUENCE = ["anticipation", "hit", "recovery"];
-const parry_audio_selector = ".sound.parry";
 class Character extends Actor {
   constructor(game2) {
     super(game2);
@@ -272,11 +268,11 @@ class Character extends Actor {
     __publicField(this, "defend_requested", false);
     __publicField(this, "defend_request_ts", -Infinity);
     __publicField(this, "defend_damage_reduction", 0.75);
-    __publicField(this, "defend_stamina_consume_factor", 3);
+    __publicField(this, "defend_stamina_consume_factor", 0.3);
     __publicField(this, "defend_acceleration", 50);
     __publicField(this, "defend_max_vel", 5);
     __publicField(this, "defending", false);
-    __publicField(this, "parry_enemy_stamina_consume_factor", 2);
+    __publicField(this, "parry_enemy_stamina_consume_factor", 0.1);
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
@@ -517,13 +513,12 @@ class Character extends Actor {
     context
   }) {
     attacking_character.consume_stamina(attack.damage * this.parry_enemy_stamina_consume_factor, { context });
-    this.game.timescale = 0.1;
-    setTimeout(() => this.game.timescale = 1, 500);
-    play_audio_element(parry_audio_selector, this.game.game_root_el);
     return true;
   }
 }
 const player_root_selector = ".player";
+const parry_audio_selector = ".sound.parry";
+const enemy_break_audio_selector = ".sound.enemy-break";
 class Player extends Character {
   constructor(game2) {
     super(game2);
@@ -532,16 +527,16 @@ class Player extends Character {
     __publicField(this, "height", 48);
     __publicField(this, "base_acceleration", 500);
     __publicField(this, "base_max_vel", 100);
-    __publicField(this, "health", 300);
-    __publicField(this, "max_health", 300);
+    __publicField(this, "health", 1850);
+    __publicField(this, "max_health", 1850);
     __publicField(this, "stamina", 200);
     __publicField(this, "max_stamina", 200);
-    __publicField(this, "stamina_movement_consume_factor", 8);
-    __publicField(this, "stamina_movement_vel_min", 40);
+    __publicField(this, "stamina_movement_consume_factor", 14);
+    __publicField(this, "stamina_movement_vel_min", 30);
     __publicField(this, "stamina_recover", 100);
     __publicField(this, "stamina_recover_delay", 500);
     __publicField(this, "last_stamina_consume_ts", -Infinity);
-    __publicField(this, "low_stamina_max_vel", 5);
+    __publicField(this, "low_stamina_max_vel", 1);
     __publicField(this, "low_stamina_accel", 100);
     __publicField(this, "low_stamina", false);
     __publicField(this, "low_stamina_enter_threshold", 1);
@@ -552,11 +547,11 @@ class Player extends Character {
     __publicField(this, "attacks_defs", {
       fast: {
         phases: {
-          anticipation: { duration: 100, acceleration: 20 },
-          hit: { duration: 250, acceleration: 10 },
-          recovery: { duration: 150, acceleration: 50 }
+          anticipation: { duration: 50, acceleration: 20 },
+          hit: { duration: 150, acceleration: 10 },
+          recovery: { duration: 100, acceleration: 50 }
         },
-        damage: 20,
+        damage: 213,
         stamina_consume: 30,
         parry_window_duration: 200,
         scale: 3,
@@ -627,9 +622,25 @@ class Player extends Character {
     super._attack_start(attack, { context });
     this.player_root_el.style.setProperty("--attack-scale", attack.scale.toString());
   }
+  attack_parry({
+    attack,
+    attacking_character,
+    context
+  }) {
+    const do_parry = super.attack_parry({ attack, attacking_character, context });
+    if (do_parry) {
+      this.game.timescale = 0.1;
+      setTimeout(() => this.game.timescale = 1, 500);
+      if (attacking_character.stamina < attacking_character.low_stamina_enter_threshold) {
+        play_audio_element(enemy_break_audio_selector, this.game.game_root_el);
+      } else {
+        play_audio_element(parry_audio_selector, this.game.game_root_el);
+      }
+    }
+    return do_parry;
+  }
 }
 const enemy_root_selector = ".skip-btn";
-const enemy_break_audio_selector = ".sound.enemy-break";
 class Enemy extends Character {
   constructor(game2) {
     super(game2);
@@ -638,15 +649,17 @@ class Enemy extends Character {
     __publicField(this, "height");
     __publicField(this, "base_acceleration", 10);
     __publicField(this, "base_max_vel", 2);
-    __publicField(this, "health", 500);
-    __publicField(this, "max_health", 500);
+    __publicField(this, "health", 5e3);
+    __publicField(this, "max_health", 5e3);
     __publicField(this, "hurtbox_def", { shape: { x: -1, y: -1, width: 2, height: 2 }, rotation_ref: 0 });
-    __publicField(this, "max_stamina", 100);
+    __publicField(this, "max_stamina", 150);
     // TODO: sanity check
+    __publicField(this, "stamina_recover", 25);
+    __publicField(this, "stamina_recover_delay", 2e3);
     __publicField(this, "low_stamina_max_vel", 0.1);
     __publicField(this, "low_stamina_enter_threshold", 1);
     // TODO: sanity check
-    __publicField(this, "low_stamina_exit_threshold", 100);
+    __publicField(this, "low_stamina_exit_threshold", 150);
     // TODO: sanity check
     __publicField(this, "attacks_defs", {
       slash: {
@@ -655,8 +668,8 @@ class Enemy extends Character {
           hit: { duration: 200, acceleration: 20, max_vel: 5 },
           recovery: { duration: 500 }
         },
-        damage: 50,
-        stamina_consume: 30,
+        damage: 500,
+        stamina_consume: 5,
         parry_window_duration: 100,
         scale: 2,
         hitbox: {
@@ -679,7 +692,7 @@ class Enemy extends Character {
     // TODO: AI
     __publicField(this, "next_attack_ts", 1e10);
     __publicField(this, "auto_attack_dist", 400);
-    __publicField(this, "auto_attack_interval", [1e3, 3e3]);
+    __publicField(this, "auto_attack_interval", [500, 2e3]);
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     const rel_rect = this.game.get_relative_rect(this.enemy_root_el);
     this.enemy_root_el.style.top = `${rel_rect.y}px`;
@@ -748,23 +761,26 @@ class HudBar extends GameComponent {
   constructor(game2, hud) {
     super(game2);
     __publicField(this, "hud");
+    __publicField(this, "value", 0);
+    __publicField(this, "max", 0);
     __publicField(this, "max_recent", 0);
     __publicField(this, "max_ts", -Infinity);
     __publicField(this, "recent_delay", 1e3);
+    __publicField(this, "decay_pct_speed", 200);
     this.hud = hud;
   }
   _update(context) {
     const { value, max } = this._get_values();
-    if (value >= this.max_recent) {
-      this.max_recent = value;
+    this.value = value;
+    this.max = max;
+    if (this.value >= this.max_recent) {
+      this.max_recent = this.value;
       this.max_ts = context.timeref;
-    } else {
-      if (context.timeref - this.max_ts > this.recent_delay) {
-        this.max_recent = smooth_ema(this.max_recent, value, 0.25);
-      }
+    } else if (this.max_recent >= value && context.timeref - this.max_ts > this.recent_delay) {
+      this.max_recent -= this.max * (this.decay_pct_speed / 100 * ((context.timedelta ?? 0) / 1e3));
     }
-    const pct_value = value / max;
-    const pct_diff = (this.max_recent - value) / max;
+    const pct_value = this.value / this.max;
+    const pct_diff = (this.max_recent - value) / this.max;
     this.bar_root_el.style.setProperty("--bar-fill", pct_value.toFixed(3));
     this.bar_root_el.style.setProperty("--bar-diff", pct_diff.toFixed(3));
   }
@@ -803,11 +819,18 @@ class PlayerStaminaBar extends HudBar {
   }
 }
 const hud_enemy_health_bar_selector = ".enemy-bar.bar.health";
+const hud_enemy_damage_selector = ".boss-info .damage";
 class EnemyHealthBar extends HudBar {
   constructor(game2, hud) {
     super(game2, hud);
     __publicField(this, "bar_root_el");
+    __publicField(this, "damage_el");
+    __publicField(this, "last_value", 0);
+    __publicField(this, "damage_value_max", 0);
+    __publicField(this, "last_value_change_ts", -Infinity);
+    __publicField(this, "damage_reset_delay", 2e3);
     this.bar_root_el = get_element(hud_enemy_health_bar_selector, this.hud.hud_root_el);
+    this.damage_el = get_element(hud_enemy_damage_selector, this.hud.hud_root_el);
   }
   _get_values() {
     return { value: this.game.enemy.health, max: this.game.enemy.max_health };
@@ -815,28 +838,61 @@ class EnemyHealthBar extends HudBar {
   _update(context) {
     if (this.hud.should_show) {
       super._update(context);
+      if (this.value != this.last_value) {
+        this.last_value_change_ts = context.timeref;
+      }
+      if (this.value < this.damage_value_max && context.timeref - this.last_value_change_ts < this.damage_reset_delay) {
+        const diff = this.damage_value_max - this.value;
+        this.damage_el.innerText = diff.toFixed(0);
+      } else {
+        this.damage_value_max = this.value;
+        this.damage_el.innerText = "";
+      }
+      this.last_value = this.value;
+    }
+  }
+}
+const hud_enemy_stamina_bar_selector = ".enemy-bar.bar.stamina";
+class EnemyStaminaBar extends HudBar {
+  constructor(game2, hud) {
+    super(game2, hud);
+    __publicField(this, "bar_root_el");
+    this.bar_root_el = get_element(hud_enemy_stamina_bar_selector, this.hud.hud_root_el);
+  }
+  _get_values() {
+    return { value: this.game.enemy.stamina, max: this.game.enemy.max_stamina };
+  }
+  _update(context) {
+    if (this.hud.should_show) {
+      super._update(context);
+      this.bar_root_el.classList.toggle("low-stamina", this.game.enemy.low_stamina);
     }
   }
 }
 const hud_root_selector = ".hud";
 const hud_hidden_class = "hidden";
 class Hud extends GameComponent {
+  // TODO: debug only
   constructor(game2) {
     super(game2);
     __publicField(this, "hud_root_el");
     __publicField(this, "player_health_bar");
     __publicField(this, "player_stamina_bar");
     __publicField(this, "enemy_health_bar");
+    __publicField(this, "enemy_stamina_bar");
+    __publicField(this, "show_enemy_stamina_bar", true);
     this.hud_root_el = get_element(hud_root_selector, this.game.game_root_el);
     this.player_health_bar = this.add_component(new PlayerHealthBar(game2, this));
     this.player_stamina_bar = this.add_component(new PlayerStaminaBar(game2, this));
     this.enemy_health_bar = this.add_component(new EnemyHealthBar(game2, this));
+    this.enemy_stamina_bar = this.add_component(new EnemyStaminaBar(game2, this));
   }
   get should_show() {
     return this.game.state !== "chill";
   }
   _update(context) {
     this.hud_root_el.classList.toggle(hud_hidden_class, !this.should_show);
+    this.enemy_stamina_bar.bar_root_el.classList.toggle(hud_hidden_class, !this.show_enemy_stamina_bar);
   }
 }
 const defeat_screen_selector = ".defeat-screen";

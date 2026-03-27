@@ -14,7 +14,6 @@ import {
     sat_overlap,
     Shape,
     shape_bbox,
-    smooth_ema,
     TargetFollower,
     transform_shape,
 } from "./utils"
@@ -89,8 +88,6 @@ type Attack = AttackDef & {
     current_phase: AttackPhases
 }
 
-const parry_audio_selector = ".sound.parry"
-
 abstract class Character extends Actor {
     private _follower: TargetFollower
     base_acceleration: number = 250
@@ -129,12 +126,12 @@ abstract class Character extends Actor {
     defend_requested: boolean = false
     defend_request_ts: number = -Infinity
     defend_damage_reduction: number = 0.75
-    defend_stamina_consume_factor: number = 3.0
+    defend_stamina_consume_factor: number = 0.3
     defend_acceleration: number = 50
     defend_max_vel: number = 5
     defending: boolean = false
 
-    parry_enemy_stamina_consume_factor: number = 2.0
+    parry_enemy_stamina_consume_factor: number = 0.1
 
     constructor(game: Game) {
         super(game)
@@ -421,14 +418,13 @@ abstract class Character extends Actor {
         context: GameUpdateContext
     }): boolean {
         attacking_character.consume_stamina(attack.damage * this.parry_enemy_stamina_consume_factor, {context})
-        this.game.timescale = 0.1
-        setTimeout(() => (this.game.timescale = 1.0), 500)
-        play_audio_element(parry_audio_selector, this.game.game_root_el)
         return true // no damage to us
     }
 }
 
 const player_root_selector = ".player"
+const parry_audio_selector = ".sound.parry"
+const enemy_break_audio_selector = ".sound.enemy-break"
 
 class Player extends Character {
     player_root_el: HTMLDivElement
@@ -439,17 +435,17 @@ class Player extends Character {
     base_acceleration: number = 500
     base_max_vel: number = 100
 
-    health: number = 300.0
-    max_health: number = 300.0
+    health: number = 1850.0
+    max_health: number = 1850.0
 
     stamina: number = 200.0
     max_stamina: number = 200.0
-    stamina_movement_consume_factor: number = 8.0
-    stamina_movement_vel_min: number = 40.0
+    stamina_movement_consume_factor: number = 14.0
+    stamina_movement_vel_min: number = 30.0
     stamina_recover: number = 100.0
     stamina_recover_delay: number = 500
     last_stamina_consume_ts: number = -Infinity
-    low_stamina_max_vel: number = 5
+    low_stamina_max_vel: number = 1
     low_stamina_accel: number = 100
     low_stamina: boolean = false
     low_stamina_enter_threshold: number = 1 // TODO: sanity check
@@ -460,11 +456,11 @@ class Player extends Character {
     attacks_defs = {
         fast: {
             phases: {
-                anticipation: {duration: 100, acceleration: 20},
-                hit: {duration: 250, acceleration: 10},
-                recovery: {duration: 150, acceleration: 50},
+                anticipation: {duration: 50, acceleration: 20},
+                hit: {duration: 150, acceleration: 10},
+                recovery: {duration: 100, acceleration: 50},
             },
-            damage: 20,
+            damage: 213,
             stamina_consume: 30,
             parry_window_duration: 200,
             scale: 3.0,
@@ -547,10 +543,30 @@ class Player extends Character {
         super._attack_start(attack, {context})
         this.player_root_el.style.setProperty("--attack-scale", attack.scale.toString())
     }
+    attack_parry({
+        attack,
+        attacking_character,
+        context,
+    }: {
+        attack: Attack
+        attacking_character: Character
+        context: GameUpdateContext
+    }): boolean {
+        const do_parry = super.attack_parry({attack, attacking_character, context})
+        if (do_parry) {
+            this.game.timescale = 0.1
+            setTimeout(() => (this.game.timescale = 1.0), 500)
+            if (attacking_character.stamina < attacking_character.low_stamina_enter_threshold) {
+                play_audio_element(enemy_break_audio_selector, this.game.game_root_el)
+            } else {
+                play_audio_element(parry_audio_selector, this.game.game_root_el)
+            }
+        }
+        return do_parry
+    }
 }
 
 const enemy_root_selector = ".skip-btn"
-const enemy_break_audio_selector = ".sound.enemy-break"
 
 class Enemy extends Character {
     enemy_root_el: HTMLDivElement
@@ -561,15 +577,17 @@ class Enemy extends Character {
     base_acceleration: number = 10
     base_max_vel: number = 2
 
-    health: number = 500.0
-    max_health: number = 500.0
+    health: number = 5000.0
+    max_health: number = 5000.0
 
     hurtbox_def: HitBox = {shape: {x: -1, y: -1, width: 2, height: 2}, rotation_ref: 0}
 
-    max_stamina: number = 100.0 // TODO: sanity check
+    max_stamina: number = 150.0 // TODO: sanity check
+    stamina_recover: number = 25
+    stamina_recover_delay: number = 2000
     low_stamina_max_vel: number = 0.1
     low_stamina_enter_threshold: number = 1 // TODO: sanity check
-    low_stamina_exit_threshold: number = 100 // TODO: sanity check
+    low_stamina_exit_threshold: number = 150 // TODO: sanity check
 
     attacks_defs = {
         slash: {
@@ -578,8 +596,8 @@ class Enemy extends Character {
                 hit: {duration: 200, acceleration: 20, max_vel: 5},
                 recovery: {duration: 500},
             },
-            damage: 50,
-            stamina_consume: 30,
+            damage: 500,
+            stamina_consume: 5,
             parry_window_duration: 100,
             scale: 2.0,
             hitbox: {
@@ -603,7 +621,7 @@ class Enemy extends Character {
     // TODO: AI
     next_attack_ts: number = 1e10
     auto_attack_dist: number = 400
-    auto_attack_interval: [number, number] = [1000, 3000]
+    auto_attack_interval: [number, number] = [500, 2000]
 
     constructor(game: Game) {
         super(game)
@@ -697,10 +715,13 @@ abstract class HudBar extends GameComponent {
     hud: Hud
     abstract bar_root_el: HTMLDivElement
 
+    value: number = 0
+    max: number = 0
     max_recent: number = 0
     max_ts: number = -Infinity
 
     recent_delay: number = 1000
+    decay_pct_speed: number = 200
 
     constructor(game: Game, hud: Hud) {
         super(game)
@@ -711,16 +732,16 @@ abstract class HudBar extends GameComponent {
 
     _update(context: GameUpdateContext): void {
         const {value, max} = this._get_values()
-        if (value >= this.max_recent) {
-            this.max_recent = value
+        this.value = value
+        this.max = max
+        if (this.value >= this.max_recent) {
+            this.max_recent = this.value
             this.max_ts = context.timeref
-        } else {
-            if (context.timeref - this.max_ts > this.recent_delay) {
-                this.max_recent = smooth_ema(this.max_recent, value, 0.25)
-            }
+        } else if (this.max_recent >= value && context.timeref - this.max_ts > this.recent_delay) {
+            this.max_recent -= this.max * ((this.decay_pct_speed / 100) * ((context.timedelta ?? 0) / 1000))
         }
-        const pct_value = value / max
-        const pct_diff = (this.max_recent - value) / max
+        const pct_value = this.value / this.max
+        const pct_diff = (this.max_recent - value) / this.max
         this.bar_root_el.style.setProperty("--bar-fill", pct_value.toFixed(3))
         this.bar_root_el.style.setProperty("--bar-diff", pct_diff.toFixed(3))
     }
@@ -772,14 +793,22 @@ class PlayerStaminaBar extends HudBar {
 }
 
 const hud_enemy_health_bar_selector = ".enemy-bar.bar.health"
+const hud_enemy_damage_selector = ".boss-info .damage"
 
 class EnemyHealthBar extends HudBar {
     bar_root_el: HTMLDivElement
+    damage_el: HTMLDivElement
+
+    last_value: number = 0
+    damage_value_max: number = 0
+    last_value_change_ts: number = -Infinity
+    damage_reset_delay: number = 2000
 
     constructor(game: Game, hud: Hud) {
         super(game, hud)
 
         this.bar_root_el = get_element(hud_enemy_health_bar_selector, this.hud.hud_root_el) as HTMLDivElement
+        this.damage_el = get_element(hud_enemy_damage_selector, this.hud.hud_root_el) as HTMLDivElement
     }
 
     _get_values(): {value: number; max: number} {
@@ -789,6 +818,43 @@ class EnemyHealthBar extends HudBar {
     _update(context: GameUpdateContext) {
         if (this.hud.should_show) {
             super._update(context)
+            if (this.value != this.last_value) {
+                this.last_value_change_ts = context.timeref
+            }
+            if (
+                this.value < this.damage_value_max &&
+                context.timeref - this.last_value_change_ts < this.damage_reset_delay
+            ) {
+                const diff = this.damage_value_max - this.value
+                this.damage_el.innerText = diff.toFixed(0)
+            } else {
+                this.damage_value_max = this.value
+                this.damage_el.innerText = ""
+            }
+            this.last_value = this.value
+        }
+    }
+}
+
+const hud_enemy_stamina_bar_selector = ".enemy-bar.bar.stamina"
+
+class EnemyStaminaBar extends HudBar {
+    bar_root_el: HTMLDivElement
+
+    constructor(game: Game, hud: Hud) {
+        super(game, hud)
+
+        this.bar_root_el = get_element(hud_enemy_stamina_bar_selector, this.hud.hud_root_el) as HTMLDivElement
+    }
+
+    _get_values(): {value: number; max: number} {
+        return {value: this.game.enemy.stamina, max: this.game.enemy.max_stamina}
+    }
+
+    _update(context: GameUpdateContext) {
+        if (this.hud.should_show) {
+            super._update(context)
+            this.bar_root_el.classList.toggle("low-stamina", this.game.enemy.low_stamina)
         }
     }
 }
@@ -802,6 +868,8 @@ class Hud extends GameComponent {
     player_health_bar: PlayerHealthBar
     player_stamina_bar: PlayerStaminaBar
     enemy_health_bar: EnemyHealthBar
+    enemy_stamina_bar: EnemyStaminaBar
+    show_enemy_stamina_bar: boolean = true // TODO: debug only
 
     constructor(game: Game) {
         super(game)
@@ -811,6 +879,7 @@ class Hud extends GameComponent {
         this.player_health_bar = this.add_component(new PlayerHealthBar(game, this))
         this.player_stamina_bar = this.add_component(new PlayerStaminaBar(game, this))
         this.enemy_health_bar = this.add_component(new EnemyHealthBar(game, this))
+        this.enemy_stamina_bar = this.add_component(new EnemyStaminaBar(game, this))
     }
 
     get should_show(): boolean {
@@ -819,6 +888,7 @@ class Hud extends GameComponent {
 
     _update(context: GameUpdateContext): void {
         this.hud_root_el.classList.toggle(hud_hidden_class, !this.should_show)
+        this.enemy_stamina_bar.bar_root_el.classList.toggle(hud_hidden_class, !this.show_enemy_stamina_bar)
     }
 }
 
