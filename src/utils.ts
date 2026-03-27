@@ -69,6 +69,9 @@ export function rect_to_shape(rect: Rect): Shape {
         ],
     }
 }
+export function rect_center_dist(rect: Rect, angle: number): number {
+    return Math.min(rect.width / 2 / Math.abs(Math.cos(angle)), rect.height / 2 / Math.abs(Math.sin(angle)))
+}
 export type Shape = {
     points: Array<Point>
 }

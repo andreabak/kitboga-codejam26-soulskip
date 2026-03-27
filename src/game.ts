@@ -10,6 +10,7 @@ import {
     play_audio_element,
     Point,
     Rect,
+    rect_center_dist,
     rect_to_shape,
     sat_overlap,
     Shape,
@@ -95,7 +96,7 @@ abstract class Character extends Actor {
 
     abstract width: number
     abstract height: number
-    origin: Point = {x: 24, y: 24}
+    origin: Point = {x: 24, y: 24} // TODO: unused
     rotates: boolean = false
 
     health: number = 100.0
@@ -138,7 +139,7 @@ abstract class Character extends Actor {
         this._follower = new TargetFollower(
             {x: 0, y: 0},
             {x: 0, y: 0},
-            {acceleration: this.base_acceleration, max_vel: this.base_max_vel, slowing_distance: 50},
+            {acceleration: this.base_acceleration, max_vel: this.base_max_vel, slowing_distance: 25},
         )
     }
 
@@ -599,7 +600,7 @@ class Enemy extends Character {
             damage: 500,
             stamina_consume: 5,
             parry_window_duration: 100,
-            scale: 2.0,
+            scale: 2.5,
             hitbox: {
                 shape: {
                     points: [
@@ -619,6 +620,7 @@ class Enemy extends Character {
     // TODO: aggro: number = 0.0
 
     // TODO: AI
+    follow_dist_offset: number = 5
     next_attack_ts: number = 1e10
     auto_attack_dist: number = 400
     auto_attack_interval: [number, number] = [500, 2000]
@@ -648,7 +650,7 @@ class Enemy extends Character {
 
     _update(context: GameUpdateContext) {
         if (this.game.state === "battle" && !this.attacking) {
-            this.target = {...this.game.player.pos}
+            this.target = this._get_reach_player_point()
         }
 
         const low_stamina_before = this.low_stamina
@@ -675,6 +677,31 @@ class Enemy extends Character {
         this.enemy_root_el.classList.toggle("attacking", this.attacking)
         for (const phase of ATTACK_PHASES_SEQUENCE) {
             this.enemy_root_el.classList.toggle(`attack-phase-${phase}`, this.current_attack?.current_phase == phase)
+        }
+    }
+
+    _get_reach_player_point(): Point {
+        const origin_bbox = shape_bbox(this.hurtbox_abs)
+        const origin = {x: origin_bbox.x + origin_bbox.width / 2, y: origin_bbox.y + origin_bbox.height / 2}
+        const target_bbox = shape_bbox(this.game.player.hurtbox_abs)
+        const target = {x: target_bbox.x + target_bbox.width / 2, y: target_bbox.y + target_bbox.height / 2}
+
+        const line_vec: Point = {x: target.x - origin.x, y: target.y - origin.y}
+        const line_angle = Math.atan2(line_vec.y, line_vec.x)
+        const line_dist = dist(line_vec.x, line_vec.y)
+        const offset_dist =
+            rect_center_dist(origin_bbox, line_angle) +
+            rect_center_dist(target_bbox, line_angle) +
+            this.follow_dist_offset
+        let reach_dist = line_dist - offset_dist
+        // if overlapping target already, approach slow
+        if (reach_dist < 0) {
+            reach_dist = 1
+        }
+        // find point on line distant offset_dist to target
+        return {
+            x: origin.x + line_vec.x * (reach_dist / line_dist),
+            y: origin.y + line_vec.y * (reach_dist / line_dist),
         }
     }
 

@@ -61,6 +61,9 @@ function rect_to_shape(rect) {
     ]
   };
 }
+function rect_center_dist(rect, angle) {
+  return Math.min(rect.width / 2 / Math.abs(Math.cos(angle)), rect.height / 2 / Math.abs(Math.sin(angle)));
+}
 function shape_bbox(shape) {
   if (!shape.points.length) {
     throw new Error("Shape has no points!");
@@ -242,6 +245,7 @@ class Character extends Actor {
     __publicField(this, "base_acceleration", 250);
     __publicField(this, "base_max_vel", 100);
     __publicField(this, "origin", { x: 24, y: 24 });
+    // TODO: unused
     __publicField(this, "rotates", false);
     __publicField(this, "health", 100);
     __publicField(this, "max_health", 100);
@@ -276,7 +280,7 @@ class Character extends Actor {
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
-      { acceleration: this.base_acceleration, max_vel: this.base_max_vel, slowing_distance: 50 }
+      { acceleration: this.base_acceleration, max_vel: this.base_max_vel, slowing_distance: 25 }
     );
   }
   get acceleration() {
@@ -671,7 +675,7 @@ class Enemy extends Character {
         damage: 500,
         stamina_consume: 5,
         parry_window_duration: 100,
-        scale: 2,
+        scale: 2.5,
         hitbox: {
           shape: {
             points: [
@@ -690,6 +694,7 @@ class Enemy extends Character {
     });
     // TODO: aggro: number = 0.0
     // TODO: AI
+    __publicField(this, "follow_dist_offset", 5);
     __publicField(this, "next_attack_ts", 1e10);
     __publicField(this, "auto_attack_dist", 400);
     __publicField(this, "auto_attack_interval", [500, 2e3]);
@@ -711,7 +716,7 @@ class Enemy extends Character {
   _update(context) {
     var _a;
     if (this.game.state === "battle" && !this.attacking) {
-      this.target = { ...this.game.player.pos };
+      this.target = this._get_reach_player_point();
     }
     const low_stamina_before = this.low_stamina;
     super._update(context);
@@ -733,6 +738,24 @@ class Enemy extends Character {
     for (const phase of ATTACK_PHASES_SEQUENCE) {
       this.enemy_root_el.classList.toggle(`attack-phase-${phase}`, ((_a = this.current_attack) == null ? void 0 : _a.current_phase) == phase);
     }
+  }
+  _get_reach_player_point() {
+    const origin_bbox = shape_bbox(this.hurtbox_abs);
+    const origin = { x: origin_bbox.x + origin_bbox.width / 2, y: origin_bbox.y + origin_bbox.height / 2 };
+    const target_bbox = shape_bbox(this.game.player.hurtbox_abs);
+    const target = { x: target_bbox.x + target_bbox.width / 2, y: target_bbox.y + target_bbox.height / 2 };
+    const line_vec = { x: target.x - origin.x, y: target.y - origin.y };
+    const line_angle = Math.atan2(line_vec.y, line_vec.x);
+    const line_dist = dist(line_vec.x, line_vec.y);
+    const offset_dist = rect_center_dist(origin_bbox, line_angle) + rect_center_dist(target_bbox, line_angle) + this.follow_dist_offset;
+    let reach_dist = line_dist - offset_dist;
+    if (reach_dist < 0) {
+      reach_dist = 1;
+    }
+    return {
+      x: origin.x + line_vec.x * (reach_dist / line_dist),
+      y: origin.y + line_vec.y * (reach_dist / line_dist)
+    };
   }
   new_attack() {
     return this.attacks_defs["slash"];
