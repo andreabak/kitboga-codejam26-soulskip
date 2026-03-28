@@ -91,6 +91,8 @@ export class Enemy extends Character {
     // TODO: aggro: number = 0.0
 
     // TODO: AI
+    private _phase: "rest" | "fight-start" | "fight" | "defeat" = "rest"
+    phases_ts: Partial<Record<typeof Enemy.prototype._phase, number>> = {}
     follow_dist_offset: number = 5
     next_attack_ts: number = 1e10
     auto_attack_dist: number = 400
@@ -114,34 +116,57 @@ export class Enemy extends Character {
         this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this))
     }
 
+    get phase(): typeof Enemy.prototype._phase {
+        return this._phase
+    }
+    set phase(value: typeof Enemy.prototype._phase) {
+        this._phase = value
+        this.phases_ts[value] = this.game.timeref
+    }
+
     get display_pos(): Point {
         const rel_rect = this.game.get_relative_rect(this.enemy_root_el)
         return {x: rel_rect.x + rel_rect.width / 2, y: rel_rect.y + rel_rect.height / 2}
     }
 
     _update(context: GameUpdateContext) {
-        if (this.game.state === "battle" && !this.attacking) {
-            this.pos_target = this._get_reach_player_point()
-            this.dir_target = {...this.game.player.pos}
+        if (this.game.state === "battle") {
+            if (this.phase === "rest") {
+                this.phase = "fight-start"
+            }
+            if (this.phase === "fight") {
+                if (!this.attacking) {
+                    this.pos_target = this._get_reach_player_point()
+                    this.dir_target = {...this.game.player.pos}
+                }
+            }
         }
 
         const low_stamina_before = this.low_stamina
         super._update(context)
 
         if (this.game.state === "battle") {
-            const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y)
-            if (
-                this.can_attack &&
-                (this.current_attack_chain ||
-                    (context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist))
-            ) {
-                this.attack_requested = true
-            } else if (!this.attacking && !this.can_attack) {
-                if (this.current_attack_chain != null) this.current_attack_chain = null
-            }
+            if (this.phase === "fight-start") {
+                this.invicible = true
+                if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 5000) {
+                    this.phase = "fight"
+                    this.invicible = false
+                }
+            } else if (this.phase === "fight") {
+                const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y)
+                if (
+                    this.can_attack &&
+                    (this.current_attack_chain ||
+                        (context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist))
+                ) {
+                    this.attack_requested = true
+                } else if (!this.attacking && !this.can_attack) {
+                    if (this.current_attack_chain != null) this.current_attack_chain = null
+                }
 
-            if (this.dead) {
-                this.game.change_state_soon("victory")
+                if (this.dead) {
+                    this.game.change_state_soon("victory")
+                }
             }
         }
 
@@ -217,6 +242,7 @@ export class Enemy extends Character {
     _aggro_trigger() {
         if (this.game.state === "chill") {
             this.game.change_state_soon("battle")
+            this.phase = "fight-start"
 
             // move to center of screen
             const game_rect = this.game.rect

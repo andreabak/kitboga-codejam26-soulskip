@@ -63,6 +63,7 @@ export abstract class Character extends Actor {
     health: number = 100.0
     max_health: number = 100.0 // TODO: sanity check
     last_damage_ts: number = -Infinity
+    invicible: boolean = false
 
     stamina: number = 100.0
     max_stamina: number = 100.0 // TODO: sanity check
@@ -378,7 +379,7 @@ export abstract class Character extends Actor {
             this.consume_stamina(stamina_consume, {context})
             health_damage *= 1.0 - this.defend_damage_reduction
         }
-        if (health_damage >= 0) {
+        if (!this.invicible && health_damage >= 0) {
             this.health -= health_damage
             this.last_damage_ts = context.timeref
             if (this.health < 0) this.health = 0

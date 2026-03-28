@@ -419,6 +419,7 @@ class Character extends Actor {
     __publicField(this, "max_health", 100);
     // TODO: sanity check
     __publicField(this, "last_damage_ts", -Infinity);
+    __publicField(this, "invicible", false);
     __publicField(this, "stamina", 100);
     __publicField(this, "max_stamina", 100);
     // TODO: sanity check
@@ -687,7 +688,7 @@ class Character extends Actor {
       this.consume_stamina(stamina_consume, { context });
       health_damage *= 1 - this.defend_damage_reduction;
     }
-    if (health_damage >= 0) {
+    if (!this.invicible && health_damage >= 0) {
       this.health -= health_damage;
       this.last_damage_ts = context.timeref;
       if (this.health < 0) this.health = 0;
@@ -911,6 +912,8 @@ class Enemy extends Character {
     __publicField(this, "current_attack_chain", null);
     // TODO: aggro: number = 0.0
     // TODO: AI
+    __publicField(this, "_phase", "rest");
+    __publicField(this, "phases_ts", {});
     __publicField(this, "follow_dist_offset", 5);
     __publicField(this, "next_attack_ts", 1e10);
     __publicField(this, "auto_attack_dist", 400);
@@ -926,27 +929,49 @@ class Enemy extends Character {
     this.height = rel_rect.height;
     this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this));
   }
+  get phase() {
+    return this._phase;
+  }
+  set phase(value) {
+    this._phase = value;
+    this.phases_ts[value] = this.game.timeref;
+  }
   get display_pos() {
     const rel_rect = this.game.get_relative_rect(this.enemy_root_el);
     return { x: rel_rect.x + rel_rect.width / 2, y: rel_rect.y + rel_rect.height / 2 };
   }
   _update(context) {
     var _a;
-    if (this.game.state === "battle" && !this.attacking) {
-      this.pos_target = this._get_reach_player_point();
-      this.dir_target = { ...this.game.player.pos };
+    if (this.game.state === "battle") {
+      if (this.phase === "rest") {
+        this.phase = "fight-start";
+      }
+      if (this.phase === "fight") {
+        if (!this.attacking) {
+          this.pos_target = this._get_reach_player_point();
+          this.dir_target = { ...this.game.player.pos };
+        }
+      }
     }
     this.low_stamina;
     super._update(context);
     if (this.game.state === "battle") {
-      const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y);
-      if (this.can_attack && (this.current_attack_chain || context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist)) {
-        this.attack_requested = true;
-      } else if (!this.attacking && !this.can_attack) {
-        if (this.current_attack_chain != null) this.current_attack_chain = null;
-      }
-      if (this.dead) {
-        this.game.change_state_soon("victory");
+      if (this.phase === "fight-start") {
+        this.invicible = true;
+        if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 5e3) {
+          this.phase = "fight";
+          this.invicible = false;
+        }
+      } else if (this.phase === "fight") {
+        const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y);
+        if (this.can_attack && (this.current_attack_chain || context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist)) {
+          this.attack_requested = true;
+        } else if (!this.attacking && !this.can_attack) {
+          if (this.current_attack_chain != null) this.current_attack_chain = null;
+        }
+        if (this.dead) {
+          this.game.change_state_soon("victory");
+        }
       }
     }
     this.enemy_root_el.style.top = `${this.pos.y - this.enemy_root_el.clientHeight / 2}px`;
@@ -1000,6 +1025,7 @@ class Enemy extends Character {
   _aggro_trigger() {
     if (this.game.state === "chill") {
       this.game.change_state_soon("battle");
+      this.phase = "fight-start";
       const game_rect = this.game.rect;
       this.pos_target = { x: game_rect.x + game_rect.width / 2, y: game_rect.y + game_rect.height / 2 };
       this.next_attack_ts = this.calc_next_attack_ts(this.game.timeref);
