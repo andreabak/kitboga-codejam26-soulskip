@@ -124,6 +124,17 @@ function dist(x, y) {
 function dist_pt(p) {
   return dist(p.x, p.y);
 }
+function rotate_vector_clamped(vector, target, max_angle_delta) {
+  const mag = typeof vector === "number" ? 1 : dist(vector.x, vector.y);
+  const angle = typeof vector === "number" ? vector : Math.atan2(vector.y, vector.x);
+  if (typeof target === "object" && "x" in target && "y" in target) target = Math.atan2(target.y, target.x);
+  let delta = target - angle;
+  if (delta > Math.PI) delta -= 2 * Math.PI;
+  else if (delta < -Math.PI) delta += 2 * Math.PI;
+  delta = Math.max(-max_angle_delta, Math.min(max_angle_delta, delta));
+  const new_angle = angle + delta;
+  return [{ x: mag * Math.cos(new_angle), y: mag * Math.sin(new_angle) }, new_angle];
+}
 function aabb_overlap(a, b) {
   return !(a.x > b.x + b.width || a.x + a.width < b.x || a.y > b.y + b.height || a.y + a.height < b.y);
 }
@@ -151,21 +162,32 @@ function sat_overlap(a, b) {
 class TargetFollower {
   constructor(pos, target, {
     acceleration,
+    velocity = { x: 0, y: 0 },
+    direction = -90 / 180 * Math.PI,
     max_vel = null,
-    slowing_distance = null
+    slowing_distance = null,
+    vel_max_rotation = Infinity,
+    dir_max_rotation = Infinity
   }) {
     __publicField(this, "pos");
-    __publicField(this, "target");
+    __publicField(this, "pos_target");
+    __publicField(this, "dir_target", "pos");
     __publicField(this, "acceleration");
-    __publicField(this, "_vel", { x: 0, y: 0 });
-    __publicField(this, "_direction", -90 / 180 * Math.PI);
+    __publicField(this, "_vel");
+    __publicField(this, "_direction");
     __publicField(this, "max_vel");
     __publicField(this, "slowing_distance");
+    __publicField(this, "vel_max_rotation");
+    __publicField(this, "dir_max_rotation");
     this.pos = pos;
-    this.target = target;
+    this.pos_target = target;
     this.acceleration = acceleration;
+    this._vel = velocity;
+    this._direction = direction;
     this.max_vel = max_vel;
     this.slowing_distance = slowing_distance;
+    this.vel_max_rotation = vel_max_rotation;
+    this.dir_max_rotation = dir_max_rotation;
   }
   get velocity() {
     return { ...this._vel };
@@ -178,14 +200,14 @@ class TargetFollower {
   }
   update(timestep, { target } = {}) {
     if (target != null) {
-      this.target = target;
+      this.pos_target = target;
     }
     if (!timestep || timestep < 0) {
       return this.pos;
     }
     const secs = timestep / 1e3;
-    const dx = this.target.x - this.pos.x;
-    const dy = this.target.y - this.pos.y;
+    const dx = this.pos_target.x - this.pos.x;
+    const dy = this.pos_target.y - this.pos.y;
     const d = dist(dx, dy);
     if (d > 0) {
       this._vel.x += dx / d * this.acceleration * secs;
@@ -197,16 +219,21 @@ class TargetFollower {
     }
     let vel = dist(this._vel.x, this._vel.y);
     if (d > 0) {
-      this._vel.x = vel * (dx / d);
-      this._vel.y = vel * (dy / d);
+      [this._vel] = rotate_vector_clamped(this._vel, { x: dx, y: dy }, this.vel_max_rotation * secs);
     }
     if (this.max_vel != null && vel >= this.max_vel) {
       this._vel.x = this.max_vel * (this._vel.x / vel);
       this._vel.y = this.max_vel * (this._vel.y / vel);
     }
     vel = dist(this._vel.x, this._vel.y);
-    if (vel > 0.1) {
-      this._direction = Math.atan2(this._vel.y, this._vel.x);
+    let dir_target = null;
+    if (this.dir_target === "pos") {
+      if (vel > 0.1) dir_target = this._vel;
+    } else if (this.dir_target != null && "x" in this.dir_target && "y" in this.dir_target) {
+      dir_target = { x: this.dir_target.x - this.pos.x, y: this.dir_target.y - this.pos.y };
+    }
+    if (dir_target) {
+      [, this._direction] = rotate_vector_clamped(this._direction, dir_target, this.dir_max_rotation * secs);
     }
     this.pos.x += this._vel.x;
     this.pos.y += this._vel.y;
@@ -280,7 +307,13 @@ class Character extends Actor {
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
-      { acceleration: this.base_acceleration, max_vel: this.base_max_vel, slowing_distance: 25 }
+      {
+        acceleration: this.base_acceleration,
+        max_vel: this.base_max_vel,
+        slowing_distance: 25,
+        vel_max_rotation: 10 * 360 / 180 * Math.PI,
+        dir_max_rotation: 2 * 360 / 180 * Math.PI
+      }
     );
   }
   get acceleration() {
@@ -301,14 +334,23 @@ class Character extends Actor {
   set pos(value) {
     this._follower.pos = value;
   }
-  get target() {
-    return this._follower.target;
+  get pos_target() {
+    return this._follower.pos_target;
   }
-  set target(value) {
-    this._follower.target = value;
+  set pos_target(value) {
+    this._follower.pos_target = value;
+  }
+  get dir_target() {
+    return this._follower.dir_target;
+  }
+  set dir_target(value) {
+    this._follower.dir_target = value;
   }
   get direction() {
     return this._follower.direction;
+  }
+  get direction_vector() {
+    return this._follower.direction_vector;
   }
   get attacking() {
     return this.current_attack != null;
@@ -386,7 +428,7 @@ class Character extends Actor {
     if (context.timedelta != null) {
       this._follower.update(context.timedelta);
     } else {
-      this._follower.pos = { ...this._follower.target };
+      this._follower.pos = { ...this._follower.pos_target };
     }
     const vel_mag = dist_pt(this._follower.velocity);
     if (!this.low_stamina && vel_mag > this.stamina_movement_vel_min) {
@@ -586,7 +628,7 @@ class Player extends Character {
   }
   _on_mousemove(event) {
     const rect = this.game.game_root_el.getBoundingClientRect();
-    this.target = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    this.pos_target = { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
   _on_mousedown(event) {
     if (event.button === 0) {
@@ -605,6 +647,9 @@ class Player extends Character {
   _update(context) {
     var _a;
     super._update(context);
+    if (this.game.state === "battle" && !this.attacking) {
+      this.dir_target = { ...this.game.enemy.pos };
+    }
     if (this.game.state === "battle" && this.dead) {
       this.game.change_state_soon("defeat");
     }
@@ -704,7 +749,7 @@ class Enemy extends Character {
     this.enemy_root_el.style.left = `${rel_rect.x}px`;
     this.enemy_root_el.style.bottom = "unset";
     this.enemy_root_el.style.right = "unset";
-    this.target = this.pos = this.display_pos;
+    this.pos_target = this.pos = this.display_pos;
     this.width = rel_rect.width;
     this.height = rel_rect.height;
     this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this));
@@ -716,7 +761,8 @@ class Enemy extends Character {
   _update(context) {
     var _a;
     if (this.game.state === "battle" && !this.attacking) {
-      this.target = this._get_reach_player_point();
+      this.pos_target = this._get_reach_player_point();
+      this.dir_target = { ...this.game.player.pos };
     }
     const low_stamina_before = this.low_stamina;
     super._update(context);
@@ -775,7 +821,7 @@ class Enemy extends Character {
     if (this.game.state === "chill") {
       this.game.change_state_soon("battle");
       const game_rect = this.game.rect;
-      this.target = { x: game_rect.x + game_rect.width / 2, y: game_rect.y + game_rect.height / 2 };
+      this.pos_target = { x: game_rect.x + game_rect.width / 2, y: game_rect.y + game_rect.height / 2 };
       this.next_attack_ts = this.calc_next_attack_ts(this.game.timeref);
     }
   }
@@ -1083,6 +1129,16 @@ class Game extends Component {
         if (hurtbox_path) {
           hurtbox_path.style.fill = "hsla(195, 100%, 50%, 0.4)";
           svg.appendChild(hurtbox_path);
+        }
+        const direction_vec = character.direction_vector;
+        const dir_vector_path = create_path_from_points([
+          character.pos,
+          { x: character.pos.x + direction_vec.x * 20, y: character.pos.y + direction_vec.y * 20 }
+        ]);
+        if (dir_vector_path) {
+          dir_vector_path.style.stroke = "hsla(0, 100%, 50%, 0.4)";
+          dir_vector_path.style.strokeWidth = "2px";
+          svg.appendChild(dir_vector_path);
         }
         const attack_hitbox_abs = character.attack_hitbox_abs;
         if (attack_hitbox_abs) {

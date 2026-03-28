@@ -139,7 +139,13 @@ abstract class Character extends Actor {
         this._follower = new TargetFollower(
             {x: 0, y: 0},
             {x: 0, y: 0},
-            {acceleration: this.base_acceleration, max_vel: this.base_max_vel, slowing_distance: 25},
+            {
+                acceleration: this.base_acceleration,
+                max_vel: this.base_max_vel,
+                slowing_distance: 25,
+                vel_max_rotation: ((10 * 360) / 180) * Math.PI,
+                dir_max_rotation: ((2 * 360) / 180) * Math.PI,
+            },
         )
     }
 
@@ -161,14 +167,23 @@ abstract class Character extends Actor {
     set pos(value: Point) {
         this._follower.pos = value
     }
-    get target(): Point {
-        return this._follower.target
+    get pos_target(): Point {
+        return this._follower.pos_target
     }
-    set target(value: Point) {
-        this._follower.target = value
+    set pos_target(value: Point) {
+        this._follower.pos_target = value
+    }
+    get dir_target(): Point | "pos" | null {
+        return this._follower.dir_target
+    }
+    set dir_target(value: Point) {
+        this._follower.dir_target = value
     }
     get direction(): number {
         return this._follower.direction
+    }
+    get direction_vector(): Point {
+        return this._follower.direction_vector
     }
 
     get attacking(): boolean {
@@ -256,7 +271,7 @@ abstract class Character extends Actor {
         if (context.timedelta != null) {
             this._follower.update(context.timedelta)
         } else {
-            this._follower.pos = {...this._follower.target}
+            this._follower.pos = {...this._follower.pos_target}
         }
         const vel_mag = dist_pt(this._follower.velocity)
         if (!this.low_stamina && vel_mag > this.stamina_movement_vel_min) {
@@ -498,7 +513,7 @@ class Player extends Character {
 
     _on_mousemove(event: MouseEvent): void {
         const rect = this.game.game_root_el.getBoundingClientRect()
-        this.target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
+        this.pos_target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
     }
     _on_mousedown(event: MouseEvent): void {
         if (event.button === 0) {
@@ -517,6 +532,10 @@ class Player extends Character {
 
     _update(context: GameUpdateContext) {
         super._update(context)
+
+        if (this.game.state === "battle" && !this.attacking) {
+            this.dir_target = {...this.game.enemy.pos}
+        }
 
         if (this.game.state === "battle" && this.dead) {
             this.game.change_state_soon("defeat")
@@ -636,7 +655,7 @@ class Enemy extends Character {
         this.enemy_root_el.style.left = `${rel_rect.x}px`
         this.enemy_root_el.style.bottom = "unset"
         this.enemy_root_el.style.right = "unset"
-        this.target = this.pos = this.display_pos // initial position is whatever document styling defines
+        this.pos_target = this.pos = this.display_pos // initial position is whatever document styling defines
         this.width = rel_rect.width
         this.height = rel_rect.height
 
@@ -650,7 +669,8 @@ class Enemy extends Character {
 
     _update(context: GameUpdateContext) {
         if (this.game.state === "battle" && !this.attacking) {
-            this.target = this._get_reach_player_point()
+            this.pos_target = this._get_reach_player_point()
+            this.dir_target = {...this.game.player.pos}
         }
 
         const low_stamina_before = this.low_stamina
@@ -731,7 +751,7 @@ class Enemy extends Character {
 
             // move to center of screen
             const game_rect = this.game.rect
-            this.target = {x: game_rect.x + game_rect.width / 2, y: game_rect.y + game_rect.height / 2}
+            this.pos_target = {x: game_rect.x + game_rect.width / 2, y: game_rect.y + game_rect.height / 2}
 
             this.next_attack_ts = this.calc_next_attack_ts(this.game.timeref)
         }
@@ -1121,6 +1141,17 @@ export class Game extends Component<GameUpdateContext> {
                 if (hurtbox_path) {
                     hurtbox_path.style.fill = "hsla(195, 100%, 50%, 0.4)"
                     svg.appendChild(hurtbox_path)
+                }
+
+                const direction_vec = character.direction_vector
+                const dir_vector_path = create_path_from_points([
+                    character.pos,
+                    {x: character.pos.x + direction_vec.x * 20, y: character.pos.y + direction_vec.y * 20},
+                ])
+                if (dir_vector_path) {
+                    dir_vector_path.style.stroke = "hsla(0, 100%, 50%, 0.4)"
+                    dir_vector_path.style.strokeWidth = "2px"
+                    svg.appendChild(dir_vector_path)
                 }
 
                 const attack_hitbox_abs = character.attack_hitbox_abs

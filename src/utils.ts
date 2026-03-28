@@ -165,6 +165,26 @@ export function dist_pt(p: Point): number {
     return dist(p.x, p.y)
 }
 
+function rotate_vector_clamped(
+    vector: Point | number,
+    target: number | Point,
+    max_angle_delta: number,
+): [Point, number] {
+    const mag = typeof vector === "number" ? 1 : dist(vector.x, vector.y)
+    const angle = typeof vector === "number" ? vector : Math.atan2(vector.y, vector.x)
+
+    if (typeof target === "object" && "x" in target && "y" in target) target = Math.atan2(target.y, target.x)
+
+    let delta = target - angle
+    if (delta > Math.PI) delta -= 2 * Math.PI
+    else if (delta < -Math.PI) delta += 2 * Math.PI
+    delta = Math.max(-max_angle_delta, Math.min(max_angle_delta, delta))
+
+    const new_angle = angle + delta
+
+    return [{x: mag * Math.cos(new_angle), y: mag * Math.sin(new_angle)}, new_angle]
+}
+
 export function aabb_overlap(a: Rect, b: Rect): boolean {
     return !(a.x > b.x + b.width || a.x + a.width < b.x || a.y > b.y + b.height || a.y + a.height < b.y)
 }
@@ -201,29 +221,48 @@ export function smooth_ema(v0: number, v1: number, sf: number) {
 
 export class TargetFollower {
     pos: Point
-    target: Point
+    pos_target: Point
+    dir_target: Point | "pos" | null = "pos"
 
     acceleration: number
-    private _vel: Point = {x: 0, y: 0}
-    private _direction: number = (-90 / 180) * Math.PI
+    private _vel: Point
+    private _direction: number
 
     max_vel: number | null
     slowing_distance: number | null
+    vel_max_rotation: number
+    dir_max_rotation: number
 
     constructor(
         pos: Point,
         target: Point,
         {
             acceleration,
+            velocity = {x: 0, y: 0},
+            direction = (-90 / 180) * Math.PI,
             max_vel = null,
             slowing_distance = null,
-        }: {acceleration: number; max_vel?: number | null; slowing_distance?: number | null},
+            vel_max_rotation = Infinity,
+            dir_max_rotation = Infinity,
+        }: {
+            acceleration: number
+            velocity?: Point
+            direction?: number
+            max_vel?: number | null
+            slowing_distance?: number | null
+            vel_max_rotation?: number
+            dir_max_rotation?: number
+        },
     ) {
         this.pos = pos
-        this.target = target
+        this.pos_target = target
         this.acceleration = acceleration
+        this._vel = velocity
+        this._direction = direction
         this.max_vel = max_vel
         this.slowing_distance = slowing_distance
+        this.vel_max_rotation = vel_max_rotation
+        this.dir_max_rotation = dir_max_rotation
     }
 
     get velocity(): Point {
@@ -238,7 +277,7 @@ export class TargetFollower {
 
     update(timestep: number, {target}: {target?: Point} = {}): Point {
         if (target != null) {
-            this.target = target
+            this.pos_target = target
         }
         if (!timestep || timestep < 0) {
             return this.pos
@@ -246,8 +285,8 @@ export class TargetFollower {
 
         const secs = timestep / 1000
 
-        const dx = this.target.x - this.pos.x
-        const dy = this.target.y - this.pos.y
+        const dx = this.pos_target.x - this.pos.x
+        const dy = this.pos_target.y - this.pos.y
         const d = dist(dx, dy)
 
         if (d > 0) {
@@ -261,18 +300,23 @@ export class TargetFollower {
 
         let vel = dist(this._vel.x, this._vel.y)
         if (d > 0) {
-            // align velocity direction to target (hacky, means immediate turning radius)
-            this._vel.x = vel * (dx / d)
-            this._vel.y = vel * (dy / d)
+            // align velocity direction to target
+            ;[this._vel] = rotate_vector_clamped(this._vel, {x: dx, y: dy}, this.vel_max_rotation * secs)
         }
         if (this.max_vel != null && vel >= this.max_vel) {
             this._vel.x = this.max_vel * (this._vel.x / vel)
             this._vel.y = this.max_vel * (this._vel.y / vel)
         }
         vel = dist(this._vel.x, this._vel.y)
-        if (vel > 0.1) {
-            // TODO: min rotation const
-            this._direction = Math.atan2(this._vel.y, this._vel.x)
+
+        let dir_target: Point | null = null
+        if (this.dir_target === "pos") {
+            if (vel > 0.1) dir_target = this._vel
+        } else if (this.dir_target != null && "x" in this.dir_target && "y" in this.dir_target) {
+            dir_target = {x: this.dir_target.x - this.pos.x, y: this.dir_target.y - this.pos.y}
+        }
+        if (dir_target) {
+            ;[, this._direction] = rotate_vector_clamped(this._direction, dir_target, this.dir_max_rotation * secs)
         }
 
         this.pos.x += this._vel.x
