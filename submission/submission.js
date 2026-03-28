@@ -51,6 +51,9 @@ async function fade_audio(audio_el, {
   audio_el.volume = volume;
   if (stop_after) audio_el.pause();
 }
+function random_pick(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
 function rect_to_shape(rect) {
   return {
     points: [
@@ -705,20 +708,45 @@ class Enemy extends Character {
     // TODO: sanity check
     __publicField(this, "stamina_recover", 25);
     __publicField(this, "stamina_recover_delay", 2e3);
-    __publicField(this, "low_stamina_max_vel", 0.1);
+    __publicField(this, "low_stamina_max_vel", 0);
     __publicField(this, "low_stamina_enter_threshold", 1);
     // TODO: sanity check
     __publicField(this, "low_stamina_exit_threshold", 150);
     // TODO: sanity check
     __publicField(this, "attacks_defs", {
-      slash: {
+      slow: {
         phases: {
           anticipation: { duration: 300, acceleration: 100, max_vel: 100 },
-          hit: { duration: 200, acceleration: 20, max_vel: 5 },
-          recovery: { duration: 500 }
+          hit: { duration: 200, acceleration: 5, max_vel: 2 },
+          recovery: { duration: 500, acceleration: 20, max_vel: 4 }
         },
         damage: 500,
-        stamina_consume: 5,
+        stamina_consume: 6,
+        parry_window_duration: 100,
+        scale: 2.5,
+        hitbox: {
+          shape: {
+            points: [
+              { x: -1, y: 0 },
+              { x: -0.71, y: -0.71 },
+              { x: 0, y: -1 },
+              { x: 0.71, y: -0.71 },
+              { x: 1, y: 0 },
+              { x: 0.25, y: 0.25 },
+              { x: -0.25, y: 0.25 }
+            ]
+          },
+          rotation_ref: -90 / 180 * Math.PI
+        }
+      },
+      fast: {
+        phases: {
+          anticipation: { duration: 150, acceleration: 100, max_vel: 100 },
+          hit: { duration: 200, acceleration: 5, max_vel: 2 },
+          recovery: { duration: 250, acceleration: 20, max_vel: 4 }
+        },
+        damage: 250,
+        stamina_consume: 3,
         parry_window_duration: 100,
         scale: 2.5,
         hitbox: {
@@ -737,12 +765,18 @@ class Enemy extends Character {
         }
       }
     });
+    __publicField(this, "attacks_chains_defs", {
+      fast_flurry: ["fast", "fast", "fast"],
+      fast_slow_flurry: ["fast", "fast", "slow"],
+      slow_fast_duplet: ["slow", "fast"]
+    });
+    __publicField(this, "current_attack_chain", null);
     // TODO: aggro: number = 0.0
     // TODO: AI
     __publicField(this, "follow_dist_offset", 5);
     __publicField(this, "next_attack_ts", 1e10);
     __publicField(this, "auto_attack_dist", 400);
-    __publicField(this, "auto_attack_interval", [500, 2e3]);
+    __publicField(this, "auto_attack_interval", [1500, 3e3]);
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     const rel_rect = this.game.get_relative_rect(this.enemy_root_el);
     this.enemy_root_el.style.top = `${rel_rect.y}px`;
@@ -768,8 +802,10 @@ class Enemy extends Character {
     super._update(context);
     if (this.game.state === "battle") {
       const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y);
-      if (this.can_attack && context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist) {
+      if (this.can_attack && (this.current_attack_chain || context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist)) {
         this.attack_requested = true;
+      } else if (!this.attacking && !this.can_attack) {
+        if (this.current_attack_chain != null) this.current_attack_chain = null;
       }
       if (!low_stamina_before && this.low_stamina) {
         play_audio_element(enemy_break_audio_selector, this.game.game_root_el);
@@ -804,7 +840,14 @@ class Enemy extends Character {
     };
   }
   new_attack() {
-    return this.attacks_defs["slash"];
+    if (this.current_attack_chain == null || this.current_attack_chain.index >= this.current_attack_chain.def.length - 1) {
+      const chain_def = random_pick(Object.values(this.attacks_chains_defs));
+      this.current_attack_chain = { def: chain_def, index: 0 };
+    } else {
+      this.current_attack_chain.index += 1;
+    }
+    const next_attack = this.current_attack_chain.def[this.current_attack_chain.index];
+    return this.attacks_defs[next_attack];
   }
   _attack_start(attack, { context }) {
     super._attack_start(attack, { context });
@@ -812,6 +855,8 @@ class Enemy extends Character {
   }
   _attack_end(attack, { context }) {
     super._attack_end(attack, { context });
+    if (this.current_attack_chain != null && this.current_attack_chain.index >= this.current_attack_chain.def.length - 1)
+      this.current_attack_chain = null;
     this.next_attack_ts = this.calc_next_attack_ts(context.timeref);
   }
   calc_next_attack_ts(now_ts) {

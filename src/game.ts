@@ -9,6 +9,7 @@ import {
     HitBox,
     play_audio_element,
     Point,
+    random_pick,
     Rect,
     rect_center_dist,
     rect_to_shape,
@@ -605,19 +606,44 @@ class Enemy extends Character {
     max_stamina: number = 150.0 // TODO: sanity check
     stamina_recover: number = 25
     stamina_recover_delay: number = 2000
-    low_stamina_max_vel: number = 0.1
+    low_stamina_max_vel: number = 0
     low_stamina_enter_threshold: number = 1 // TODO: sanity check
     low_stamina_exit_threshold: number = 150 // TODO: sanity check
 
     attacks_defs = {
-        slash: {
+        slow: {
             phases: {
                 anticipation: {duration: 300, acceleration: 100, max_vel: 100},
-                hit: {duration: 200, acceleration: 20, max_vel: 5},
-                recovery: {duration: 500},
+                hit: {duration: 200, acceleration: 5, max_vel: 2},
+                recovery: {duration: 500, acceleration: 20, max_vel: 4},
             },
             damage: 500,
-            stamina_consume: 5,
+            stamina_consume: 6,
+            parry_window_duration: 100,
+            scale: 2.5,
+            hitbox: {
+                shape: {
+                    points: [
+                        {x: -1.0, y: 0.0},
+                        {x: -0.71, y: -0.71},
+                        {x: 0.0, y: -1.0},
+                        {x: 0.71, y: -0.71},
+                        {x: 1.0, y: 0.0},
+                        {x: 0.25, y: 0.25},
+                        {x: -0.25, y: 0.25},
+                    ],
+                },
+                rotation_ref: (-90 / 180) * Math.PI,
+            },
+        },
+        fast: {
+            phases: {
+                anticipation: {duration: 150, acceleration: 100, max_vel: 100},
+                hit: {duration: 200, acceleration: 5, max_vel: 2},
+                recovery: {duration: 250, acceleration: 20, max_vel: 4},
+            },
+            damage: 250,
+            stamina_consume: 3,
             parry_window_duration: 100,
             scale: 2.5,
             hitbox: {
@@ -636,13 +662,22 @@ class Enemy extends Character {
             },
         },
     }
+    attacks_chains_defs: Record<string, Array<keyof typeof Enemy.prototype.attacks_defs>> = {
+        fast_flurry: ["fast", "fast", "fast"],
+        fast_slow_flurry: ["fast", "fast", "slow"],
+        slow_fast_duplet: ["slow", "fast"],
+    }
+    current_attack_chain: {
+        def: (typeof Enemy.prototype.attacks_chains_defs)[keyof typeof Enemy.prototype.attacks_chains_defs]
+        index: number
+    } | null = null
     // TODO: aggro: number = 0.0
 
     // TODO: AI
     follow_dist_offset: number = 5
     next_attack_ts: number = 1e10
     auto_attack_dist: number = 400
-    auto_attack_interval: [number, number] = [500, 2000]
+    auto_attack_interval: [number, number] = [1500, 3000]
 
     constructor(game: Game) {
         super(game)
@@ -678,8 +713,14 @@ class Enemy extends Character {
 
         if (this.game.state === "battle") {
             const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y)
-            if (this.can_attack && context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist) {
+            if (
+                this.can_attack &&
+                (this.current_attack_chain ||
+                    (context.timeref > this.next_attack_ts && player_dist <= this.auto_attack_dist))
+            ) {
                 this.attack_requested = true
+            } else if (!this.attacking && !this.can_attack) {
+                if (this.current_attack_chain != null) this.current_attack_chain = null
             }
 
             if (!low_stamina_before && this.low_stamina) {
@@ -726,7 +767,17 @@ class Enemy extends Character {
     }
 
     new_attack(): AttackDef {
-        return this.attacks_defs["slash"] // TODO: AI
+        if (
+            this.current_attack_chain == null ||
+            this.current_attack_chain.index >= this.current_attack_chain.def.length - 1
+        ) {
+            const chain_def = random_pick(Object.values(this.attacks_chains_defs))
+            this.current_attack_chain = {def: chain_def, index: 0}
+        } else {
+            this.current_attack_chain.index += 1
+        }
+        const next_attack = this.current_attack_chain.def[this.current_attack_chain.index]
+        return this.attacks_defs[next_attack]
     }
     _attack_start(attack: Attack, {context}: {context: GameUpdateContext}) {
         super._attack_start(attack, {context})
@@ -734,6 +785,11 @@ class Enemy extends Character {
     }
     _attack_end(attack: Attack, {context}: {context: GameUpdateContext}) {
         super._attack_end(attack, {context})
+        if (
+            this.current_attack_chain != null &&
+            this.current_attack_chain.index >= this.current_attack_chain.def.length - 1
+        )
+            this.current_attack_chain = null
         this.next_attack_ts = this.calc_next_attack_ts(context.timeref)
     }
 
