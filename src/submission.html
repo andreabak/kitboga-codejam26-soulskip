@@ -135,7 +135,7 @@
                 border: 2px solid #909274;
                 border-top: none;
                 border-right: none;
-                background-color: hsla(0, 0%, 0%, 0.5);
+                background-color: hsla(0, 0%, 0%, 0.75);
                 position: absolute;
                 height: 8px;
                 width: 64px;
@@ -191,7 +191,7 @@
                     " name   damage"
                     " health health"
                     / 1fr auto;
-                bottom: 64px;
+                bottom: 76px;
                 width: 320px;
                 left: 0;
                 right: 0;
@@ -219,6 +219,53 @@
                 position: relative;
                 grid-column: 1 / -1;
                 width: 100%;
+            }
+            .equipped {
+                position: absolute;
+                bottom: 24px;
+                left: 16px;
+                display: grid;
+                grid-template:
+                    " .    top    ." 1fr
+                    " left top    right" 1fr
+                    " left bottom right" 1fr
+                    " .    bottom ." 1fr
+                    / 1fr 1fr 1fr;
+                gap: 12px;
+            }
+            .equipped .slot {
+                position: relative;
+                width: 32px;
+                height: 40px;
+                background-color: hsla(0, 0%, 0%, 0.75);
+                box-shadow: 0 0 2.5px 2.5px hsla(0, 0%, 0%, 0.75);
+                pointer-events: initial;
+            }
+            .equipped .slot.equip-left {
+                grid-area: left;
+            }
+            .equipped .slot.equip-right {
+                grid-area: right;
+            }
+            .equipped .slot.equip-top {
+                grid-area: top;
+            }
+            .equipped .slot.equip-bottom {
+                grid-area: bottom;
+            }
+            .equipped .slot .item {
+                height: 100%;
+                width: 100%;
+                object-fit: cover;
+            }
+            .equipped .slot .amount {
+                position: absolute;
+                bottom: -3px;
+                right: -3px;
+                line-height: 1;
+                font-family: serif;
+                font-size: 0.8em;
+                color: white;
             }
 
             .defeat-screen,
@@ -303,6 +350,21 @@
                         <div class="enemy-bar bar stamina hidden">
                             <div class="bar-diff"></div>
                             <div class="bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="equipped">
+                        <div class="slot equip-left">
+                            <div class="amount"></div>
+                        </div>
+                        <div class="slot equip-right">
+                            <div class="amount"></div>
+                        </div>
+                        <div class="slot equip-top">
+                            <div class="amount"></div>
+                        </div>
+                        <div class="slot equip-bottom" data-item="flask">
+                            <img class="item" src="assets/flask.png" />
+                            <div class="amount"></div>
                         </div>
                     </div>
                 </div>

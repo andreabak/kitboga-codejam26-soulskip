@@ -1,5 +1,6 @@
 import {get_element} from "@/utils"
 
+import {PlayerItemName} from "./characters/player"
 import {GameComponent, GameUpdateContext} from "./core"
 import type {Game} from "./game"
 
@@ -151,6 +152,44 @@ class EnemyStaminaBar extends HudBar {
     }
 }
 
+const hud_equipped_selector = ".equipped"
+const hud_equip_slot_amount_selector = ".amount"
+
+class EquippedItemsHud extends GameComponent {
+    hud: Hud
+    equip_root_el: HTMLDivElement
+    slots_elements: Array<HTMLDivElement>
+
+    constructor(game: Game, hud: Hud) {
+        super(game)
+        this.hud = hud
+
+        this.equip_root_el = get_element(hud_equipped_selector, this.hud.hud_root_el) as HTMLDivElement
+
+        this.slots_elements = [...(this.equip_root_el.querySelectorAll(".slot") as NodeListOf<HTMLDivElement>)]
+        for (const slot of this.slots_elements) {
+            slot.addEventListener("click", () => this._use_slot_item(slot))
+        }
+    }
+
+    _use_slot_item(slot: HTMLDivElement) {
+        const item_name = slot.dataset.item
+        if (!item_name) return
+        this.game.player.use_item(item_name as PlayerItemName)
+    }
+
+    _update(context: GameUpdateContext) {
+        for (const slot of this.slots_elements) {
+            const item_name = slot.dataset.item
+            if (!item_name) continue
+            const item = this.game.player.items[item_name as PlayerItemName]
+            if (!item) continue
+            const amount_el = get_element(hud_equip_slot_amount_selector, slot)
+            amount_el.textContent = item.owned.toFixed(0)
+        }
+    }
+}
+
 const hud_root_selector = ".hud"
 const hud_hidden_class = "hidden"
 
@@ -163,6 +202,8 @@ export class Hud extends GameComponent {
     enemy_stamina_bar: EnemyStaminaBar
     show_enemy_stamina_bar: boolean = true // TODO: debug only
 
+    equipped_items: EquippedItemsHud
+
     constructor(game: Game) {
         super(game)
 
@@ -172,6 +213,8 @@ export class Hud extends GameComponent {
         this.player_stamina_bar = this.add_component(new PlayerStaminaBar(game, this))
         this.enemy_health_bar = this.add_component(new EnemyHealthBar(game, this))
         this.enemy_stamina_bar = this.add_component(new EnemyStaminaBar(game, this))
+
+        this.equipped_items = this.add_component(new EquippedItemsHud(game, this))
     }
 
     get should_show(): boolean {

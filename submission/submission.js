@@ -369,10 +369,40 @@ class EnemyStaminaBar extends HudBar {
     }
   }
 }
+const hud_equipped_selector = ".equipped";
+const hud_equip_slot_amount_selector = ".amount";
+class EquippedItemsHud extends GameComponent {
+  constructor(game2, hud) {
+    super(game2);
+    __publicField(this, "hud");
+    __publicField(this, "equip_root_el");
+    __publicField(this, "slots_elements");
+    this.hud = hud;
+    this.equip_root_el = get_element(hud_equipped_selector, this.hud.hud_root_el);
+    this.slots_elements = [...this.equip_root_el.querySelectorAll(".slot")];
+    for (const slot of this.slots_elements) {
+      slot.addEventListener("click", () => this._use_slot_item(slot));
+    }
+  }
+  _use_slot_item(slot) {
+    const item_name = slot.dataset.item;
+    if (!item_name) return;
+    this.game.player.use_item(item_name);
+  }
+  _update(context) {
+    for (const slot of this.slots_elements) {
+      const item_name = slot.dataset.item;
+      if (!item_name) continue;
+      const item = this.game.player.items[item_name];
+      if (!item) continue;
+      const amount_el = get_element(hud_equip_slot_amount_selector, slot);
+      amount_el.textContent = item.owned.toFixed(0);
+    }
+  }
+}
 const hud_root_selector = ".hud";
 const hud_hidden_class = "hidden";
 class Hud extends GameComponent {
-  // TODO: debug only
   constructor(game2) {
     super(game2);
     __publicField(this, "hud_root_el");
@@ -381,11 +411,14 @@ class Hud extends GameComponent {
     __publicField(this, "enemy_health_bar");
     __publicField(this, "enemy_stamina_bar");
     __publicField(this, "show_enemy_stamina_bar", true);
+    // TODO: debug only
+    __publicField(this, "equipped_items");
     this.hud_root_el = get_element(hud_root_selector, this.game.game_root_el);
     this.player_health_bar = this.add_component(new PlayerHealthBar(game2, this));
     this.player_stamina_bar = this.add_component(new PlayerStaminaBar(game2, this));
     this.enemy_health_bar = this.add_component(new EnemyHealthBar(game2, this));
     this.enemy_stamina_bar = this.add_component(new EnemyStaminaBar(game2, this));
+    this.equipped_items = this.add_component(new EquippedItemsHud(game2, this));
   }
   get should_show() {
     return this.game.state !== "chill";
@@ -445,6 +478,7 @@ class Character extends Actor {
     __publicField(this, "defend_acceleration", 50);
     __publicField(this, "defend_max_vel", 5);
     __publicField(this, "defending", false);
+    __publicField(this, "parry_stamina_consume", 30);
     __publicField(this, "parry_enemy_stamina_consume_factor", 0.1);
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
@@ -701,6 +735,7 @@ class Character extends Actor {
     context
   }) {
     attacking_character.consume_stamina(attack.damage * this.parry_enemy_stamina_consume_factor, { context });
+    this.consume_stamina(this.parry_stamina_consume, { context });
     return true;
   }
 }
@@ -759,6 +794,10 @@ class Player extends Character {
         }
       }
     });
+    __publicField(this, "items", {
+      flask: { name: "flask", owned: 3 }
+    });
+    __publicField(this, "flask_health_recover_pct", 0.65);
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
     this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
     this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this));
@@ -830,6 +869,19 @@ class Player extends Character {
     }
     return do_parry;
   }
+  use_item(item_name) {
+    const item = this.items[item_name];
+    if (!item) console.warn(`Player has no item "${item_name}"`);
+    if (item.owned > 0) {
+      if (item.name === "flask") {
+        this.health += this.max_health * this.flask_health_recover_pct;
+        if (this.health > this.max_health) {
+          this.health = this.max_health;
+        }
+      }
+      item.owned -= 1;
+    }
+  }
 }
 const enemy_root_selector = ".skip-btn";
 class Enemy extends Character {
@@ -862,7 +914,7 @@ class Enemy extends Character {
         damage: 500,
         stamina_consume: 6,
         parry_window_duration: 100,
-        scale: 2.5,
+        scale: 3,
         hitbox: {
           shape: {
             points: [
@@ -887,7 +939,7 @@ class Enemy extends Character {
         damage: 250,
         stamina_consume: 3,
         parry_window_duration: 100,
-        scale: 2.5,
+        scale: 3,
         hitbox: {
           shape: {
             points: [

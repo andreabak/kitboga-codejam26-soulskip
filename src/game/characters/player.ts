@@ -4,6 +4,12 @@ import {GameUpdateContext} from "../core"
 import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
 
+export type PlayerItemName = "flask"
+export type PlayerItem = {
+    name: PlayerItemName
+    owned: number
+}
+
 const player_root_selector = ".player"
 const parry_audio_selector = ".sound.parry"
 const enemy_break_audio_selector = ".sound.enemy-break"
@@ -62,6 +68,11 @@ export class Player extends Character {
             },
         },
     }
+
+    items: Record<PlayerItemName, PlayerItem> = {
+        flask: {name: "flask", owned: 3},
+    }
+    flask_health_recover_pct: number = 0.65
 
     constructor(game: Game) {
         super(game)
@@ -149,5 +160,19 @@ export class Player extends Character {
             }
         }
         return do_parry
+    }
+
+    use_item(item_name: PlayerItemName): void {
+        const item = this.items[item_name]
+        if (!item) console.warn(`Player has no item "${item_name}"`)
+        if (item.owned > 0) {
+            if (item.name === "flask") {
+                this.health += this.max_health * this.flask_health_recover_pct
+                if (this.health > this.max_health) {
+                    this.health = this.max_health
+                }
+            }
+            item.owned -= 1
+        }
     }
 }

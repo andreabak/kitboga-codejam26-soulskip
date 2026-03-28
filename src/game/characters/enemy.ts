@@ -37,7 +37,7 @@ export class Enemy extends Character {
             damage: 500,
             stamina_consume: 6,
             parry_window_duration: 100,
-            scale: 2.5,
+            scale: 3,
             hitbox: {
                 shape: {
                     points: [
@@ -62,7 +62,7 @@ export class Enemy extends Character {
             damage: 250,
             stamina_consume: 3,
             parry_window_duration: 100,
-            scale: 2.5,
+            scale: 3,
             hitbox: {
                 shape: {
                     points: [

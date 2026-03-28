@@ -94,6 +94,7 @@ export abstract class Character extends Actor {
     defend_max_vel: number = 5
     defending: boolean = false
 
+    parry_stamina_consume: number = 30
     parry_enemy_stamina_consume_factor: number = 0.1
 
     constructor(game: Game) {
@@ -396,6 +397,7 @@ export abstract class Character extends Actor {
         context: GameUpdateContext
     }): boolean {
         attacking_character.consume_stamina(attack.damage * this.parry_enemy_stamina_consume_factor, {context})
+        this.consume_stamina(this.parry_stamina_consume, {context})
         return true // no damage to us
     }
 }
