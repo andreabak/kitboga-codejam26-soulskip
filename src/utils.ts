@@ -93,16 +93,6 @@ export function shape_bbox(shape: Shape): Rect {
         height: max_y - min_y,
     }
 }
-export type HitBox = {
-    shape: Shape | Rect
-    rotation_ref: number
-}
-export function hitbox_bbox(box: HitBox): Rect {
-    if (!("points" in box.shape)) {
-        return box.shape
-    }
-    return shape_bbox(box.shape)
-}
 
 export function transform(
     points: Array<Point>,

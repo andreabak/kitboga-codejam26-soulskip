@@ -1,4 +1,5 @@
-import {Game} from "./game"
+import {Game} from "@/game"
+
 import {add_shell_events_listener, ShellEvent} from "./shell"
 
 let game: Game | null = null

@@ -1,15 +1,29 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-function add_shell_events_listener(listener) {
-  window.addEventListener("message", (event) => {
-    var _a;
-    if (!event || typeof event !== "object" || !((_a = event == null ? void 0 : event.data) == null ? void 0 : _a.type)) return;
-    listener(event.data);
-  });
+class Component {
+  constructor() {
+    __publicField(this, "_children", []);
+  }
+  add_component(component) {
+    this._children.push(component);
+    return component;
+  }
+  update(context) {
+    this._update(context);
+    for (const component of this._children) {
+      component.update(context);
+    }
+  }
 }
-function send_shell_request(request) {
-  window.top.postMessage(request, "*");
+class GameComponent extends Component {
+  constructor(game2) {
+    super();
+    __publicField(this, "game");
+    this.game = game2;
+  }
+}
+class Actor extends GameComponent {
 }
 async function delay(ms) {
   return await new Promise((resolve) => setTimeout(resolve, ms));
@@ -243,29 +257,153 @@ class TargetFollower {
     return this.pos;
   }
 }
-class Component {
-  constructor() {
-    __publicField(this, "_children", []);
+class HudBar extends GameComponent {
+  constructor(game2, hud) {
+    super(game2);
+    __publicField(this, "hud");
+    __publicField(this, "value", 0);
+    __publicField(this, "max", 0);
+    __publicField(this, "max_recent", 0);
+    __publicField(this, "max_ts", -Infinity);
+    __publicField(this, "recent_delay", 1e3);
+    __publicField(this, "decay_pct_speed", 200);
+    this.hud = hud;
   }
-  add_component(component) {
-    this._children.push(component);
-    return component;
+  _update(context) {
+    const { value, max } = this._get_values();
+    this.value = value;
+    this.max = max;
+    if (this.value >= this.max_recent) {
+      this.max_recent = this.value;
+      this.max_ts = context.timeref;
+    } else if (this.max_recent >= value && context.timeref - this.max_ts > this.recent_delay) {
+      this.max_recent -= this.max * (this.decay_pct_speed / 100 * ((context.timedelta ?? 0) / 1e3));
+    }
+    const pct_value = this.value / this.max;
+    const pct_diff = (this.max_recent - value) / this.max;
+    this.bar_root_el.style.setProperty("--bar-fill", pct_value.toFixed(3));
+    this.bar_root_el.style.setProperty("--bar-diff", pct_diff.toFixed(3));
   }
-  update(context) {
-    this._update(context);
-    for (const component of this._children) {
-      component.update(context);
+}
+const hud_player_health_bar_selector = ".player-bar.bar.health";
+class PlayerHealthBar extends HudBar {
+  constructor(game2, hud) {
+    super(game2, hud);
+    __publicField(this, "bar_root_el");
+    this.bar_root_el = get_element(hud_player_health_bar_selector, this.hud.hud_root_el);
+  }
+  _get_values() {
+    return { value: this.game.player.health, max: this.game.player.max_health };
+  }
+  _update(context) {
+    if (this.hud.should_show) {
+      super._update(context);
     }
   }
 }
-class GameComponent extends Component {
-  constructor(game2) {
-    super();
-    __publicField(this, "game");
-    this.game = game2;
+const hud_player_stamina_bar_selector = ".player-bar.bar.stamina";
+class PlayerStaminaBar extends HudBar {
+  constructor(game2, hud) {
+    super(game2, hud);
+    __publicField(this, "bar_root_el");
+    this.bar_root_el = get_element(hud_player_stamina_bar_selector, this.hud.hud_root_el);
+  }
+  _get_values() {
+    return { value: this.game.player.stamina, max: this.game.player.max_stamina };
+  }
+  _update(context) {
+    if (this.hud.should_show) {
+      super._update(context);
+      this.bar_root_el.classList.toggle("low-stamina", this.game.player.low_stamina);
+    }
   }
 }
-class Actor extends GameComponent {
+const hud_enemy_health_bar_selector = ".enemy-bar.bar.health";
+const hud_enemy_damage_selector = ".boss-info .damage";
+class EnemyHealthBar extends HudBar {
+  constructor(game2, hud) {
+    super(game2, hud);
+    __publicField(this, "bar_root_el");
+    __publicField(this, "damage_el");
+    __publicField(this, "last_value", 0);
+    __publicField(this, "damage_value_max", 0);
+    __publicField(this, "last_value_change_ts", -Infinity);
+    __publicField(this, "damage_reset_delay", 2e3);
+    this.bar_root_el = get_element(hud_enemy_health_bar_selector, this.hud.hud_root_el);
+    this.damage_el = get_element(hud_enemy_damage_selector, this.hud.hud_root_el);
+  }
+  _get_values() {
+    return { value: this.game.enemy.health, max: this.game.enemy.max_health };
+  }
+  _update(context) {
+    if (this.hud.should_show) {
+      super._update(context);
+      if (this.value != this.last_value) {
+        this.last_value_change_ts = context.timeref;
+      }
+      if (this.value < this.damage_value_max && context.timeref - this.last_value_change_ts < this.damage_reset_delay) {
+        const diff = this.damage_value_max - this.value;
+        this.damage_el.innerText = diff.toFixed(0);
+      } else {
+        this.damage_value_max = this.value;
+        this.damage_el.innerText = "";
+      }
+      this.last_value = this.value;
+    }
+  }
+}
+const hud_enemy_stamina_bar_selector = ".enemy-bar.bar.stamina";
+class EnemyStaminaBar extends HudBar {
+  constructor(game2, hud) {
+    super(game2, hud);
+    __publicField(this, "bar_root_el");
+    this.bar_root_el = get_element(hud_enemy_stamina_bar_selector, this.hud.hud_root_el);
+  }
+  _get_values() {
+    return { value: this.game.enemy.stamina, max: this.game.enemy.max_stamina };
+  }
+  _update(context) {
+    if (this.hud.should_show) {
+      super._update(context);
+      this.bar_root_el.classList.toggle("low-stamina", this.game.enemy.low_stamina);
+    }
+  }
+}
+const hud_root_selector = ".hud";
+const hud_hidden_class = "hidden";
+class Hud extends GameComponent {
+  // TODO: debug only
+  constructor(game2) {
+    super(game2);
+    __publicField(this, "hud_root_el");
+    __publicField(this, "player_health_bar");
+    __publicField(this, "player_stamina_bar");
+    __publicField(this, "enemy_health_bar");
+    __publicField(this, "enemy_stamina_bar");
+    __publicField(this, "show_enemy_stamina_bar", true);
+    this.hud_root_el = get_element(hud_root_selector, this.game.game_root_el);
+    this.player_health_bar = this.add_component(new PlayerHealthBar(game2, this));
+    this.player_stamina_bar = this.add_component(new PlayerStaminaBar(game2, this));
+    this.enemy_health_bar = this.add_component(new EnemyHealthBar(game2, this));
+    this.enemy_stamina_bar = this.add_component(new EnemyStaminaBar(game2, this));
+  }
+  get should_show() {
+    return this.game.state !== "chill";
+  }
+  _update(context) {
+    this.hud_root_el.classList.toggle(hud_hidden_class, !this.should_show);
+    this.enemy_stamina_bar.bar_root_el.classList.toggle(hud_hidden_class, !this.show_enemy_stamina_bar);
+  }
+}
+function add_shell_events_listener(listener) {
+  window.addEventListener("message", (event) => {
+    var _a;
+    if (!event || typeof event !== "object" || !((_a = event == null ? void 0 : event.data) == null ? void 0 : _a.type)) return;
+    listener(event.data);
+  });
+}
+function send_shell_request(request) {
+  window.top.postMessage(request, "*");
 }
 const ATTACK_PHASES_SEQUENCE = ["anticipation", "hit", "recovery"];
 class Character extends Actor {
@@ -798,7 +936,7 @@ class Enemy extends Character {
       this.pos_target = this._get_reach_player_point();
       this.dir_target = { ...this.game.player.pos };
     }
-    const low_stamina_before = this.low_stamina;
+    this.low_stamina;
     super._update(context);
     if (this.game.state === "battle") {
       const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y);
@@ -806,9 +944,6 @@ class Enemy extends Character {
         this.attack_requested = true;
       } else if (!this.attacking && !this.can_attack) {
         if (this.current_attack_chain != null) this.current_attack_chain = null;
-      }
-      if (!low_stamina_before && this.low_stamina) {
-        play_audio_element(enemy_break_audio_selector, this.game.game_root_el);
       }
       if (this.dead) {
         this.game.change_state_soon("victory");
@@ -869,144 +1004,6 @@ class Enemy extends Character {
       this.pos_target = { x: game_rect.x + game_rect.width / 2, y: game_rect.y + game_rect.height / 2 };
       this.next_attack_ts = this.calc_next_attack_ts(this.game.timeref);
     }
-  }
-}
-class HudBar extends GameComponent {
-  constructor(game2, hud) {
-    super(game2);
-    __publicField(this, "hud");
-    __publicField(this, "value", 0);
-    __publicField(this, "max", 0);
-    __publicField(this, "max_recent", 0);
-    __publicField(this, "max_ts", -Infinity);
-    __publicField(this, "recent_delay", 1e3);
-    __publicField(this, "decay_pct_speed", 200);
-    this.hud = hud;
-  }
-  _update(context) {
-    const { value, max } = this._get_values();
-    this.value = value;
-    this.max = max;
-    if (this.value >= this.max_recent) {
-      this.max_recent = this.value;
-      this.max_ts = context.timeref;
-    } else if (this.max_recent >= value && context.timeref - this.max_ts > this.recent_delay) {
-      this.max_recent -= this.max * (this.decay_pct_speed / 100 * ((context.timedelta ?? 0) / 1e3));
-    }
-    const pct_value = this.value / this.max;
-    const pct_diff = (this.max_recent - value) / this.max;
-    this.bar_root_el.style.setProperty("--bar-fill", pct_value.toFixed(3));
-    this.bar_root_el.style.setProperty("--bar-diff", pct_diff.toFixed(3));
-  }
-}
-const hud_player_health_bar_selector = ".player-bar.bar.health";
-class PlayerHealthBar extends HudBar {
-  constructor(game2, hud) {
-    super(game2, hud);
-    __publicField(this, "bar_root_el");
-    this.bar_root_el = get_element(hud_player_health_bar_selector, this.hud.hud_root_el);
-  }
-  _get_values() {
-    return { value: this.game.player.health, max: this.game.player.max_health };
-  }
-  _update(context) {
-    if (this.hud.should_show) {
-      super._update(context);
-    }
-  }
-}
-const hud_player_stamina_bar_selector = ".player-bar.bar.stamina";
-class PlayerStaminaBar extends HudBar {
-  constructor(game2, hud) {
-    super(game2, hud);
-    __publicField(this, "bar_root_el");
-    this.bar_root_el = get_element(hud_player_stamina_bar_selector, this.hud.hud_root_el);
-  }
-  _get_values() {
-    return { value: this.game.player.stamina, max: this.game.player.max_stamina };
-  }
-  _update(context) {
-    if (this.hud.should_show) {
-      super._update(context);
-      this.bar_root_el.classList.toggle("low-stamina", this.game.player.low_stamina);
-    }
-  }
-}
-const hud_enemy_health_bar_selector = ".enemy-bar.bar.health";
-const hud_enemy_damage_selector = ".boss-info .damage";
-class EnemyHealthBar extends HudBar {
-  constructor(game2, hud) {
-    super(game2, hud);
-    __publicField(this, "bar_root_el");
-    __publicField(this, "damage_el");
-    __publicField(this, "last_value", 0);
-    __publicField(this, "damage_value_max", 0);
-    __publicField(this, "last_value_change_ts", -Infinity);
-    __publicField(this, "damage_reset_delay", 2e3);
-    this.bar_root_el = get_element(hud_enemy_health_bar_selector, this.hud.hud_root_el);
-    this.damage_el = get_element(hud_enemy_damage_selector, this.hud.hud_root_el);
-  }
-  _get_values() {
-    return { value: this.game.enemy.health, max: this.game.enemy.max_health };
-  }
-  _update(context) {
-    if (this.hud.should_show) {
-      super._update(context);
-      if (this.value != this.last_value) {
-        this.last_value_change_ts = context.timeref;
-      }
-      if (this.value < this.damage_value_max && context.timeref - this.last_value_change_ts < this.damage_reset_delay) {
-        const diff = this.damage_value_max - this.value;
-        this.damage_el.innerText = diff.toFixed(0);
-      } else {
-        this.damage_value_max = this.value;
-        this.damage_el.innerText = "";
-      }
-      this.last_value = this.value;
-    }
-  }
-}
-const hud_enemy_stamina_bar_selector = ".enemy-bar.bar.stamina";
-class EnemyStaminaBar extends HudBar {
-  constructor(game2, hud) {
-    super(game2, hud);
-    __publicField(this, "bar_root_el");
-    this.bar_root_el = get_element(hud_enemy_stamina_bar_selector, this.hud.hud_root_el);
-  }
-  _get_values() {
-    return { value: this.game.enemy.stamina, max: this.game.enemy.max_stamina };
-  }
-  _update(context) {
-    if (this.hud.should_show) {
-      super._update(context);
-      this.bar_root_el.classList.toggle("low-stamina", this.game.enemy.low_stamina);
-    }
-  }
-}
-const hud_root_selector = ".hud";
-const hud_hidden_class = "hidden";
-class Hud extends GameComponent {
-  // TODO: debug only
-  constructor(game2) {
-    super(game2);
-    __publicField(this, "hud_root_el");
-    __publicField(this, "player_health_bar");
-    __publicField(this, "player_stamina_bar");
-    __publicField(this, "enemy_health_bar");
-    __publicField(this, "enemy_stamina_bar");
-    __publicField(this, "show_enemy_stamina_bar", true);
-    this.hud_root_el = get_element(hud_root_selector, this.game.game_root_el);
-    this.player_health_bar = this.add_component(new PlayerHealthBar(game2, this));
-    this.player_stamina_bar = this.add_component(new PlayerStaminaBar(game2, this));
-    this.enemy_health_bar = this.add_component(new EnemyHealthBar(game2, this));
-    this.enemy_stamina_bar = this.add_component(new EnemyStaminaBar(game2, this));
-  }
-  get should_show() {
-    return this.game.state !== "chill";
-  }
-  _update(context) {
-    this.hud_root_el.classList.toggle(hud_hidden_class, !this.should_show);
-    this.enemy_stamina_bar.bar_root_el.classList.toggle(hud_hidden_class, !this.show_enemy_stamina_bar);
   }
 }
 const defeat_screen_selector = ".defeat-screen";
