@@ -1044,8 +1044,10 @@ export class Game extends Component<GameUpdateContext> {
             console.warn("Received unknown event object", event)
             return
         }
-        if (event.type === "adStarted") {
-            // TODO: handle events
+        // repeat ad forever
+        if (event.type === "adFinished") {
+            send_shell_request({type: "seekTo", value: 0})
+            send_shell_request({type: "play"})
         }
     }
 

@@ -1043,7 +1043,10 @@ class Game extends Component {
       console.warn("Received unknown event object", event);
       return;
     }
-    if (event.type === "adStarted") ;
+    if (event.type === "adFinished") {
+      send_shell_request({ type: "seekTo", value: 0 });
+      send_shell_request({ type: "play" });
+    }
   }
   _update(context) {
     this.game_root_el.classList.toggle("hide-mouse", this.state !== "chill");
