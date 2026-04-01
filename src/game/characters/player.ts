@@ -4,11 +4,23 @@ import {GameUpdateContext} from "../core"
 import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
 
-export type PlayerItemName = "flask"
-export type PlayerItem = {
+import FlaskIcon from "@/assets/flask.webp"
+import ShieldIcon from "@/assets/shield.webp"
+import SwordIcon from "@/assets/sword.svg"
+
+export type PlayerItemName = "flask" | "shield" | "sword"
+export type PlayerItemBase = {
     name: PlayerItemName
+    icon_src: string
+}
+export type PlayerItemConsumable = PlayerItemBase & {
+    consumable: true
     owned: number
 }
+export type PlayerItemEquipment = PlayerItemBase & {
+    consumable: false
+}
+export type PlayerItem = PlayerItemConsumable | PlayerItemEquipment
 
 const player_root_selector = ".player"
 const parry_audio_selector = ".sound.parry"
@@ -70,7 +82,9 @@ export class Player extends Character {
     }
 
     items: Record<PlayerItemName, PlayerItem> = {
-        flask: {name: "flask", owned: 3},
+        flask: {name: "flask", icon_src: FlaskIcon, owned: 3, consumable: true},
+        shield: {name: "shield", icon_src: ShieldIcon, consumable: false},
+        sword: {name: "sword", icon_src: SwordIcon, consumable: false},
     }
     flask_health_recover_pct: number = 0.65
 
@@ -165,14 +179,16 @@ export class Player extends Character {
     use_item(item_name: PlayerItemName): void {
         const item = this.items[item_name]
         if (!item) console.warn(`Player has no item "${item_name}"`)
-        if (item.owned > 0) {
+        if (!this.dead && (!item.consumable || item.owned > 0)) {
             if (item.name === "flask") {
                 this.health += this.max_health * this.flask_health_recover_pct
                 if (this.health > this.max_health) {
                     this.health = this.max_health
                 }
             }
-            item.owned -= 1
+            if (item.consumable) {
+                item.owned -= 1
+            }
         }
     }
 }

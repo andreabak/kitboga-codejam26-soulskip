@@ -152,13 +152,21 @@ class EnemyStaminaBar extends HudBar {
     }
 }
 
+type EquipmentSlot = "left" | "right" | "top" | "bottom"
+
 const hud_equipped_selector = ".equipped"
-const hud_equip_slot_amount_selector = ".amount"
+const hud_equip_slot_amount_el_class = "amount"
 
 class EquippedItemsHud extends GameComponent {
     hud: Hud
     equip_root_el: HTMLDivElement
-    slots_elements: Array<HTMLDivElement>
+    slots_elements: Record<EquipmentSlot, HTMLDivElement>
+
+    slots_items: Partial<Record<EquipmentSlot, PlayerItemName | null>> = {
+        bottom: "flask",
+        right: "sword",
+        left: "shield",
+    }
 
     constructor(game: Game, hud: Hud) {
         super(game)
@@ -166,10 +174,15 @@ class EquippedItemsHud extends GameComponent {
 
         this.equip_root_el = get_element(hud_equipped_selector, this.hud.hud_root_el) as HTMLDivElement
 
-        this.slots_elements = [...(this.equip_root_el.querySelectorAll(".slot") as NodeListOf<HTMLDivElement>)]
-        for (const slot of this.slots_elements) {
+        const slots_elements = this.equip_root_el.querySelectorAll(".slot") as NodeListOf<HTMLDivElement>
+        const slots_elements_map: Record<string, HTMLDivElement> = {}
+        for (const slot of slots_elements) {
+            const slot_name = slot.dataset.slot
+            if (!slot_name) continue
+            slots_elements_map[slot_name] = slot
             slot.addEventListener("click", () => this._use_slot_item(slot))
         }
+        this.slots_elements = slots_elements_map as Record<EquipmentSlot, HTMLDivElement>
     }
 
     _use_slot_item(slot: HTMLDivElement) {
@@ -179,13 +192,31 @@ class EquippedItemsHud extends GameComponent {
     }
 
     _update(context: GameUpdateContext) {
-        for (const slot of this.slots_elements) {
-            const item_name = slot.dataset.item
-            if (!item_name) continue
+        for (const [slot_name, slot] of Object.entries(this.slots_elements)) {
+            const item_name = this.slots_items[slot_name as EquipmentSlot]
             const item = this.game.player.items[item_name as PlayerItemName]
-            if (!item) continue
-            const amount_el = get_element(hud_equip_slot_amount_selector, slot)
-            amount_el.textContent = item.owned.toFixed(0)
+            if (!item_name || !item) {
+                slot.replaceChildren()
+                slot.dataset.item = undefined
+                continue
+            }
+            if (slot.dataset.item != item_name) {
+                slot.replaceChildren()
+                slot.dataset.item = item_name
+                const icon_img = document.createElement("img")
+                icon_img.classList.add("item")
+                icon_img.src = item.icon_src
+                slot.appendChild(icon_img)
+                if (item.consumable) {
+                    const amount_el = document.createElement("div")
+                    amount_el.classList.add(hud_equip_slot_amount_el_class)
+                    slot.appendChild(amount_el)
+                }
+            }
+            if (item.consumable) {
+                const amount_el = get_element(`.${hud_equip_slot_amount_el_class}`, slot)
+                amount_el.textContent = item.owned.toFixed(0)
+            }
         }
     }
 }

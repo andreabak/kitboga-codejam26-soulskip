@@ -370,19 +370,29 @@ class EnemyStaminaBar extends HudBar {
   }
 }
 const hud_equipped_selector = ".equipped";
-const hud_equip_slot_amount_selector = ".amount";
+const hud_equip_slot_amount_el_class = "amount";
 class EquippedItemsHud extends GameComponent {
   constructor(game2, hud) {
     super(game2);
     __publicField(this, "hud");
     __publicField(this, "equip_root_el");
     __publicField(this, "slots_elements");
+    __publicField(this, "slots_items", {
+      bottom: "flask",
+      right: "sword",
+      left: "shield"
+    });
     this.hud = hud;
     this.equip_root_el = get_element(hud_equipped_selector, this.hud.hud_root_el);
-    this.slots_elements = [...this.equip_root_el.querySelectorAll(".slot")];
-    for (const slot of this.slots_elements) {
+    const slots_elements = this.equip_root_el.querySelectorAll(".slot");
+    const slots_elements_map = {};
+    for (const slot of slots_elements) {
+      const slot_name = slot.dataset.slot;
+      if (!slot_name) continue;
+      slots_elements_map[slot_name] = slot;
       slot.addEventListener("click", () => this._use_slot_item(slot));
     }
+    this.slots_elements = slots_elements_map;
   }
   _use_slot_item(slot) {
     const item_name = slot.dataset.item;
@@ -390,13 +400,31 @@ class EquippedItemsHud extends GameComponent {
     this.game.player.use_item(item_name);
   }
   _update(context) {
-    for (const slot of this.slots_elements) {
-      const item_name = slot.dataset.item;
-      if (!item_name) continue;
+    for (const [slot_name, slot] of Object.entries(this.slots_elements)) {
+      const item_name = this.slots_items[slot_name];
       const item = this.game.player.items[item_name];
-      if (!item) continue;
-      const amount_el = get_element(hud_equip_slot_amount_selector, slot);
-      amount_el.textContent = item.owned.toFixed(0);
+      if (!item_name || !item) {
+        slot.replaceChildren();
+        slot.dataset.item = void 0;
+        continue;
+      }
+      if (slot.dataset.item != item_name) {
+        slot.replaceChildren();
+        slot.dataset.item = item_name;
+        const icon_img = document.createElement("img");
+        icon_img.classList.add("item");
+        icon_img.src = item.icon_src;
+        slot.appendChild(icon_img);
+        if (item.consumable) {
+          const amount_el = document.createElement("div");
+          amount_el.classList.add(hud_equip_slot_amount_el_class);
+          slot.appendChild(amount_el);
+        }
+      }
+      if (item.consumable) {
+        const amount_el = get_element(`.${hud_equip_slot_amount_el_class}`, slot);
+        amount_el.textContent = item.owned.toFixed(0);
+      }
     }
   }
 }
@@ -739,6 +767,9 @@ class Character extends Actor {
     return true;
   }
 }
+const FlaskIcon = "" + new URL("assets/flask.webp", import.meta.url).href;
+const ShieldIcon = "" + new URL("assets/shield.webp", import.meta.url).href;
+const SwordIcon = "" + new URL("assets/sword.svg", import.meta.url).href;
 const player_root_selector = ".player";
 const parry_audio_selector = ".sound.parry";
 const enemy_break_audio_selector = ".sound.enemy-break";
@@ -795,7 +826,9 @@ class Player extends Character {
       }
     });
     __publicField(this, "items", {
-      flask: { name: "flask", owned: 3 }
+      flask: { name: "flask", icon_src: FlaskIcon, owned: 3, consumable: true },
+      shield: { name: "shield", icon_src: ShieldIcon, consumable: false },
+      sword: { name: "sword", icon_src: SwordIcon, consumable: false }
     });
     __publicField(this, "flask_health_recover_pct", 0.65);
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
@@ -872,14 +905,16 @@ class Player extends Character {
   use_item(item_name) {
     const item = this.items[item_name];
     if (!item) console.warn(`Player has no item "${item_name}"`);
-    if (item.owned > 0) {
+    if (!this.dead && (!item.consumable || item.owned > 0)) {
       if (item.name === "flask") {
         this.health += this.max_health * this.flask_health_recover_pct;
         if (this.health > this.max_health) {
           this.health = this.max_health;
         }
       }
-      item.owned -= 1;
+      if (item.consumable) {
+        item.owned -= 1;
+      }
     }
   }
 }
