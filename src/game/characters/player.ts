@@ -5,6 +5,7 @@ import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
 
 import FlaskIcon from "@/assets/flask.webp"
+import AttackFast from "@/assets/player-attack-fast.png"
 import ShieldIcon from "@/assets/shield.webp"
 import SwordIcon from "@/assets/sword.svg"
 
@@ -26,7 +27,7 @@ const player_root_selector = ".player"
 const parry_audio_selector = ".sound.parry"
 const enemy_break_audio_selector = ".sound.enemy-break"
 
-export class Player extends Character {
+class Player extends Character<Player> {
     player_root_el: HTMLDivElement
 
     width: number = 48
@@ -40,8 +41,8 @@ export class Player extends Character {
 
     stamina: number = 200.0
     max_stamina: number = 200.0
-    stamina_movement_consume_factor: number = 14.0
-    stamina_movement_vel_min: number = 30.0
+    stamina_movement_consume_factor: number = 5.0
+    stamina_movement_vel_min: number = 60.0
     stamina_recover: number = 100.0
     stamina_recover_delay: number = 500
     last_stamina_consume_ts: number = -Infinity
@@ -53,15 +54,52 @@ export class Player extends Character {
 
     hurtbox_def: HitBox = {shape: {x: 0, y: 0, width: 0.75, height: 1}, rotation_ref: 0}
 
-    attacks_defs = {
+    attacks_defs: Record<string, AttackDef<Player>> = {
         fast: {
             phases: {
-                anticipation: {duration: 50, acceleration: 20},
-                hit: {duration: 150, acceleration: 10},
+                anticipation: {
+                    duration: 0,
+                    acceleration: 20,
+                },
+                hit: {
+                    duration: 150,
+                    acceleration: 1,
+                    animation: (player, attack) => {
+                        const randid = "anim-" + Math.random().toString(36)
+                        const anim_el = document.createElement("img")
+                        anim_el.id = randid
+                        anim_el.src = AttackFast
+                        anim_el.style = `
+                            position: absolute;
+                            width: ${player.width}px;
+                            height: ${player.height}px;
+                            top: 0;
+                            left: 0;
+                            mix-blend-mode: plus-lighter;
+                        `
+                        const rotation_base_deg = ((player.direction - attack.hitbox.rotation_ref) * 180) / Math.PI
+                        player.player_root_el.appendChild(anim_el)
+                        const update = (progress: number) => {
+                            const rotation_offset_deg = 30 - 45 * progress ** 0.25
+                            anim_el.style.transform = `
+                                scale(${attack.scale})
+                                rotate(${rotation_base_deg + rotation_offset_deg}deg)
+                            `
+                            const overblend = 1 - progress
+                            anim_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`
+                            anim_el.style.opacity = ((1 - progress) ** 0.125).toString()
+                        }
+                        update(0)
+                        return {
+                            update,
+                            end: () => anim_el.remove(),
+                        }
+                    },
+                },
                 recovery: {duration: 100, acceleration: 50},
             },
             damage: 213,
-            stamina_consume: 30,
+            stamina_consume: 20,
             parry_window_duration: 200,
             scale: 3.0,
             hitbox: {
@@ -147,10 +185,10 @@ export class Player extends Character {
         this.player_root_el.classList.toggle("hurt", context.timeref - this.last_damage_ts < 500)
     }
 
-    new_attack(): AttackDef {
+    new_attack(): AttackDef<Player> {
         return this.attacks_defs["fast"]
     }
-    _attack_start(attack: Attack, {context}: {context: GameUpdateContext}) {
+    _attack_start(attack: Attack<Player>, {context}: {context: GameUpdateContext}) {
         super._attack_start(attack, {context})
         this.player_root_el.style.setProperty("--attack-scale", attack.scale.toString())
     }
@@ -159,7 +197,7 @@ export class Player extends Character {
         attacking_character,
         context,
     }: {
-        attack: Attack
+        attack: Attack<Player>
         attacking_character: Character
         context: GameUpdateContext
     }): boolean {
@@ -192,3 +230,5 @@ export class Player extends Character {
         }
     }
 }
+
+export default Player

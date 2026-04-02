@@ -2,7 +2,7 @@ import {send_shell_request, ShellEvent} from "@/shell"
 import {aabb_overlap, delay, fade_audio, get_element, play_audio_element, Point, sat_overlap, shape_bbox} from "@/utils"
 
 import {Character, Enemy, Player} from "./characters"
-import {Component, GameComponent, GameState, GameUpdateContext} from "./core"
+import {AnimationHandle, Component, GameComponent, GameState, GameUpdateContext, TimedAnimationHandle} from "./core"
 import {Hud} from "./hud"
 
 const defeat_screen_selector = ".defeat-screen"
@@ -53,6 +53,8 @@ export class Game extends Component<GameUpdateContext> {
 
     game_root_el: HTMLDivElement
 
+    animations: Record<string, {start_ts: number; duration: number; handle: AnimationHandle}> = {}
+
     player: Player
     enemy: Enemy
     characters: Array<Character> = []
@@ -62,7 +64,9 @@ export class Game extends Component<GameUpdateContext> {
     defeat_screen: DefeatScreen
     victory_screen: VictoryScreen
 
-    private debug_hitboxes: boolean = true
+    debug_mode: boolean = false
+    debug_enemy_stamina: boolean = true
+    debug_hitboxes: boolean = true
 
     constructor() {
         super()
@@ -138,6 +142,26 @@ export class Game extends Component<GameUpdateContext> {
                 setTimeout(() => send_shell_request({type: "success"}), 7000)
             }
         }
+        this._update_animations(context)
+    }
+
+    play_animation(handle: TimedAnimationHandle): void
+    play_animation(handle: AnimationHandle, duration: number): void
+    play_animation(handle: AnimationHandle | TimedAnimationHandle, duration?: number): void {
+        if ("duration" in handle) duration = handle.duration
+        if (duration == null) throw new Error("Cannot play animation without duration!")
+        const id = Math.random().toString(36)
+        this.animations[id] = {start_ts: this.timeref, duration, handle}
+    }
+    _update_animations(context: GameUpdateContext): void {
+        for (const [id, anim_info] of [...Object.entries(this.animations)]) {
+            const progress = (context.timeref - anim_info.start_ts) / anim_info.duration
+            if (anim_info.handle.update) anim_info.handle.update(Math.max(0, Math.min(progress, 1)))
+            if (progress >= 1) {
+                if (anim_info.handle.end) anim_info.handle.end()
+                delete this.animations[id]
+            }
+        }
     }
 
     step(timestamp: number): void {
@@ -175,7 +199,7 @@ export class Game extends Component<GameUpdateContext> {
         for (const el of svg_els) {
             el.parentNode?.removeChild(el)
         }
-        if (this.debug_hitboxes) {
+        if (this.debug_mode && this.debug_hitboxes) {
             const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
             svg.id = svg_id
             svg.style.cssText = `

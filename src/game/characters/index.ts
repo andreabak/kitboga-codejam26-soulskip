@@ -1,3 +1,3 @@
 export * from "./core"
-export {Player} from "./player"
+export {default as Player} from "./player"
 export {Enemy} from "./enemy"

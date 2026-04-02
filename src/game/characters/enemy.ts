@@ -6,7 +6,7 @@ import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./co
 
 const enemy_root_selector = ".skip-btn"
 
-export class Enemy extends Character {
+export class Enemy extends Character<Enemy> {
     enemy_root_el: HTMLDivElement
 
     width: number
@@ -204,7 +204,7 @@ export class Enemy extends Character {
         }
     }
 
-    new_attack(): AttackDef {
+    new_attack(): AttackDef<Enemy> {
         if (
             this.current_attack_chain == null ||
             this.current_attack_chain.index >= this.current_attack_chain.def.length - 1
@@ -217,11 +217,11 @@ export class Enemy extends Character {
         const next_attack = this.current_attack_chain.def[this.current_attack_chain.index]
         return this.attacks_defs[next_attack]
     }
-    _attack_start(attack: Attack, {context}: {context: GameUpdateContext}) {
+    _attack_start(attack: Attack<Enemy>, {context}: {context: GameUpdateContext}) {
         super._attack_start(attack, {context})
         this.enemy_root_el.style.setProperty("--attack-scale", attack.scale.toString())
     }
-    _attack_end(attack: Attack, {context}: {context: GameUpdateContext}) {
+    _attack_end(attack: Attack<Enemy>, {context}: {context: GameUpdateContext}) {
         super._attack_end(attack, {context})
         if (
             this.current_attack_chain != null &&

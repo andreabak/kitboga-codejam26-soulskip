@@ -4,7 +4,7 @@ import {add_shell_events_listener, ShellEvent} from "./shell"
 
 let game: Game | null = null
 let game_frame_req_id: number | null = null
-const schedule_mode: "interval" | "frame" = "frame"
+const schedule_mode: "interval" | "frame" = "interval"
 
 function handle_shell_event(event: ShellEvent) {
     if (event.type === "adStarted" && game == null) {

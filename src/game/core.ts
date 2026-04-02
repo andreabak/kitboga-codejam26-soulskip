@@ -22,6 +22,18 @@ export abstract class Component<T extends UpdateContext> {
     }
 }
 
+export type AnimationHandle = {
+    update?: ((progress: number) => void) | null
+    end?: (() => void) | null
+}
+export type AnimationDef<C extends Component<object>> = (component: C) => AnimationHandle
+export type TimedAnimationHandle = {
+    duration: number
+    update?: ((progress: number) => void) | null
+    end?: (() => void) | null
+}
+export type TimedAnimationDef<C extends Component<object>> = (component: C) => TimedAnimationHandle
+
 export type GameUpdateContext = {
     /*
      * timestamp of update tick

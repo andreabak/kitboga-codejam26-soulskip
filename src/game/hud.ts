@@ -231,7 +231,6 @@ export class Hud extends GameComponent {
     player_stamina_bar: PlayerStaminaBar
     enemy_health_bar: EnemyHealthBar
     enemy_stamina_bar: EnemyStaminaBar
-    show_enemy_stamina_bar: boolean = true // TODO: debug only
 
     equipped_items: EquippedItemsHud
 
@@ -254,6 +253,9 @@ export class Hud extends GameComponent {
 
     _update(context: GameUpdateContext): void {
         this.hud_root_el.classList.toggle(hud_hidden_class, !this.should_show)
-        this.enemy_stamina_bar.bar_root_el.classList.toggle(hud_hidden_class, !this.show_enemy_stamina_bar)
+        this.enemy_stamina_bar.bar_root_el.classList.toggle(
+            hud_hidden_class,
+            !(this.game.debug_mode && this.game.debug_enemy_stamina),
+        )
     }
 }

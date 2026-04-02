@@ -438,8 +438,6 @@ class Hud extends GameComponent {
     __publicField(this, "player_stamina_bar");
     __publicField(this, "enemy_health_bar");
     __publicField(this, "enemy_stamina_bar");
-    __publicField(this, "show_enemy_stamina_bar", true);
-    // TODO: debug only
     __publicField(this, "equipped_items");
     this.hud_root_el = get_element(hud_root_selector, this.game.game_root_el);
     this.player_health_bar = this.add_component(new PlayerHealthBar(game2, this));
@@ -453,7 +451,10 @@ class Hud extends GameComponent {
   }
   _update(context) {
     this.hud_root_el.classList.toggle(hud_hidden_class, !this.should_show);
-    this.enemy_stamina_bar.bar_root_el.classList.toggle(hud_hidden_class, !this.show_enemy_stamina_bar);
+    this.enemy_stamina_bar.bar_root_el.classList.toggle(
+      hud_hidden_class,
+      !(this.game.debug_mode && this.game.debug_enemy_stamina)
+    );
   }
 }
 function add_shell_events_listener(listener) {
@@ -647,7 +648,7 @@ class Character extends Actor {
           start_ts: context.timeref,
           current_phase: ATTACK_PHASES_SEQUENCE[0]
         };
-        this.current_attack.phases[this.current_attack.current_phase].start_ts = context.timeref;
+        this._attack_phase_start(this.current_attack, ATTACK_PHASES_SEQUENCE[0], { context });
         this.consume_stamina(this.current_attack.stamina_consume * this.attack_stamina_consume_multiplier, {
           context
         });
@@ -657,14 +658,17 @@ class Character extends Actor {
     }
     if (this.current_attack) {
       const current_phase = this.current_attack.phases[this.current_attack.current_phase];
-      if (current_phase.start_ts == null) {
-        current_phase.start_ts = context.timeref;
-      } else if (current_phase.start_ts + current_phase.duration <= context.timeref) {
+      if (current_phase.start_ts == null) current_phase.start_ts = context.timeref;
+      const phase_end_ts = current_phase.start_ts + current_phase.duration;
+      if (context.timeref <= phase_end_ts)
+        this._attack_phase_update(this.current_attack, current_phase, { context });
+      if (context.timeref >= phase_end_ts) {
+        this._attack_phase_end(this.current_attack, current_phase, { context });
         const phase_idx = ATTACK_PHASES_SEQUENCE.indexOf(this.current_attack.current_phase);
         if (phase_idx + 1 < ATTACK_PHASES_SEQUENCE.length) {
           const next_phase_name = ATTACK_PHASES_SEQUENCE[phase_idx + 1];
           this.current_attack.current_phase = next_phase_name;
-          this.current_attack.phases[next_phase_name].start_ts = context.timeref;
+          this._attack_phase_start(this.current_attack, next_phase_name, { context });
         } else {
           this._attack_end(this.current_attack, { context });
           this.current_attack = null;
@@ -707,6 +711,23 @@ class Character extends Actor {
     return this.dead ? 0 : this.attacking ? ((_a = this.current_attack_phase) == null ? void 0 : _a.max_vel) ?? this.base_max_vel : this.defending ? this.defend_max_vel : this.low_stamina ? this.low_stamina_max_vel : this.base_max_vel;
   }
   _attack_start(attack, { context }) {
+  }
+  _attack_phase_start(attack, phase_name, { context }) {
+    const phase = attack.phases[phase_name];
+    phase.start_ts = context.timeref;
+    if (phase.animation != null) {
+      phase.animation_handle = phase.animation(this, attack, phase);
+    }
+  }
+  _attack_phase_update(attack, phase, { context }) {
+    var _a;
+    if (phase.start_ts == null) phase.start_ts = context.timeref;
+    const progress = (context.timeref - phase.start_ts) / phase.duration;
+    if (((_a = phase.animation_handle) == null ? void 0 : _a.update) != null) phase.animation_handle.update(Math.max(0, Math.min(progress, 1)));
+  }
+  _attack_phase_end(attack, phase, { context }) {
+    var _a;
+    if (((_a = phase.animation_handle) == null ? void 0 : _a.end) != null) phase.animation_handle.end();
   }
   _attack_end(attack, { context }) {
   }
@@ -768,6 +789,7 @@ class Character extends Actor {
   }
 }
 const FlaskIcon = "" + new URL("assets/flask.webp", import.meta.url).href;
+const AttackFast = "" + new URL("assets/player-attack-fast.png", import.meta.url).href;
 const ShieldIcon = "" + new URL("assets/shield.webp", import.meta.url).href;
 const SwordIcon = "" + new URL("assets/sword.svg", import.meta.url).href;
 const player_root_selector = ".player";
@@ -785,8 +807,8 @@ class Player extends Character {
     __publicField(this, "max_health", 1850);
     __publicField(this, "stamina", 200);
     __publicField(this, "max_stamina", 200);
-    __publicField(this, "stamina_movement_consume_factor", 14);
-    __publicField(this, "stamina_movement_vel_min", 30);
+    __publicField(this, "stamina_movement_consume_factor", 5);
+    __publicField(this, "stamina_movement_vel_min", 60);
     __publicField(this, "stamina_recover", 100);
     __publicField(this, "stamina_recover_delay", 500);
     __publicField(this, "last_stamina_consume_ts", -Infinity);
@@ -801,12 +823,49 @@ class Player extends Character {
     __publicField(this, "attacks_defs", {
       fast: {
         phases: {
-          anticipation: { duration: 50, acceleration: 20 },
-          hit: { duration: 150, acceleration: 10 },
+          anticipation: {
+            duration: 0,
+            acceleration: 20
+          },
+          hit: {
+            duration: 150,
+            acceleration: 1,
+            animation: (player, attack) => {
+              const randid = "anim-" + Math.random().toString(36);
+              const anim_el = document.createElement("img");
+              anim_el.id = randid;
+              anim_el.src = AttackFast;
+              anim_el.style = `
+                            position: absolute;
+                            width: ${player.width}px;
+                            height: ${player.height}px;
+                            top: 0;
+                            left: 0;
+                            mix-blend-mode: plus-lighter;
+                        `;
+              const rotation_base_deg = (player.direction - attack.hitbox.rotation_ref) * 180 / Math.PI;
+              player.player_root_el.appendChild(anim_el);
+              const update = (progress) => {
+                const rotation_offset_deg = 30 - 45 * progress ** 0.25;
+                anim_el.style.transform = `
+                                scale(${attack.scale})
+                                rotate(${rotation_base_deg + rotation_offset_deg}deg)
+                            `;
+                const overblend = 1 - progress;
+                anim_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`;
+                anim_el.style.opacity = ((1 - progress) ** 0.125).toString();
+              };
+              update(0);
+              return {
+                update,
+                end: () => anim_el.remove()
+              };
+            }
+          },
           recovery: { duration: 100, acceleration: 50 }
         },
         damage: 213,
-        stamina_consume: 30,
+        stamina_consume: 20,
         parry_window_duration: 200,
         scale: 3,
         hitbox: {
@@ -1155,12 +1214,15 @@ class Game extends Component {
     __publicField(this, "_timescale", 1);
     __publicField(this, "_last_step_ts", null);
     __publicField(this, "game_root_el");
+    __publicField(this, "animations", {});
     __publicField(this, "player");
     __publicField(this, "enemy");
     __publicField(this, "characters", []);
     __publicField(this, "hud");
     __publicField(this, "defeat_screen");
     __publicField(this, "victory_screen");
+    __publicField(this, "debug_mode", false);
+    __publicField(this, "debug_enemy_stamina", true);
     __publicField(this, "debug_hitboxes", true);
     this.game_root_el = get_element(game_root_selector);
     this.game_root_el.classList.toggle("hidden", false);
@@ -1224,6 +1286,23 @@ class Game extends Component {
         setTimeout(() => send_shell_request({ type: "success" }), 7e3);
       }
     }
+    this._update_animations(context);
+  }
+  play_animation(handle, duration) {
+    if ("duration" in handle) duration = handle.duration;
+    if (duration == null) throw new Error("Cannot play animation without duration!");
+    const id = Math.random().toString(36);
+    this.animations[id] = { start_ts: this.timeref, duration, handle };
+  }
+  _update_animations(context) {
+    for (const [id, anim_info] of [...Object.entries(this.animations)]) {
+      const progress = (context.timeref - anim_info.start_ts) / anim_info.duration;
+      if (anim_info.handle.update) anim_info.handle.update(Math.max(0, Math.min(progress, 1)));
+      if (progress >= 1) {
+        if (anim_info.handle.end) anim_info.handle.end();
+        delete this.animations[id];
+      }
+    }
   }
   step(timestamp) {
     const last_timeref = this._timeref;
@@ -1258,7 +1337,7 @@ class Game extends Component {
     for (const el of svg_els) {
       (_a = el.parentNode) == null ? void 0 : _a.removeChild(el);
     }
-    if (this.debug_hitboxes) {
+    if (this.debug_mode && this.debug_hitboxes) {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.id = svg_id;
       svg.style.cssText = `
@@ -1329,11 +1408,7 @@ function handle_shell_event(event) {
   if (event.type === "adStarted" && game == null) {
     game = new Game();
     {
-      const request_animation = () => {
-        game == null ? void 0 : game.step(performance.now());
-        requestAnimationFrame(request_animation);
-      };
-      request_animation();
+      setInterval(() => game == null ? void 0 : game.step(performance.now()), 1e3 / 60);
     }
   }
   if (game != null) {

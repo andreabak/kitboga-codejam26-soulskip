@@ -11,13 +11,14 @@ import {
     transform_shape,
 } from "@/utils"
 
-import {Actor, GameUpdateContext} from "../core"
+import {Actor, AnimationDef, AnimationHandle, GameUpdateContext} from "../core"
 import type {Game} from "../game"
 
 export type HitBox = {
     shape: Shape | Rect
     rotation_ref: number
 }
+
 export function hitbox_bbox(box: HitBox): Rect {
     if (!("points" in box.shape)) {
         return box.shape
@@ -25,32 +26,39 @@ export function hitbox_bbox(box: HitBox): Rect {
     return shape_bbox(box.shape)
 }
 
+export type AttackAnimationDef<C extends Character> = (
+    component: C,
+    attack: Attack<C>,
+    phase: AttackPhase<C>,
+) => AnimationHandle
 export type AttackPhases = "anticipation" | "hit" | "recovery"
 export const ATTACK_PHASES_SEQUENCE: Array<AttackPhases> = ["anticipation", "hit", "recovery"]
-export type AttackPhaseDef = {
+export type AttackPhaseDef<C extends Character> = {
     duration: number
     acceleration?: number | null
     max_vel?: number | null
-    animation?: unknown // TODO
+    animation?: AnimationDef<C> | AttackAnimationDef<C> | null
 }
-export type AttackDef = {
-    phases: Required<Record<AttackPhases, AttackPhaseDef>>
+export type AttackDef<C extends Character> = {
+    phases: Required<Record<AttackPhases, AttackPhaseDef<C>>>
     damage: number
     stamina_consume: number
     parry_window_duration: number
     scale: number
     hitbox: HitBox
 }
-export type AttackPhase = AttackPhaseDef & {
+export type AttackPhase<C extends Character> = AttackPhaseDef<C> & {
     start_ts?: number | null
+    animation_handle?: AnimationHandle | null
 }
-export type Attack = AttackDef & {
+export type Attack<C extends Character> = AttackDef<C> & {
     start_ts: number
-    phases: Required<Record<AttackPhases, AttackPhase>>
+    phases: Required<Record<AttackPhases, AttackPhase<C>>>
     current_phase: AttackPhases
 }
 
-export abstract class Character extends Actor {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export abstract class Character<C extends Character<C> = any> extends Actor {
     private _follower: TargetFollower
     base_acceleration: number = 250
     base_max_vel: number = 100
@@ -81,10 +89,10 @@ export abstract class Character extends Actor {
     abstract hurtbox_def: HitBox
 
     attack_requested: boolean = false
-    current_attack: Attack | null = null
+    current_attack: Attack<C> | null = null
     attack_stamina_consume_multiplier: number = 1.0
     last_attack_hits: Array<Character> = []
-    abstract attacks_defs: Record<string, AttackDef>
+    abstract attacks_defs: Record<string, AttackDef<C>>
 
     defend_requested: boolean = false
     defend_request_ts: number = -Infinity
@@ -115,36 +123,47 @@ export abstract class Character extends Actor {
     get acceleration(): number {
         return this._follower.acceleration
     }
+
     set acceleration(value: number) {
         this._follower.acceleration = value
     }
+
     get max_vel(): number | null {
         return this._follower.max_vel
     }
+
     set max_vel(value: number | null) {
         this._follower.max_vel = value
     }
+
     get pos(): Point {
         return this._follower.pos
     }
+
     set pos(value: Point) {
         this._follower.pos = value
     }
+
     get pos_target(): Point {
         return this._follower.pos_target
     }
+
     set pos_target(value: Point) {
         this._follower.pos_target = value
     }
+
     get dir_target(): Point | "pos" | null {
         return this._follower.dir_target
     }
+
     set dir_target(value: Point) {
         this._follower.dir_target = value
     }
+
     get direction(): number {
         return this._follower.direction
     }
+
     get direction_vector(): Point {
         return this._follower.direction_vector
     }
@@ -152,7 +171,8 @@ export abstract class Character extends Actor {
     get attacking(): boolean {
         return this.current_attack != null
     }
-    get current_attack_phase(): AttackPhase | null {
+
+    get current_attack_phase(): AttackPhase<C> | null {
         if (this.current_attack == null) return null
         return this.current_attack.phases[this.current_attack.current_phase]
     }
@@ -188,9 +208,11 @@ export abstract class Character extends Actor {
             rotates: this.rotates,
         })
     }
+
     get hurtbox_abs(): Shape {
         return transform_shape(this.hurtbox, {translate: this.pos})
     }
+
     get attack_hitbox(): Shape | null {
         if (!this.current_attack) {
             return null
@@ -202,6 +224,7 @@ export abstract class Character extends Actor {
             keep_aspect_ratio: true,
         })
     }
+
     get attack_hitbox_abs(): Shape | null {
         const attack_hitbox = this.attack_hitbox
         if (!attack_hitbox) return null
@@ -211,6 +234,7 @@ export abstract class Character extends Actor {
     get dead(): boolean {
         return this.health <= 0
     }
+
     get can_attack(): boolean {
         return !this.attacking && !this.low_stamina && !this.dead
     }
@@ -218,6 +242,7 @@ export abstract class Character extends Actor {
     get can_defend(): boolean {
         return !this.attacking && !this.low_stamina && !this.dead
     }
+
     get can_parry(): boolean {
         return !this.attacking && !this.low_stamina && !this.dead
     }
@@ -250,7 +275,7 @@ export abstract class Character extends Actor {
                     start_ts: context.timeref,
                     current_phase: ATTACK_PHASES_SEQUENCE[0],
                 }
-                this.current_attack.phases[this.current_attack.current_phase].start_ts = context.timeref
+                this._attack_phase_start(this.current_attack, ATTACK_PHASES_SEQUENCE[0], {context})
                 this.consume_stamina(this.current_attack.stamina_consume * this.attack_stamina_consume_multiplier, {
                     context,
                 })
@@ -260,14 +285,17 @@ export abstract class Character extends Actor {
         }
         if (this.current_attack) {
             const current_phase = this.current_attack.phases[this.current_attack.current_phase]
-            if (current_phase.start_ts == null) {
-                current_phase.start_ts = context.timeref
-            } else if (current_phase.start_ts + current_phase.duration <= context.timeref) {
+            if (current_phase.start_ts == null) current_phase.start_ts = context.timeref
+            const phase_end_ts = current_phase.start_ts + current_phase.duration
+            if (context.timeref <= phase_end_ts)
+                this._attack_phase_update(this.current_attack, current_phase, {context})
+            if (context.timeref >= phase_end_ts) {
+                this._attack_phase_end(this.current_attack, current_phase, {context})
                 const phase_idx = ATTACK_PHASES_SEQUENCE.indexOf(this.current_attack.current_phase)
                 if (phase_idx + 1 < ATTACK_PHASES_SEQUENCE.length) {
                     const next_phase_name = ATTACK_PHASES_SEQUENCE[phase_idx + 1]
                     this.current_attack.current_phase = next_phase_name
-                    this.current_attack.phases[next_phase_name].start_ts = context.timeref
+                    this._attack_phase_start(this.current_attack, next_phase_name, {context})
                 } else {
                     this._attack_end(this.current_attack, {context})
                     this.current_attack = null
@@ -315,6 +343,7 @@ export abstract class Character extends Actor {
                 ? this.low_stamina_accel
                 : this.base_acceleration
     }
+
     calc_max_vel(): number {
         return this.dead
             ? 0
@@ -327,9 +356,26 @@ export abstract class Character extends Actor {
                   : this.base_max_vel
     }
 
-    abstract new_attack(): AttackDef
-    _attack_start(attack: Attack, {context}: {context: GameUpdateContext}) {}
-    _attack_end(attack: Attack, {context}: {context: GameUpdateContext}) {}
+    abstract new_attack(): AttackDef<C>
+
+    _attack_start(attack: Attack<C>, {context}: {context: GameUpdateContext}) {}
+    _attack_phase_start(attack: Attack<C>, phase_name: AttackPhases, {context}: {context: GameUpdateContext}) {
+        const phase = attack.phases[phase_name]
+        phase.start_ts = context.timeref
+        if (phase.animation != null) {
+            phase.animation_handle = phase.animation(this as unknown as C, attack, phase)
+        }
+    }
+    _attack_phase_update(attack: Attack<C>, phase: AttackPhase<C>, {context}: {context: GameUpdateContext}) {
+        if (phase.start_ts == null) phase.start_ts = context.timeref
+        const progress = (context.timeref - phase.start_ts) / phase.duration
+        if (phase.animation_handle?.update != null) phase.animation_handle.update(Math.max(0, Math.min(progress, 1)))
+    }
+    _attack_phase_end(attack: Attack<C>, phase: AttackPhase<C>, {context}: {context: GameUpdateContext}) {
+        if (phase.animation_handle?.end != null) phase.animation_handle.end()
+    }
+    _attack_end(attack: Attack<C>, {context}: {context: GameUpdateContext}) {}
+
     _check_attack_hits(context: GameUpdateContext) {
         if (this.current_attack?.current_phase !== "hit") return
         for (const character of this.game.characters) {
@@ -349,12 +395,13 @@ export abstract class Character extends Actor {
             }
         }
     }
+
     attack_hit({
         attack,
         attacking_character,
         context,
     }: {
-        attack: Attack
+        attack: Attack<C>
         attacking_character: Character
         context: GameUpdateContext
     }): boolean {
@@ -387,12 +434,13 @@ export abstract class Character extends Actor {
         }
         return true
     }
+
     attack_parry({
         attack,
         attacking_character,
         context,
     }: {
-        attack: Attack
+        attack: Attack<C>
         attacking_character: Character
         context: GameUpdateContext
     }): boolean {
