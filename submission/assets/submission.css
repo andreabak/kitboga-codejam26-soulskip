@@ -151,13 +151,13 @@
 }
 
 .player-bar.health {
-    left: 16px;
-    top: 16px;
+    left: 24px;
+    top: 30px;
     width: 256px;
 }
 .player-bar.stamina {
-    left: 16px;
-    top: 30px;
+    left: 24px;
+    top: 42px;
     width: 128px;
 }
 
@@ -168,8 +168,8 @@
         " name   damage"
         " health health"
         / 1fr auto;
-    bottom: 76px;
-    width: 320px;
+    bottom: 96px;
+    width: 500px;
     left: 0;
     right: 0;
     color: white;
@@ -199,8 +199,8 @@
 }
 .equipped {
     position: absolute;
-    bottom: 24px;
-    left: 16px;
+    bottom: 30px;
+    left: 24px;
     display: grid;
     grid-template:
         " .    top    ." 1fr
@@ -208,17 +208,21 @@
         " left bottom right" 1fr
         " .    bottom ." 1fr
         / 1fr 1fr 1fr;
-    gap: 12px;
+    gap: 0 3px;
 }
 .equipped .slot {
     position: relative;
     width: calc(32px + 2 * 4px);
     height: calc(40px + 2 * 4px);
-    margin: -4px;
+    margin: 0px;
     padding: 2px;
     background-color: hsla(0, 0%, 0%, 0.75);
+    border: 3px solid #909274;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    box-shadow: 0 0 3px inset #909274;
     pointer-events: initial;
-    --edge-feather: 4px;
+    --edge-feather: 2px;
     mask-image:
         linear-gradient(
             to bottom,
@@ -281,7 +285,7 @@
     align-items: center;
     justify-content: center;
     font-family: serif;
-    font-size: 48px;
+    font-size: 54px;
     text-transform: uppercase;
     text-align: center;
     background-image: linear-gradient(
