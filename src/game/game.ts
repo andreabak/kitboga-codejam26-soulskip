@@ -1,9 +1,13 @@
 import {send_shell_request, ShellEvent} from "@/shell"
-import {aabb_overlap, delay, fade_audio, get_element, play_audio_element, Point, sat_overlap, shape_bbox} from "@/utils"
+import {aabb_overlap, delay, fade_audio, get_element, Point, random_pick, sat_overlap, shape_bbox} from "@/utils"
 
 import {Character, Enemy, Player} from "./characters"
 import {AnimationHandle, Component, GameComponent, GameState, GameUpdateContext, TimedAnimationHandle} from "./core"
 import {Hud} from "./hud"
+
+import BattleDefeatSound from "@/assets/sounds/battle-defeat/er-death.opus"
+import BattleMusicSound from "@/assets/sounds/battle-music/er-boss.opus"
+import BattleVictorySound from "@/assets/sounds/battle-victory/er-victory.opus"
 
 const defeat_screen_selector = ".defeat-screen"
 
@@ -38,9 +42,6 @@ class VictoryScreen extends GameComponent {
 }
 
 const game_root_selector = "#game-root"
-const battle_start_audio_selector = ".sound.battle-start"
-const defeat_audio_selector = ".sound.defeat"
-const victory_audio_selector = ".sound.victory"
 
 export class Game extends Component<GameUpdateContext> {
     private _state: GameState = "chill"
@@ -55,6 +56,8 @@ export class Game extends Component<GameUpdateContext> {
 
     animations: Record<string, {start_ts: number; duration: number; handle: AnimationHandle}> = {}
 
+    sound_effects: Record<string, HTMLAudioElement> = {}
+
     player: Player
     enemy: Enemy
     characters: Array<Character> = []
@@ -67,6 +70,12 @@ export class Game extends Component<GameUpdateContext> {
     debug_mode: boolean = false
     debug_enemy_stamina: boolean = true
     debug_hitboxes: boolean = true
+
+    sounds = {
+        battle_music: [BattleMusicSound],
+        battle_defeat: [BattleDefeatSound],
+        battle_victory: [BattleVictorySound],
+    }
 
     constructor() {
         super()
@@ -81,6 +90,19 @@ export class Game extends Component<GameUpdateContext> {
 
         this.defeat_screen = this.add_component(new DefeatScreen(this))
         this.victory_screen = this.add_component(new VictoryScreen(this))
+
+        this.preload()
+    }
+
+    preload() {
+        for (const sound of Object.values(this.sounds)) {
+            this.preload_sounds(...(sound ?? []))
+        }
+        for (const component of this._children) {
+            if (component instanceof GameComponent) {
+                component.preload()
+            }
+        }
     }
 
     add_character<C extends Character>(character: C): C {
@@ -126,19 +148,18 @@ export class Game extends Component<GameUpdateContext> {
         if (this.changed_state) {
             if (this.state === "battle") {
                 send_shell_request({type: "setVideoFilter", value: "blur(3px) brightness(0.8)"})
-                play_audio_element(battle_start_audio_selector, this.game_root_el).then(async () => {
-                    await delay(3500)
-                    const battle_start_audio_el = get_element(
-                        battle_start_audio_selector,
-                        this.game_root_el,
-                    ) as HTMLAudioElement
-                    await fade_audio(battle_start_audio_el, {duration: 15000, volume: 0, stop_after: true})
-                })
+                const battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music)
+                if (battle_music_audio) {
+                    battle_music_audio.addEventListener("play", async () => {
+                        await delay(3500)
+                        await fade_audio(battle_music_audio, {duration: 15000, volume: 0, stop_after: true})
+                    })
+                }
             } else if (this.state === "defeat") {
-                play_audio_element(defeat_audio_selector, this.game_root_el)
+                this.pick_and_play_sound_effect(this.sounds.battle_defeat)
                 setTimeout(() => send_shell_request({type: "fail"}), 7000)
             } else if (this.state === "victory") {
-                play_audio_element(victory_audio_selector, this.game_root_el)
+                this.pick_and_play_sound_effect(this.sounds.battle_victory)
                 setTimeout(() => send_shell_request({type: "success"}), 7000)
             }
         }
@@ -162,6 +183,37 @@ export class Game extends Component<GameUpdateContext> {
                 delete this.animations[id]
             }
         }
+    }
+
+    load_sound_effect(src: string): HTMLAudioElement {
+        const audio = new Audio(src)
+        this.sound_effects[src] = audio
+        return audio
+    }
+    preload_sounds(...srcs: Array<string>) {
+        for (const src of srcs) {
+            this.load_sound_effect(src)
+        }
+    }
+    play_sound_effect(src: string, {volume = 1.0}: {volume?: number} = {}): HTMLAudioElement {
+        let audio: HTMLAudioElement
+        if (src in this.sound_effects) {
+            audio = this.sound_effects[src]
+        } else {
+            audio = this.load_sound_effect(src)
+        }
+        audio.currentTime = 0
+        audio.volume = volume
+        audio.play()
+        return audio
+    }
+    pick_and_play_sound_effect(
+        sounds?: Array<string> | null,
+        {volume = 1.0}: {volume?: number} = {},
+    ): HTMLAudioElement | null {
+        if (sounds == null || !sounds.length) return null
+        const sound = random_pick(sounds)
+        return this.play_sound_effect(sound, {volume})
     }
 
     step(timestamp: number): void {

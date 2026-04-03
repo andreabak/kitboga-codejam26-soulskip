@@ -22,6 +22,8 @@ class GameComponent extends Component {
     __publicField(this, "game");
     this.game = game2;
   }
+  preload() {
+  }
 }
 class Actor extends GameComponent {
 }
@@ -33,16 +35,6 @@ function get_element(selector, root) {
   const el = root.querySelector(selector);
   if (!el) throw new Error(`Could not find element with selector "${selector}"`);
   return el;
-}
-function play_audio_element(selector, root) {
-  const el = get_element(selector, root);
-  if (!(el instanceof HTMLMediaElement)) {
-    throw new Error(`Element with selector "${selector}" doesn't look like an audio element.`);
-  }
-  if (el.paused) {
-    el.currentTime = 0;
-  }
-  return el.play();
 }
 async function fade_audio(audio_el, {
   duration,
@@ -509,6 +501,7 @@ class Character extends Actor {
     __publicField(this, "defending", false);
     __publicField(this, "parry_stamina_consume", 30);
     __publicField(this, "parry_enemy_stamina_consume_factor", 0.1);
+    __publicField(this, "sounds", {});
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
@@ -520,6 +513,18 @@ class Character extends Actor {
         dir_max_rotation: 2 * 360 / 180 * Math.PI
       }
     );
+  }
+  preload() {
+    super.preload();
+    for (const attack_def of Object.values(this.attacks_defs)) {
+      this.game.preload_sounds(...attack_def.hit_sound ?? []);
+      for (const attack_phase_def of Object.values(attack_def.phases)) {
+        this.game.preload_sounds(...attack_phase_def.sound ?? []);
+      }
+    }
+    for (const sound of Object.values(this.sounds)) {
+      this.game.preload_sounds(...sound ?? []);
+    }
   }
   get acceleration() {
     return this._follower.acceleration;
@@ -718,6 +723,7 @@ class Character extends Actor {
     if (phase.animation != null) {
       phase.animation_handle = phase.animation(this, attack, phase);
     }
+    this.game.pick_and_play_sound_effect(phase.sound);
   }
   _attack_phase_update(attack, phase, { context }) {
     var _a;
@@ -761,6 +767,13 @@ class Character extends Actor {
         if (!this.defending) {
           return false;
         } else if (this.attack_parry({ attack, attacking_character, context })) {
+          const stamina_break = attacking_character.stamina < attacking_character.low_stamina_enter_threshold;
+          const break_sound = attacking_character.sounds.break;
+          if (stamina_break && (break_sound == null ? void 0 : break_sound.length)) {
+            this.game.pick_and_play_sound_effect(break_sound);
+          } else {
+            this.game.pick_and_play_sound_effect(this.sounds.parry);
+          }
           return true;
         }
       }
@@ -770,11 +783,18 @@ class Character extends Actor {
       const stamina_consume = attack.damage * this.defend_stamina_consume_factor;
       this.consume_stamina(stamina_consume, { context });
       health_damage *= 1 - this.defend_damage_reduction;
+      this.game.pick_and_play_sound_effect(this.sounds.defend);
     }
     if (!this.invicible && health_damage >= 0) {
       this.health -= health_damage;
       this.last_damage_ts = context.timeref;
-      if (this.health < 0) this.health = 0;
+      if (this.health <= 0) {
+        this.health = 0;
+        this.game.pick_and_play_sound_effect(this.sounds.death);
+      } else {
+        this.game.pick_and_play_sound_effect(this.sounds.damage);
+      }
+      this.game.pick_and_play_sound_effect(attack.hit_sound);
     }
     return true;
   }
@@ -791,10 +811,22 @@ class Character extends Actor {
 const FlaskIcon = "" + new URL("assets/flask.webp", import.meta.url).href;
 const AttackFast = "" + new URL("assets/player-attack-fast.png", import.meta.url).href;
 const ShieldIcon = "" + new URL("assets/shield.webp", import.meta.url).href;
+const PlayerAttackHitSound1 = "" + new URL("assets/442903.opus", import.meta.url).href;
+const PlayerAttackHitSound2 = "" + new URL("assets/547042.opus", import.meta.url).href;
+const PlayerAttackHitSound3 = "" + new URL("assets/574820.opus", import.meta.url).href;
+const PlayerAttackHitSound4 = "" + new URL("assets/574821.opus", import.meta.url).href;
+const PlayerAttackSound1 = "" + new URL("assets/268227.opus", import.meta.url).href;
+const PlayerAttackSound2 = "" + new URL("assets/724716.opus", import.meta.url).href;
+const PlayerCureSound = "" + new URL("assets/er-cure.opus", import.meta.url).href;
+const PlayerDamageSound1 = "" + new URL("assets/488225.opus", import.meta.url).href;
+const PlayerDamageSound2 = "" + new URL("assets/629664.opus", import.meta.url).href;
+const PlayerDeathSound = "" + new URL("assets/398068.opus", import.meta.url).href;
+const PlayerDefendSound1 = "" + new URL("assets/364530.opus", import.meta.url).href;
+const PlayerDefendSound2 = "" + new URL("assets/442769.opus", import.meta.url).href;
+const PlayerDefendSound3 = "" + new URL("assets/574043.opus", import.meta.url).href;
+const PlayerParrySound = "" + new URL("assets/er-parry.opus", import.meta.url).href;
 const SwordIcon = "" + new URL("assets/sword.svg", import.meta.url).href;
 const player_root_selector = ".player";
-const parry_audio_selector = ".sound.parry";
-const enemy_break_audio_selector = ".sound.enemy-break";
 class Player extends Character {
   constructor(game2) {
     super(game2);
@@ -825,7 +857,8 @@ class Player extends Character {
         phases: {
           anticipation: {
             duration: 0,
-            acceleration: 20
+            acceleration: 20,
+            sound: [PlayerAttackSound1, PlayerAttackSound2]
           },
           hit: {
             duration: 150,
@@ -881,7 +914,8 @@ class Player extends Character {
             ]
           },
           rotation_ref: -90 / 180 * Math.PI
-        }
+        },
+        hit_sound: [PlayerAttackHitSound1, PlayerAttackHitSound2, PlayerAttackHitSound3, PlayerAttackHitSound4]
       }
     });
     __publicField(this, "items", {
@@ -890,6 +924,13 @@ class Player extends Character {
       sword: { name: "sword", icon_src: SwordIcon, consumable: false }
     });
     __publicField(this, "flask_health_recover_pct", 0.65);
+    __publicField(this, "sounds", {
+      defend: [PlayerDefendSound1, PlayerDefendSound2, PlayerDefendSound3],
+      parry: [PlayerParrySound],
+      damage: [PlayerDamageSound1, PlayerDamageSound2],
+      death: [PlayerDeathSound],
+      cure: [PlayerCureSound]
+    });
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
     this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
     this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this));
@@ -904,17 +945,21 @@ class Player extends Character {
     this.pos_target = { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
   _on_mousedown(event) {
-    if (event.button === 0) {
-      this.attack_requested = true;
-    } else if (event.button === 2) {
-      this.defend_request_ts = this.game.timeref;
-      this.defend_requested = true;
+    if (this.game.state === "battle") {
+      if (event.button === 0) {
+        this.attack_requested = true;
+      } else if (event.button === 2) {
+        this.defend_request_ts = this.game.timeref;
+        this.defend_requested = true;
+      }
     }
   }
   _on_mouseup(event) {
-    if (event.button === 2) {
-      this.defend_request_ts = this.game.timeref;
-      this.defend_requested = false;
+    if (this.game.state === "battle") {
+      if (event.button === 2) {
+        this.defend_request_ts = this.game.timeref;
+        this.defend_requested = false;
+      }
     }
   }
   _update(context) {
@@ -953,11 +998,6 @@ class Player extends Character {
     if (do_parry) {
       this.game.timescale = 0.1;
       setTimeout(() => this.game.timescale = 1, 500);
-      if (attacking_character.stamina < attacking_character.low_stamina_enter_threshold) {
-        play_audio_element(enemy_break_audio_selector, this.game.game_root_el);
-      } else {
-        play_audio_element(parry_audio_selector, this.game.game_root_el);
-      }
     }
     return do_parry;
   }
@@ -970,6 +1010,7 @@ class Player extends Character {
         if (this.health > this.max_health) {
           this.health = this.max_health;
         }
+        this.game.pick_and_play_sound_effect(this.sounds.cure);
       }
       if (item.consumable) {
         item.owned -= 1;
@@ -977,6 +1018,28 @@ class Player extends Character {
     }
   }
 }
+const EnemyAttackHitSound1 = "" + new URL("assets/420674.opus", import.meta.url).href;
+const EnemyAttackHitSound2 = "" + new URL("assets/474575.opus", import.meta.url).href;
+const EnemyAttackHitSound3 = "" + new URL("assets/536258.opus", import.meta.url).href;
+const EnemyAttackFastSound1 = "" + new URL("assets/380488_fast1.opus", import.meta.url).href;
+const EnemyAttackFastSound2 = "" + new URL("assets/380488_fast2.opus", import.meta.url).href;
+const EnemyAttackFastSound3 = "" + new URL("assets/380488_fast3.opus", import.meta.url).href;
+const EnemyAttackFastSound4 = "" + new URL("assets/380488_fast4.opus", import.meta.url).href;
+const EnemyAttackFastSound5 = "" + new URL("assets/380488_fast5.opus", import.meta.url).href;
+const EnemyAttackSlowSound1 = "" + new URL("assets/380488_slow1.opus", import.meta.url).href;
+const EnemyAttackSlowSound2 = "" + new URL("assets/380488_slow2.opus", import.meta.url).href;
+const EnemyAttackSlowSound3 = "" + new URL("assets/542017_slow3.opus", import.meta.url).href;
+const EnemyBreakSound = "" + new URL("assets/er-break.opus", import.meta.url).href;
+const EnemyDamageSound1 = "" + new URL("assets/404109.opus", import.meta.url).href;
+const EnemyDamageSound2 = "" + new URL("assets/515624.opus", import.meta.url).href;
+const EnemyDamageSound3 = "" + new URL("assets/770124_1.opus", import.meta.url).href;
+const EnemyDamageSound4 = "" + new URL("assets/770124_2.opus", import.meta.url).href;
+const EnemyDamageSound5 = "" + new URL("assets/770124_3.opus", import.meta.url).href;
+const EnemyDamageSound6 = "" + new URL("assets/770124_4.opus", import.meta.url).href;
+const EnemyDamageSound7 = "" + new URL("assets/770124_5.opus", import.meta.url).href;
+const EnemyDamageSound8 = "" + new URL("assets/770124_6.opus", import.meta.url).href;
+const EnemyDamageSound9 = "" + new URL("assets/770124_7.opus", import.meta.url).href;
+const EnemyDeathSound = "" + new URL("assets/369005.opus", import.meta.url).href;
 const enemy_root_selector = ".skip-btn";
 class Enemy extends Character {
   constructor(game2) {
@@ -1002,7 +1065,12 @@ class Enemy extends Character {
       slow: {
         phases: {
           anticipation: { duration: 300, acceleration: 100, max_vel: 100 },
-          hit: { duration: 200, acceleration: 5, max_vel: 2 },
+          hit: {
+            duration: 200,
+            acceleration: 5,
+            max_vel: 2,
+            sound: [EnemyAttackSlowSound1, EnemyAttackSlowSound2, EnemyAttackSlowSound3]
+          },
           recovery: { duration: 500, acceleration: 20, max_vel: 4 }
         },
         damage: 500,
@@ -1022,12 +1090,24 @@ class Enemy extends Character {
             ]
           },
           rotation_ref: -90 / 180 * Math.PI
-        }
+        },
+        hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3]
       },
       fast: {
         phases: {
           anticipation: { duration: 150, acceleration: 100, max_vel: 100 },
-          hit: { duration: 200, acceleration: 5, max_vel: 2 },
+          hit: {
+            duration: 200,
+            acceleration: 5,
+            max_vel: 2,
+            sound: [
+              EnemyAttackFastSound1,
+              EnemyAttackFastSound2,
+              EnemyAttackFastSound3,
+              EnemyAttackFastSound4,
+              EnemyAttackFastSound5
+            ]
+          },
           recovery: { duration: 250, acceleration: 20, max_vel: 4 }
         },
         damage: 250,
@@ -1047,7 +1127,8 @@ class Enemy extends Character {
             ]
           },
           rotation_ref: -90 / 180 * Math.PI
-        }
+        },
+        hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3]
       }
     });
     __publicField(this, "attacks_chains_defs", {
@@ -1064,6 +1145,21 @@ class Enemy extends Character {
     __publicField(this, "next_attack_ts", 1e10);
     __publicField(this, "auto_attack_dist", 400);
     __publicField(this, "auto_attack_interval", [1500, 3e3]);
+    __publicField(this, "sounds", {
+      damage: [
+        EnemyDamageSound1,
+        EnemyDamageSound2,
+        EnemyDamageSound3,
+        EnemyDamageSound4,
+        EnemyDamageSound5,
+        EnemyDamageSound6,
+        EnemyDamageSound7,
+        EnemyDamageSound8,
+        EnemyDamageSound9
+      ],
+      break: [EnemyBreakSound],
+      death: [EnemyDeathSound]
+    });
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     const rel_rect = this.game.get_relative_rect(this.enemy_root_el);
     this.enemy_root_el.style.top = `${rel_rect.y}px`;
@@ -1178,6 +1274,9 @@ class Enemy extends Character {
     }
   }
 }
+const BattleDefeatSound = "" + new URL("assets/er-death.opus", import.meta.url).href;
+const BattleMusicSound = "" + new URL("assets/er-boss.opus", import.meta.url).href;
+const BattleVictorySound = "" + new URL("assets/er-victory.opus", import.meta.url).href;
 const defeat_screen_selector = ".defeat-screen";
 class DefeatScreen extends GameComponent {
   constructor(game2) {
@@ -1201,9 +1300,6 @@ class VictoryScreen extends GameComponent {
   }
 }
 const game_root_selector = "#game-root";
-const battle_start_audio_selector = ".sound.battle-start";
-const defeat_audio_selector = ".sound.defeat";
-const victory_audio_selector = ".sound.victory";
 class Game extends Component {
   constructor() {
     super();
@@ -1215,6 +1311,7 @@ class Game extends Component {
     __publicField(this, "_last_step_ts", null);
     __publicField(this, "game_root_el");
     __publicField(this, "animations", {});
+    __publicField(this, "sound_effects", {});
     __publicField(this, "player");
     __publicField(this, "enemy");
     __publicField(this, "characters", []);
@@ -1224,6 +1321,11 @@ class Game extends Component {
     __publicField(this, "debug_mode", false);
     __publicField(this, "debug_enemy_stamina", true);
     __publicField(this, "debug_hitboxes", true);
+    __publicField(this, "sounds", {
+      battle_music: [BattleMusicSound],
+      battle_defeat: [BattleDefeatSound],
+      battle_victory: [BattleVictorySound]
+    });
     this.game_root_el = get_element(game_root_selector);
     this.game_root_el.classList.toggle("hidden", false);
     this.player = this.add_character(this.add_component(new Player(this)));
@@ -1231,6 +1333,17 @@ class Game extends Component {
     this.hud = this.add_component(new Hud(this));
     this.defeat_screen = this.add_component(new DefeatScreen(this));
     this.victory_screen = this.add_component(new VictoryScreen(this));
+    this.preload();
+  }
+  preload() {
+    for (const sound of Object.values(this.sounds)) {
+      this.preload_sounds(...sound ?? []);
+    }
+    for (const component of this._children) {
+      if (component instanceof GameComponent) {
+        component.preload();
+      }
+    }
   }
   add_character(character) {
     this.characters.push(character);
@@ -1270,19 +1383,18 @@ class Game extends Component {
     if (this.changed_state) {
       if (this.state === "battle") {
         send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.8)" });
-        play_audio_element(battle_start_audio_selector, this.game_root_el).then(async () => {
-          await delay(3500);
-          const battle_start_audio_el = get_element(
-            battle_start_audio_selector,
-            this.game_root_el
-          );
-          await fade_audio(battle_start_audio_el, { duration: 15e3, volume: 0, stop_after: true });
-        });
+        const battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music);
+        if (battle_music_audio) {
+          battle_music_audio.addEventListener("play", async () => {
+            await delay(3500);
+            await fade_audio(battle_music_audio, { duration: 15e3, volume: 0, stop_after: true });
+          });
+        }
       } else if (this.state === "defeat") {
-        play_audio_element(defeat_audio_selector, this.game_root_el);
+        this.pick_and_play_sound_effect(this.sounds.battle_defeat);
         setTimeout(() => send_shell_request({ type: "fail" }), 7e3);
       } else if (this.state === "victory") {
-        play_audio_element(victory_audio_selector, this.game_root_el);
+        this.pick_and_play_sound_effect(this.sounds.battle_victory);
         setTimeout(() => send_shell_request({ type: "success" }), 7e3);
       }
     }
@@ -1303,6 +1415,33 @@ class Game extends Component {
         delete this.animations[id];
       }
     }
+  }
+  load_sound_effect(src) {
+    const audio = new Audio(src);
+    this.sound_effects[src] = audio;
+    return audio;
+  }
+  preload_sounds(...srcs) {
+    for (const src of srcs) {
+      this.load_sound_effect(src);
+    }
+  }
+  play_sound_effect(src, { volume = 1 } = {}) {
+    let audio;
+    if (src in this.sound_effects) {
+      audio = this.sound_effects[src];
+    } else {
+      audio = this.load_sound_effect(src);
+    }
+    audio.currentTime = 0;
+    audio.volume = volume;
+    audio.play();
+    return audio;
+  }
+  pick_and_play_sound_effect(sounds, { volume = 1 } = {}) {
+    if (sounds == null || !sounds.length) return null;
+    const sound = random_pick(sounds);
+    return this.play_sound_effect(sound, { volume });
   }
   step(timestamp) {
     const last_timeref = this._timeref;

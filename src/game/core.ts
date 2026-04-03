@@ -53,6 +53,8 @@ export abstract class GameComponent extends Component<GameUpdateContext> {
         super()
         this.game = game
     }
+
+    preload(): void {}
 }
 
 export abstract class Actor extends GameComponent {}

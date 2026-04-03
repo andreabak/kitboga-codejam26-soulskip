@@ -38,6 +38,7 @@ export type AttackPhaseDef<C extends Character> = {
     acceleration?: number | null
     max_vel?: number | null
     animation?: AnimationDef<C> | AttackAnimationDef<C> | null
+    sound?: Array<string> | null
 }
 export type AttackDef<C extends Character> = {
     phases: Required<Record<AttackPhases, AttackPhaseDef<C>>>
@@ -46,6 +47,7 @@ export type AttackDef<C extends Character> = {
     parry_window_duration: number
     scale: number
     hitbox: HitBox
+    hit_sound?: Array<string> | null
 }
 export type AttackPhase<C extends Character> = AttackPhaseDef<C> & {
     start_ts?: number | null
@@ -56,6 +58,15 @@ export type Attack<C extends Character> = AttackDef<C> & {
     phases: Required<Record<AttackPhases, AttackPhase<C>>>
     current_phase: AttackPhases
 }
+
+export type CharacterSounds = {
+    damage?: Array<string> | null
+    break?: Array<string> | null
+    defend?: Array<string> | null
+    parry?: Array<string> | null
+    cure?: Array<string> | null
+    death?: Array<string> | null
+} & Record<string, Array<string> | null>
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export abstract class Character<C extends Character<C> = any> extends Actor {
@@ -105,6 +116,8 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
     parry_stamina_consume: number = 30
     parry_enemy_stamina_consume_factor: number = 0.1
 
+    sounds: CharacterSounds = {}
+
     constructor(game: Game) {
         super(game)
         this._follower = new TargetFollower(
@@ -118,6 +131,19 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
                 dir_max_rotation: ((2 * 360) / 180) * Math.PI,
             },
         )
+    }
+
+    preload() {
+        super.preload()
+        for (const attack_def of Object.values(this.attacks_defs)) {
+            this.game.preload_sounds(...(attack_def.hit_sound ?? []))
+            for (const attack_phase_def of Object.values(attack_def.phases)) {
+                this.game.preload_sounds(...(attack_phase_def.sound ?? []))
+            }
+        }
+        for (const sound of Object.values(this.sounds)) {
+            this.game.preload_sounds(...(sound ?? []))
+        }
     }
 
     get acceleration(): number {
@@ -365,6 +391,7 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
         if (phase.animation != null) {
             phase.animation_handle = phase.animation(this as unknown as C, attack, phase)
         }
+        this.game.pick_and_play_sound_effect(phase.sound)
     }
     _attack_phase_update(attack: Attack<C>, phase: AttackPhase<C>, {context}: {context: GameUpdateContext}) {
         if (phase.start_ts == null) phase.start_ts = context.timeref
@@ -417,6 +444,13 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
                 if (!this.defending) {
                     return false // not parrying yet, but still in window, ignore hit this step, recheck later
                 } else if (this.attack_parry({attack, attacking_character, context})) {
+                    const stamina_break = attacking_character.stamina < attacking_character.low_stamina_enter_threshold
+                    const break_sound = attacking_character.sounds.break
+                    if (stamina_break && break_sound?.length) {
+                        this.game.pick_and_play_sound_effect(break_sound)
+                    } else {
+                        this.game.pick_and_play_sound_effect(this.sounds.parry)
+                    }
                     return true // parried, no further damage to this
                 }
             }
@@ -426,11 +460,18 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
             const stamina_consume = attack.damage * this.defend_stamina_consume_factor
             this.consume_stamina(stamina_consume, {context})
             health_damage *= 1.0 - this.defend_damage_reduction
+            this.game.pick_and_play_sound_effect(this.sounds.defend)
         }
         if (!this.invicible && health_damage >= 0) {
             this.health -= health_damage
             this.last_damage_ts = context.timeref
-            if (this.health < 0) this.health = 0
+            if (this.health <= 0) {
+                this.health = 0
+                this.game.pick_and_play_sound_effect(this.sounds.death)
+            } else {
+                this.game.pick_and_play_sound_effect(this.sounds.damage)
+            }
+            this.game.pick_and_play_sound_effect(attack.hit_sound)
         }
         return true
     }

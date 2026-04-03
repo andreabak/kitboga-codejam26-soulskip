@@ -1,4 +1,4 @@
-import {get_element, play_audio_element} from "@/utils"
+import {get_element} from "@/utils"
 
 import {GameUpdateContext} from "../core"
 import type {Game} from "../game"
@@ -7,6 +7,20 @@ import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./co
 import FlaskIcon from "@/assets/flask.webp"
 import AttackFast from "@/assets/player-attack-fast.png"
 import ShieldIcon from "@/assets/shield.webp"
+import PlayerAttackHitSound1 from "@/assets/sounds/player-attack-hit/442903.opus"
+import PlayerAttackHitSound2 from "@/assets/sounds/player-attack-hit/547042.opus"
+import PlayerAttackHitSound3 from "@/assets/sounds/player-attack-hit/574820.opus"
+import PlayerAttackHitSound4 from "@/assets/sounds/player-attack-hit/574821.opus"
+import PlayerAttackSound1 from "@/assets/sounds/player-attack/268227.opus"
+import PlayerAttackSound2 from "@/assets/sounds/player-attack/724716.opus"
+import PlayerCureSound from "@/assets/sounds/player-cure/er-cure.opus"
+import PlayerDamageSound1 from "@/assets/sounds/player-damage/488225.opus"
+import PlayerDamageSound2 from "@/assets/sounds/player-damage/629664.opus"
+import PlayerDeathSound from "@/assets/sounds/player-death/398068.opus"
+import PlayerDefendSound1 from "@/assets/sounds/player-defend/364530.opus"
+import PlayerDefendSound2 from "@/assets/sounds/player-defend/442769.opus"
+import PlayerDefendSound3 from "@/assets/sounds/player-defend/574043.opus"
+import PlayerParrySound from "@/assets/sounds/player-parry/er-parry.opus"
 import SwordIcon from "@/assets/sword.svg"
 
 export type PlayerItemName = "flask" | "shield" | "sword"
@@ -24,8 +38,6 @@ export type PlayerItemEquipment = PlayerItemBase & {
 export type PlayerItem = PlayerItemConsumable | PlayerItemEquipment
 
 const player_root_selector = ".player"
-const parry_audio_selector = ".sound.parry"
-const enemy_break_audio_selector = ".sound.enemy-break"
 
 class Player extends Character<Player> {
     player_root_el: HTMLDivElement
@@ -60,6 +72,7 @@ class Player extends Character<Player> {
                 anticipation: {
                     duration: 0,
                     acceleration: 20,
+                    sound: [PlayerAttackSound1, PlayerAttackSound2],
                 },
                 hit: {
                     duration: 150,
@@ -116,6 +129,7 @@ class Player extends Character<Player> {
                 },
                 rotation_ref: (-90 / 180) * Math.PI,
             },
+            hit_sound: [PlayerAttackHitSound1, PlayerAttackHitSound2, PlayerAttackHitSound3, PlayerAttackHitSound4],
         },
     }
 
@@ -125,6 +139,14 @@ class Player extends Character<Player> {
         sword: {name: "sword", icon_src: SwordIcon, consumable: false},
     }
     flask_health_recover_pct: number = 0.65
+
+    sounds = {
+        defend: [PlayerDefendSound1, PlayerDefendSound2, PlayerDefendSound3],
+        parry: [PlayerParrySound],
+        damage: [PlayerDamageSound1, PlayerDamageSound2],
+        death: [PlayerDeathSound],
+        cure: [PlayerCureSound],
+    }
 
     constructor(game: Game) {
         super(game)
@@ -145,17 +167,21 @@ class Player extends Character<Player> {
         this.pos_target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
     }
     _on_mousedown(event: MouseEvent): void {
-        if (event.button === 0) {
-            this.attack_requested = true
-        } else if (event.button === 2) {
-            this.defend_request_ts = this.game.timeref
-            this.defend_requested = true
+        if (this.game.state === "battle") {
+            if (event.button === 0) {
+                this.attack_requested = true
+            } else if (event.button === 2) {
+                this.defend_request_ts = this.game.timeref
+                this.defend_requested = true
+            }
         }
     }
     _on_mouseup(event: MouseEvent): void {
-        if (event.button === 2) {
-            this.defend_request_ts = this.game.timeref
-            this.defend_requested = false
+        if (this.game.state === "battle") {
+            if (event.button === 2) {
+                this.defend_request_ts = this.game.timeref
+                this.defend_requested = false
+            }
         }
     }
 
@@ -203,13 +229,9 @@ class Player extends Character<Player> {
     }): boolean {
         const do_parry = super.attack_parry({attack, attacking_character, context})
         if (do_parry) {
+            // slow down game effect
             this.game.timescale = 0.1
             setTimeout(() => (this.game.timescale = 1.0), 500)
-            if (attacking_character.stamina < attacking_character.low_stamina_enter_threshold) {
-                play_audio_element(enemy_break_audio_selector, this.game.game_root_el)
-            } else {
-                play_audio_element(parry_audio_selector, this.game.game_root_el)
-            }
         }
         return do_parry
     }
@@ -223,6 +245,7 @@ class Player extends Character<Player> {
                 if (this.health > this.max_health) {
                     this.health = this.max_health
                 }
+                this.game.pick_and_play_sound_effect(this.sounds.cure)
             }
             if (item.consumable) {
                 item.owned -= 1

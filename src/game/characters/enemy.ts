@@ -4,6 +4,29 @@ import {GameUpdateContext} from "../core"
 import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
 
+import EnemyAttackHitSound1 from "@/assets/sounds/enemy-attack-hit/420674.opus"
+import EnemyAttackHitSound2 from "@/assets/sounds/enemy-attack-hit/474575.opus"
+import EnemyAttackHitSound3 from "@/assets/sounds/enemy-attack-hit/536258.opus"
+import EnemyAttackFastSound1 from "@/assets/sounds/enemy-attack/380488_fast1.opus"
+import EnemyAttackFastSound2 from "@/assets/sounds/enemy-attack/380488_fast2.opus"
+import EnemyAttackFastSound3 from "@/assets/sounds/enemy-attack/380488_fast3.opus"
+import EnemyAttackFastSound4 from "@/assets/sounds/enemy-attack/380488_fast4.opus"
+import EnemyAttackFastSound5 from "@/assets/sounds/enemy-attack/380488_fast5.opus"
+import EnemyAttackSlowSound1 from "@/assets/sounds/enemy-attack/380488_slow1.opus"
+import EnemyAttackSlowSound2 from "@/assets/sounds/enemy-attack/380488_slow2.opus"
+import EnemyAttackSlowSound3 from "@/assets/sounds/enemy-attack/542017_slow3.opus"
+import EnemyBreakSound from "@/assets/sounds/enemy-break/er-break.opus"
+import EnemyDamageSound1 from "@/assets/sounds/enemy-damage/404109.opus"
+import EnemyDamageSound2 from "@/assets/sounds/enemy-damage/515624.opus"
+import EnemyDamageSound3 from "@/assets/sounds/enemy-damage/770124_1.opus"
+import EnemyDamageSound4 from "@/assets/sounds/enemy-damage/770124_2.opus"
+import EnemyDamageSound5 from "@/assets/sounds/enemy-damage/770124_3.opus"
+import EnemyDamageSound6 from "@/assets/sounds/enemy-damage/770124_4.opus"
+import EnemyDamageSound7 from "@/assets/sounds/enemy-damage/770124_5.opus"
+import EnemyDamageSound8 from "@/assets/sounds/enemy-damage/770124_6.opus"
+import EnemyDamageSound9 from "@/assets/sounds/enemy-damage/770124_7.opus"
+import EnemyDeathSound from "@/assets/sounds/enemy-death/369005.opus"
+
 const enemy_root_selector = ".skip-btn"
 
 export class Enemy extends Character<Enemy> {
@@ -31,7 +54,12 @@ export class Enemy extends Character<Enemy> {
         slow: {
             phases: {
                 anticipation: {duration: 300, acceleration: 100, max_vel: 100},
-                hit: {duration: 200, acceleration: 5, max_vel: 2},
+                hit: {
+                    duration: 200,
+                    acceleration: 5,
+                    max_vel: 2,
+                    sound: [EnemyAttackSlowSound1, EnemyAttackSlowSound2, EnemyAttackSlowSound3],
+                },
                 recovery: {duration: 500, acceleration: 20, max_vel: 4},
             },
             damage: 500,
@@ -52,11 +80,23 @@ export class Enemy extends Character<Enemy> {
                 },
                 rotation_ref: (-90 / 180) * Math.PI,
             },
+            hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3],
         },
         fast: {
             phases: {
                 anticipation: {duration: 150, acceleration: 100, max_vel: 100},
-                hit: {duration: 200, acceleration: 5, max_vel: 2},
+                hit: {
+                    duration: 200,
+                    acceleration: 5,
+                    max_vel: 2,
+                    sound: [
+                        EnemyAttackFastSound1,
+                        EnemyAttackFastSound2,
+                        EnemyAttackFastSound3,
+                        EnemyAttackFastSound4,
+                        EnemyAttackFastSound5,
+                    ],
+                },
                 recovery: {duration: 250, acceleration: 20, max_vel: 4},
             },
             damage: 250,
@@ -77,6 +117,7 @@ export class Enemy extends Character<Enemy> {
                 },
                 rotation_ref: (-90 / 180) * Math.PI,
             },
+            hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3],
         },
     }
     attacks_chains_defs: Record<string, Array<keyof typeof Enemy.prototype.attacks_defs>> = {
@@ -97,6 +138,22 @@ export class Enemy extends Character<Enemy> {
     next_attack_ts: number = 1e10
     auto_attack_dist: number = 400
     auto_attack_interval: [number, number] = [1500, 3000]
+
+    sounds = {
+        damage: [
+            EnemyDamageSound1,
+            EnemyDamageSound2,
+            EnemyDamageSound3,
+            EnemyDamageSound4,
+            EnemyDamageSound5,
+            EnemyDamageSound6,
+            EnemyDamageSound7,
+            EnemyDamageSound8,
+            EnemyDamageSound9,
+        ],
+        break: [EnemyBreakSound],
+        death: [EnemyDeathSound],
+    }
 
     constructor(game: Game) {
         super(game)
