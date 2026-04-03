@@ -512,7 +512,7 @@ class Character extends Actor {
         acceleration: this.base_acceleration,
         max_vel: this.base_max_vel,
         slowing_distance: 25,
-        vel_max_rotation: 10 * 360 / 180 * Math.PI,
+        vel_max_rotation: 20 * 360 / 180 * Math.PI,
         dir_max_rotation: 2 * 360 / 180 * Math.PI
       }
     );
