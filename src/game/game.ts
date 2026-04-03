@@ -1,5 +1,15 @@
 import {send_shell_request, ShellEvent} from "@/shell"
-import {aabb_overlap, delay, fade_audio, get_element, Point, random_pick, sat_overlap, shape_bbox} from "@/utils"
+import {
+    aabb_overlap,
+    delay,
+    fade_audio,
+    get_element,
+    Point,
+    random_pick,
+    sat_overlap,
+    shape_bbox,
+    smooth_ema,
+} from "@/utils"
 
 import {Character, Enemy, Player} from "./characters"
 import {AnimationHandle, Component, GameComponent, GameState, GameUpdateContext, TimedAnimationHandle} from "./core"
@@ -51,6 +61,8 @@ export class Game extends Component<GameUpdateContext> {
     private _timeref: number = 0.0
     _timescale: number = 1.0
     private _last_step_ts: number | null = null
+
+    private _video_playback_rate_base: number = 1.0
 
     game_root_el: HTMLDivElement
 
@@ -128,7 +140,17 @@ export class Game extends Component<GameUpdateContext> {
     }
     set timescale(value: number) {
         this._timescale = value
-        send_shell_request({type: "setPlaybackRate", value: value})
+        this._update_video_playback_rate()
+    }
+    get video_playback_rate_base(): number {
+        return this._video_playback_rate_base
+    }
+    set video_playback_rate_base(value: number) {
+        this._video_playback_rate_base = value
+        this._update_video_playback_rate()
+    }
+    _update_video_playback_rate() {
+        send_shell_request({type: "setPlaybackRate", value: this._timescale * this._video_playback_rate_base})
     }
 
     handle_shell_event(event: ShellEvent | unknown): void {
@@ -157,11 +179,18 @@ export class Game extends Component<GameUpdateContext> {
                 }
             } else if (this.state === "defeat") {
                 this.pick_and_play_sound_effect(this.sounds.battle_defeat)
-                setTimeout(() => send_shell_request({type: "fail"}), 7000)
+                setTimeout(() => send_shell_request({type: "fail"}), 8000)
             } else if (this.state === "victory") {
                 this.pick_and_play_sound_effect(this.sounds.battle_victory)
-                setTimeout(() => send_shell_request({type: "success"}), 7000)
+                setTimeout(() => send_shell_request({type: "success"}), 8000)
             }
+        }
+        if (["defeat", "victory"].includes(this.state)) {
+            this.video_playback_rate_base = smooth_ema(
+                this.video_playback_rate_base,
+                0.1,
+                (0.5 * (context.timedelta ?? 0)) / 1000,
+            )
         }
         this._update_animations(context)
     }

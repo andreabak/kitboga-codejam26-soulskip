@@ -168,6 +168,9 @@ function sat_overlap(a, b) {
     return a_max < b_min || b_max < a_min;
   });
 }
+function smooth_ema(v0, v1, sf) {
+  return (1 - sf) * v0 + sf * v1;
+}
 class TargetFollower {
   constructor(pos, target, {
     acceleration,
@@ -1309,6 +1312,7 @@ class Game extends Component {
     __publicField(this, "_timeref", 0);
     __publicField(this, "_timescale", 1);
     __publicField(this, "_last_step_ts", null);
+    __publicField(this, "_video_playback_rate_base", 1);
     __publicField(this, "game_root_el");
     __publicField(this, "animations", {});
     __publicField(this, "sound_effects", {});
@@ -1366,7 +1370,17 @@ class Game extends Component {
   }
   set timescale(value) {
     this._timescale = value;
-    send_shell_request({ type: "setPlaybackRate", value });
+    this._update_video_playback_rate();
+  }
+  get video_playback_rate_base() {
+    return this._video_playback_rate_base;
+  }
+  set video_playback_rate_base(value) {
+    this._video_playback_rate_base = value;
+    this._update_video_playback_rate();
+  }
+  _update_video_playback_rate() {
+    send_shell_request({ type: "setPlaybackRate", value: this._timescale * this._video_playback_rate_base });
   }
   handle_shell_event(event) {
     if (!event || typeof event !== "object" || !("type" in event)) {
@@ -1392,11 +1406,18 @@ class Game extends Component {
         }
       } else if (this.state === "defeat") {
         this.pick_and_play_sound_effect(this.sounds.battle_defeat);
-        setTimeout(() => send_shell_request({ type: "fail" }), 7e3);
+        setTimeout(() => send_shell_request({ type: "fail" }), 8e3);
       } else if (this.state === "victory") {
         this.pick_and_play_sound_effect(this.sounds.battle_victory);
-        setTimeout(() => send_shell_request({ type: "success" }), 7e3);
+        setTimeout(() => send_shell_request({ type: "success" }), 8e3);
       }
+    }
+    if (["defeat", "victory"].includes(this.state)) {
+      this.video_playback_rate_base = smooth_ema(
+        this.video_playback_rate_base,
+        0.1,
+        0.5 * (context.timedelta ?? 0) / 1e3
+      );
     }
     this._update_animations(context);
   }
