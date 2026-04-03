@@ -244,6 +244,17 @@ export class Game extends Component<GameUpdateContext> {
         const sound = random_pick(sounds)
         return this.play_sound_effect(sound, {volume})
     }
+    preload_images(...srcs: Array<string>) {
+        for (const src of srcs) {
+            const existing_link = document.querySelector(`link[href="${src}"]`)
+            if (existing_link != null) continue
+            const preload_link = document.createElement("link")
+            preload_link.href = src
+            preload_link.rel = "preload"
+            preload_link.as = "image"
+            document.head.appendChild(preload_link)
+        }
+    }
 
     step(timestamp: number): void {
         const last_timeref = this._timeref

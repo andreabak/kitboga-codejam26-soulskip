@@ -462,6 +462,39 @@ function add_shell_events_listener(listener) {
 function send_shell_request(request) {
   window.top.postMessage(request, "*");
 }
+function image_animation_def(image_src, init) {
+  function factory(character, attack) {
+    const randid = "anim-" + Math.random().toString(36);
+    const image_el = document.createElement("div");
+    image_el.id = randid;
+    image_el.style = `
+            position: absolute;
+            width: ${character.width}px;
+            height: ${character.height}px;
+            top: 0;
+            left: 0;
+            mix-blend-mode: plus-lighter;
+            background-image: url('${image_src}');
+            background-size: contain;
+        `;
+    character.root_el.appendChild(image_el);
+    let sub_update, sub_end = void 0;
+    if (init != null) {
+      ({ update: sub_update, end: sub_end } = init(character, attack, image_el));
+    }
+    const update = sub_update;
+    const end = () => {
+      if (sub_end != null) sub_end();
+      image_el.remove();
+    };
+    if (update != null) {
+      update(0);
+    }
+    return { update, end };
+  }
+  factory.image_src = image_src;
+  return factory;
+}
 const ATTACK_PHASES_SEQUENCE = ["anticipation", "hit", "recovery"];
 class Character extends Actor {
   constructor(game2) {
@@ -522,6 +555,9 @@ class Character extends Actor {
     for (const attack_def of Object.values(this.attacks_defs)) {
       this.game.preload_sounds(...attack_def.hit_sound ?? []);
       for (const attack_phase_def of Object.values(attack_def.phases)) {
+        if (attack_phase_def.animation && "image_src" in attack_phase_def.animation) {
+          this.game.preload_images(attack_phase_def.animation.image_src);
+        }
         this.game.preload_sounds(...attack_phase_def.sound ?? []);
       }
     }
@@ -866,37 +902,20 @@ class Player extends Character {
           hit: {
             duration: 150,
             acceleration: 1,
-            animation: (player, attack) => {
-              const randid = "anim-" + Math.random().toString(36);
-              const anim_el = document.createElement("img");
-              anim_el.id = randid;
-              anim_el.src = AttackFast;
-              anim_el.style = `
-                            position: absolute;
-                            width: ${player.width}px;
-                            height: ${player.height}px;
-                            top: 0;
-                            left: 0;
-                            mix-blend-mode: plus-lighter;
-                        `;
+            animation: image_animation_def(AttackFast, (player, attack, image_el) => {
               const rotation_base_deg = (player.direction - attack.hitbox.rotation_ref) * 180 / Math.PI;
-              player.player_root_el.appendChild(anim_el);
               const update = (progress) => {
                 const rotation_offset_deg = 30 - 45 * progress ** 0.25;
-                anim_el.style.transform = `
-                                scale(${attack.scale})
-                                rotate(${rotation_base_deg + rotation_offset_deg}deg)
-                            `;
+                image_el.style.transform = `
+                                    scale(${attack.scale})
+                                    rotate(${rotation_base_deg + rotation_offset_deg}deg)
+                                `;
                 const overblend = 1 - progress;
-                anim_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`;
-                anim_el.style.opacity = ((1 - progress) ** 0.125).toString();
+                image_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`;
+                image_el.style.opacity = ((1 - progress) ** 0.125).toString();
               };
-              update(0);
-              return {
-                update,
-                end: () => anim_el.remove()
-              };
-            }
+              return { update };
+            })
           },
           recovery: { duration: 100, acceleration: 50 }
         },
@@ -942,6 +961,9 @@ class Player extends Character {
       e.preventDefault();
       return false;
     });
+  }
+  get root_el() {
+    return this.player_root_el;
   }
   _on_mousemove(event) {
     const rect = this.game.game_root_el.getBoundingClientRect();
@@ -1173,6 +1195,9 @@ class Enemy extends Character {
     this.width = rel_rect.width;
     this.height = rel_rect.height;
     this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this));
+  }
+  get root_el() {
+    return this.enemy_root_el;
   }
   get phase() {
     return this._phase;
@@ -1463,6 +1488,17 @@ class Game extends Component {
     if (sounds == null || !sounds.length) return null;
     const sound = random_pick(sounds);
     return this.play_sound_effect(sound, { volume });
+  }
+  preload_images(...srcs) {
+    for (const src of srcs) {
+      const existing_link = document.querySelector(`link[href="${src}"]`);
+      if (existing_link != null) continue;
+      const preload_link = document.createElement("link");
+      preload_link.href = src;
+      preload_link.rel = "preload";
+      preload_link.as = "image";
+      document.head.appendChild(preload_link);
+    }
   }
   step(timestamp) {
     const last_timeref = this._timeref;

@@ -173,6 +173,10 @@ export class Enemy extends Character<Enemy> {
         this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this))
     }
 
+    get root_el(): HTMLElement {
+        return this.enemy_root_el
+    }
+
     get phase(): typeof Enemy.prototype._phase {
         return this._phase
     }

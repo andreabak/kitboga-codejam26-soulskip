@@ -2,7 +2,7 @@ import {get_element} from "@/utils"
 
 import {GameUpdateContext} from "../core"
 import type {Game} from "../game"
-import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
+import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox, image_animation_def} from "./core"
 
 import FlaskIcon from "@/assets/flask.webp"
 import AttackFast from "@/assets/player-attack-fast.png"
@@ -77,37 +77,20 @@ class Player extends Character<Player> {
                 hit: {
                     duration: 150,
                     acceleration: 1,
-                    animation: (player, attack) => {
-                        const randid = "anim-" + Math.random().toString(36)
-                        const anim_el = document.createElement("img")
-                        anim_el.id = randid
-                        anim_el.src = AttackFast
-                        anim_el.style = `
-                            position: absolute;
-                            width: ${player.width}px;
-                            height: ${player.height}px;
-                            top: 0;
-                            left: 0;
-                            mix-blend-mode: plus-lighter;
-                        `
+                    animation: image_animation_def(AttackFast, (player, attack, image_el) => {
                         const rotation_base_deg = ((player.direction - attack.hitbox.rotation_ref) * 180) / Math.PI
-                        player.player_root_el.appendChild(anim_el)
                         const update = (progress: number) => {
                             const rotation_offset_deg = 30 - 45 * progress ** 0.25
-                            anim_el.style.transform = `
-                                scale(${attack.scale})
-                                rotate(${rotation_base_deg + rotation_offset_deg}deg)
-                            `
+                            image_el.style.transform = `
+                                    scale(${attack.scale})
+                                    rotate(${rotation_base_deg + rotation_offset_deg}deg)
+                                `
                             const overblend = 1 - progress
-                            anim_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`
-                            anim_el.style.opacity = ((1 - progress) ** 0.125).toString()
+                            image_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`
+                            image_el.style.opacity = ((1 - progress) ** 0.125).toString()
                         }
-                        update(0)
-                        return {
-                            update,
-                            end: () => anim_el.remove(),
-                        }
-                    },
+                        return {update}
+                    }),
                 },
                 recovery: {duration: 100, acceleration: 50},
             },
@@ -160,6 +143,10 @@ class Player extends Character<Player> {
             e.preventDefault()
             return false
         })
+    }
+
+    get root_el(): HTMLElement {
+        return this.player_root_el
     }
 
     _on_mousemove(event: MouseEvent): void {

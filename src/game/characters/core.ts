@@ -31,13 +31,54 @@ export type AttackAnimationDef<C extends Character> = (
     attack: Attack<C>,
     phase: AttackPhase<C>,
 ) => AnimationHandle
+
+export type AttackImageAnimationDef<C extends Character> = AttackAnimationDef<C> & {image_src: string}
+export function image_animation_def<C extends Character>(
+    image_src: string,
+    init?: (character: C, attack: Attack<C>, image_el: HTMLElement) => AnimationHandle,
+): AttackImageAnimationDef<C> {
+    function factory(character: C, attack: Attack<C>): AnimationHandle {
+        const randid = "anim-" + Math.random().toString(36)
+        const image_el = document.createElement("div")
+        image_el.id = randid
+        // using div + background-image prevents further browser HEAD requests
+        image_el.style = `
+            position: absolute;
+            width: ${character.width}px;
+            height: ${character.height}px;
+            top: 0;
+            left: 0;
+            mix-blend-mode: plus-lighter;
+            background-image: url('${image_src}');
+            background-size: contain;
+        `
+        character.root_el.appendChild(image_el)
+        let sub_update,
+            sub_end = undefined
+        if (init != null) {
+            ;({update: sub_update, end: sub_end} = init(character, attack, image_el))
+        }
+        const update = sub_update
+        const end = () => {
+            if (sub_end != null) sub_end()
+            image_el.remove()
+        }
+        if (update != null) {
+            update(0)
+        }
+        return {update, end}
+    }
+    factory.image_src = image_src
+    return factory
+}
+
 export type AttackPhases = "anticipation" | "hit" | "recovery"
 export const ATTACK_PHASES_SEQUENCE: Array<AttackPhases> = ["anticipation", "hit", "recovery"]
 export type AttackPhaseDef<C extends Character> = {
     duration: number
     acceleration?: number | null
     max_vel?: number | null
-    animation?: AnimationDef<C> | AttackAnimationDef<C> | null
+    animation?: AnimationDef<C> | AttackAnimationDef<C> | AttackImageAnimationDef<C> | null
     sound?: Array<string> | null
 }
 export type AttackDef<C extends Character> = {
@@ -138,6 +179,9 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
         for (const attack_def of Object.values(this.attacks_defs)) {
             this.game.preload_sounds(...(attack_def.hit_sound ?? []))
             for (const attack_phase_def of Object.values(attack_def.phases)) {
+                if (attack_phase_def.animation && "image_src" in attack_phase_def.animation) {
+                    this.game.preload_images(attack_phase_def.animation.image_src)
+                }
                 this.game.preload_sounds(...(attack_phase_def.sound ?? []))
             }
         }
@@ -145,6 +189,8 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
             this.game.preload_sounds(...(sound ?? []))
         }
     }
+
+    abstract get root_el(): HTMLElement
 
     get acceleration(): number {
         return this._follower.acceleration
