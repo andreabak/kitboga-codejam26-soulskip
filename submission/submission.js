@@ -27,103 +27,6 @@ class GameComponent extends Component {
 }
 class Actor extends GameComponent {
 }
-function image_animation_def(image_src, element, { duration, remove, position, size, image_size = "contain", style } = {}, init) {
-  function factory(component, params_override, init_override) {
-    const params = { ...{ duration, remove, position, size, image_size, style }, ...params_override ?? {} };
-    const randid = "img-" + Math.random().toString(36);
-    const image_el = document.createElement("div");
-    image_el.id = randid;
-    image_el.style = `
-            position: absolute;
-            background-image: url('${image_src}');
-            background-size: ${params.image_size};
-        `;
-    if (params.position) {
-      image_el.style.top = `${params.position.y}px`;
-      image_el.style.left = `${params.position.x}px`;
-    }
-    if (params.size) {
-      image_el.style.width = `${params.size.x}px`;
-      image_el.style.height = `${params.size.y}px`;
-    }
-    if (params.style) {
-      Object.assign(image_el.style, params.style);
-    }
-    const el = element instanceof HTMLElement ? element : element(component);
-    el.appendChild(image_el);
-    let sub_update, sub_end = void 0;
-    const _init = init_override ?? init;
-    if (_init != null) {
-      ({ update: sub_update, end: sub_end } = _init(component, image_el));
-    }
-    const update = sub_update;
-    const end = () => {
-      if (sub_end != null) sub_end();
-      if (params.remove == null || params.remove === true) image_el.remove();
-    };
-    if (update != null) {
-      update(0);
-    }
-    if (params.duration != null) return { duration: params.duration, update, end };
-    else return { update, end };
-  }
-  factory.image_src = image_src;
-  return factory;
-}
-function multi_animation_def(defs, { duration } = {}, init) {
-  const defs_array = Array.isArray(defs) ? defs : [...Object.values(defs)];
-  function factory(component) {
-    let animations;
-    if (init != null) {
-      animations = init(component, defs);
-    } else {
-      animations = defs_array.map((def) => def(component));
-    }
-    const update = (progress) => animations.forEach((anim) => {
-      if (anim.update) anim.update(progress);
-    });
-    const end = () => animations.forEach((anim) => {
-      if (anim.end) anim.end();
-    });
-    if (duration != null) return { duration, update, end };
-    else return { update, end };
-  }
-  const image_src_set = new Set(
-    defs_array.filter((def) => "image_src" in def).map((img_def) => img_def.image_src).flat()
-  );
-  if (image_src_set.size > 0) factory.image_src = [...image_src_set.values()];
-  return factory;
-}
-function subs_anim(game2, subs) {
-  if (!subs.length) return { duration: 0 };
-  const duration = Math.max(...subs.map(([, end_s]) => end_s)) * 1e3;
-  const lines = subs.map(([start, end, text]) => {
-    const line_el = document.createElement("div");
-    line_el.classList.add("sub-line");
-    line_el.textContent = text;
-    return [start, end, line_el];
-  });
-  return {
-    duration,
-    update: (progress) => {
-      const reltime = progress * duration;
-      for (const [start_s, end_s, line_el] of lines) {
-        if (reltime < start_s * 1e3) continue;
-        const in_dom = game2.subs_root_el.contains(line_el);
-        if (reltime < end_s * 1e3) {
-          if (!in_dom) game2.subs_root_el.appendChild(line_el);
-        } else {
-          if (in_dom) line_el.remove();
-        }
-      }
-    },
-    end: () => {
-      for (const [, , line_el] of lines) {
-        line_el.remove();
-      }
-    }
-  };
-}
 async function delay(ms) {
   return await new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -156,6 +59,12 @@ async function fade_audio(audio_el, {
 }
 function random_pick(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+function interpolate(a, b, alpha) {
+  return a * (1 - alpha) + b * alpha;
+}
+function interpolate_point(a, b, alpha) {
+  return { x: interpolate(a.x, b.x, alpha), y: interpolate(a.y, b.y, alpha) };
 }
 function rect_to_shape(rect) {
   return {
@@ -230,13 +139,20 @@ function dist(x, y) {
 function dist_pt(p) {
   return dist(p.x, p.y);
 }
+function shortest_delta_angle(a, b) {
+  a = typeof a === "number" ? a : Math.atan2(a.y, a.x);
+  b = typeof b === "number" ? b : Math.atan2(b.y, b.x);
+  let delta = b - a;
+  delta = delta % (2 * Math.PI);
+  if (delta > Math.PI) delta -= 2 * Math.PI;
+  else if (delta < -Math.PI) delta += 2 * Math.PI;
+  return delta;
+}
 function rotate_vector_clamped(vector, target, max_angle_delta) {
   const mag = typeof vector === "number" ? 1 : dist(vector.x, vector.y);
   const angle = typeof vector === "number" ? vector : Math.atan2(vector.y, vector.x);
   if (typeof target === "object" && "x" in target && "y" in target) target = Math.atan2(target.y, target.x);
-  let delta = target - angle;
-  if (delta > Math.PI) delta -= 2 * Math.PI;
-  else if (delta < -Math.PI) delta += 2 * Math.PI;
+  let delta = shortest_delta_angle(vector, target);
   delta = Math.max(-max_angle_delta, Math.min(max_angle_delta, delta));
   const new_angle = angle + delta;
   return [{ x: mag * Math.cos(new_angle), y: mag * Math.sin(new_angle) }, new_angle];
@@ -338,6 +254,8 @@ class TargetFollower {
     let dir_target = null;
     if (this.dir_target === "pos") {
       if (vel > 0.1) dir_target = this._vel;
+    } else if (typeof this.dir_target === "number") {
+      dir_target = this.dir_target;
     } else if (this.dir_target != null && "x" in this.dir_target && "y" in this.dir_target) {
       dir_target = { x: this.dir_target.x - this.pos.x, y: this.dir_target.y - this.pos.y };
     }
@@ -348,6 +266,126 @@ class TargetFollower {
     this.pos.y += this._vel.y;
     return this.pos;
   }
+}
+function image_animation_def(image_src, element, { duration, remove, position, size, image_size = "contain", style } = {}, init) {
+  function factory(component, params_override, init_override) {
+    const params = { ...{ duration, remove, position, size, image_size, style }, ...params_override ?? {} };
+    const randid = "img-" + Math.random().toString(36);
+    const image_el = document.createElement("div");
+    image_el.id = randid;
+    image_el.style = `
+            position: absolute;
+            background-image: url('${image_src}');
+            background-size: ${params.image_size};
+        `;
+    if (params.position) {
+      image_el.style.top = `${params.position.y}px`;
+      image_el.style.left = `${params.position.x}px`;
+    }
+    if (params.size) {
+      image_el.style.width = `${params.size.x}px`;
+      image_el.style.height = `${params.size.y}px`;
+    }
+    if (params.style) {
+      Object.assign(image_el.style, params.style);
+    }
+    const el = element instanceof HTMLElement ? element : element(component);
+    el.appendChild(image_el);
+    let sub_update, sub_end = void 0;
+    const _init = init_override ?? init;
+    if (_init != null) {
+      ({ update: sub_update, end: sub_end } = _init(component, image_el));
+    }
+    const update = sub_update;
+    const end = () => {
+      if (sub_end != null) sub_end();
+      if (params.remove == null || params.remove === true) image_el.remove();
+    };
+    if (update != null) {
+      update(0);
+    }
+    if (params.duration != null) return { duration: params.duration, update, end };
+    else return { update, end };
+  }
+  factory.image_src = image_src;
+  return factory;
+}
+function multi_animation_def(defs, { duration } = {}, init) {
+  const defs_array = Array.isArray(defs) ? defs : [...Object.values(defs)];
+  function factory(component) {
+    let animations;
+    if (init != null) {
+      animations = init(component, defs);
+    } else {
+      animations = defs_array.map((def) => def(component));
+    }
+    const update = (progress) => animations.forEach((anim) => {
+      if (anim.update) anim.update(progress);
+    });
+    const end = () => animations.forEach((anim) => {
+      if (anim.end) anim.end();
+    });
+    if (duration != null) return { duration, update, end };
+    else return { update, end };
+  }
+  const image_src_set = new Set(
+    defs_array.filter((def) => "image_src" in def).map((img_def) => img_def.image_src).flat()
+  );
+  if (image_src_set.size > 0) factory.image_src = [...image_src_set.values()];
+  return factory;
+}
+function interpolate_anim_def(start, target, set, { duration, shortest_angle = true, ease_fn } = {}) {
+  return (component) => {
+    const _start = typeof start === "function" ? start(component) : start;
+    const _target = typeof target === "function" ? target(component) : target;
+    const update = (progress) => {
+      const _progress = ease_fn != null ? ease_fn(progress) : progress;
+      const state = {};
+      if (_start.position != null && _target.position != null)
+        state.position = interpolate_point(_start.position, _target.position, _progress);
+      if (_start.rotation != null && _target.rotation != null) {
+        if (shortest_angle)
+          state.rotation = _start.rotation + _progress * shortest_delta_angle(_start.rotation, _target.rotation);
+        else state.rotation = interpolate(_start.rotation, _target.rotation, _progress);
+      }
+      if (_start.scale != null && _target.scale != null)
+        state.scale = interpolate(_start.scale, _target.scale, _progress);
+      set(component, state);
+    };
+    const end = () => set(component, _target);
+    if (duration != null) return { duration, update, end };
+    else return { update, end };
+  };
+}
+function subs_anim(game2, subs) {
+  if (!subs.length) return { duration: 0 };
+  const duration = Math.max(...subs.map(([, end_s]) => end_s)) * 1e3;
+  const lines = subs.map(([start, end, text]) => {
+    const line_el = document.createElement("div");
+    line_el.classList.add("sub-line");
+    line_el.textContent = text;
+    return [start, end, line_el];
+  });
+  return {
+    duration,
+    update: (progress) => {
+      const reltime = progress * duration;
+      for (const [start_s, end_s, line_el] of lines) {
+        if (reltime < start_s * 1e3) continue;
+        const in_dom = game2.subs_root_el.contains(line_el);
+        if (reltime < end_s * 1e3) {
+          if (!in_dom) game2.subs_root_el.appendChild(line_el);
+        } else {
+          if (in_dom) line_el.remove();
+        }
+      }
+    },
+    end: () => {
+      for (const [, , line_el] of lines) {
+        line_el.remove();
+      }
+    }
+  };
 }
 class HudBar extends GameComponent {
   constructor(game2, hud) {
@@ -679,6 +717,9 @@ class Character extends Actor {
   set pos_target(value) {
     this._follower.pos_target = value;
   }
+  get velocity() {
+    return this._follower.velocity;
+  }
   get dir_target() {
     return this._follower.dir_target;
   }
@@ -699,6 +740,7 @@ class Character extends Actor {
     return this.current_attack.phases[this.current_attack.current_phase];
   }
   _transform_shape(rel_shape, {
+    origin_ref,
     rotation_ref = 0,
     rotates = true,
     scale_ref = 1,
@@ -717,10 +759,12 @@ class Character extends Actor {
       rotate: (rotates ? this._follower.direction : 0) - rotation_ref,
       scale: { x: scale.x * scale_ref, y: scale.y * scale_ref }
     });
+    if (origin_ref) shape = transform_shape(shape, { translate: origin_ref });
     return shape;
   }
   get hurtbox() {
     return this._transform_shape(this.hurtbox_def.shape, {
+      origin_ref: this.hurtbox_def.origin_ref,
       rotation_ref: this.hurtbox_def.rotation_ref,
       rotates: this.rotates
     });
@@ -733,6 +777,7 @@ class Character extends Actor {
       return null;
     }
     return this._transform_shape(this.current_attack.hitbox.shape, {
+      origin_ref: this.current_attack.hitbox.origin_ref,
       rotation_ref: this.current_attack.hitbox.rotation_ref,
       rotates: true,
       scale_ref: this.current_attack.scale,
@@ -1163,6 +1208,99 @@ const EnemyDamageSound7 = "" + new URL("assets/770124_5.opus", import.meta.url).
 const EnemyDamageSound8 = "" + new URL("assets/770124_6.opus", import.meta.url).href;
 const EnemyDamageSound9 = "" + new URL("assets/770124_7.opus", import.meta.url).href;
 const EnemyDeathSound = "" + new URL("assets/369005.opus", import.meta.url).href;
+const enemy_weapon_selector = ".weapon";
+const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
+  constructor(game2, enemy) {
+    super(game2);
+    __publicField(this, "enemy");
+    __publicField(this, "weapon_el");
+    __publicField(this, "follower");
+    __publicField(this, "base_offset", { x: 0, y: 24 });
+    __publicField(this, "base_rotation", -165 / 180 * Math.PI);
+    __publicField(this, "rotation_ref", -135 / 180 * Math.PI);
+    __publicField(this, "velocity_drift_factor", 3);
+    this.enemy = enemy;
+    this.weapon_el = get_element(enemy_weapon_selector, enemy.enemy_root_el);
+    this.follower = new TargetFollower(
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      {
+        acceleration: 200,
+        slowing_distance: 10,
+        dir_max_rotation: 20 * 360 / 180 * Math.PI
+      }
+    );
+  }
+  _update(context) {
+    const offset = {
+      x: this.base_offset.x - this.enemy.velocity.x * this.velocity_drift_factor,
+      y: this.base_offset.y - this.enemy.velocity.y * this.velocity_drift_factor
+    };
+    const rotation = this.base_rotation - this.rotation_ref + Math.max(-30, Math.min(-this.enemy.velocity.x * 1.5, 30)) / 180 * Math.PI;
+    this.follower.pos_target = offset;
+    this.follower.dir_target = rotation;
+    if (context.timedelta) this.follower.update(context.timedelta);
+    this.weapon_el.style.transform = `
+            translate(calc(${this.follower.pos.x}px - 50%), calc(${this.follower.pos.y}px - 50%))
+            rotate(${this.follower.direction * 180 / Math.PI}deg)
+        `;
+  }
+};
+__publicField(_EnemyWeapon, "initial_offset", { x: 0, y: 24 });
+__publicField(_EnemyWeapon, "initial_rotation", -165 / 180 * Math.PI);
+__publicField(_EnemyWeapon, "animation_base_def", ({
+  position,
+  rotation,
+  params
+}) => interpolate_anim_def(
+  (enemy) => ({ position: enemy.weapon.base_offset, rotation: enemy.weapon.base_rotation }),
+  (enemy) => ({
+    position: typeof position === "function" ? position(enemy) : position,
+    rotation: typeof rotation === "function" ? rotation(enemy) : rotation
+  }),
+  (enemy, state) => {
+    enemy.weapon.base_offset = state.position;
+    enemy.weapon.base_rotation = state.rotation;
+  },
+  params
+));
+__publicField(_EnemyWeapon, "animations", {
+  swing_fast_anticipation: _EnemyWeapon.animation_base_def({
+    position: { x: -24, y: -16 },
+    rotation: (enemy) => {
+      var _a, _b;
+      return -90 / 180 * Math.PI + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
+    }
+  }),
+  swing_fast_hit: _EnemyWeapon.animation_base_def({
+    position: { x: 24, y: 0 },
+    rotation: (enemy) => {
+      var _a, _b;
+      return -355 / 180 * Math.PI + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
+    },
+    params: { shortest_angle: false, ease_fn: (progress) => progress ** 0.5 }
+  }),
+  swing_slow_anticipation: _EnemyWeapon.animation_base_def({
+    position: { x: -32, y: -24 },
+    rotation: (enemy) => {
+      var _a, _b;
+      return -60 / 180 * Math.PI + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
+    }
+  }),
+  swing_slow_hit: _EnemyWeapon.animation_base_def({
+    position: { x: 24, y: 0 },
+    rotation: (enemy) => {
+      var _a, _b;
+      return -355 / 180 * Math.PI + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
+    },
+    params: { shortest_angle: false, ease_fn: (progress) => progress ** 0.5 }
+  }),
+  swing_recover: _EnemyWeapon.animation_base_def({
+    position: _EnemyWeapon.initial_offset,
+    rotation: _EnemyWeapon.initial_rotation
+  })
+});
+let EnemyWeapon = _EnemyWeapon;
 const enemy_root_selector = ".enemy";
 const skip_btn_selector = ".skip-btn";
 const vines_root_selector = ".vines";
@@ -1172,12 +1310,13 @@ class Enemy extends Character {
     __publicField(this, "enemy_root_el");
     __publicField(this, "skip_btn_el");
     __publicField(this, "vines_root_el");
+    __publicField(this, "weapon");
     __publicField(this, "width");
     __publicField(this, "height");
     __publicField(this, "base_acceleration", 10);
     __publicField(this, "base_max_vel", 2);
-    __publicField(this, "health", 5e3);
-    __publicField(this, "max_health", 5e3);
+    __publicField(this, "health", 1e4);
+    __publicField(this, "max_health", 1e4);
     __publicField(this, "hurtbox_def", { shape: { x: -1, y: -1, width: 2, height: 2 }, rotation_ref: 0 });
     __publicField(this, "max_stamina", 150);
     // TODO: sanity check
@@ -1191,19 +1330,30 @@ class Enemy extends Character {
     __publicField(this, "attacks_defs", {
       slow: {
         phases: {
-          anticipation: { duration: 300, acceleration: 100, max_vel: 100 },
+          anticipation: {
+            duration: 300,
+            acceleration: 100,
+            max_vel: 100,
+            animation: EnemyWeapon.animations.swing_slow_anticipation
+          },
           hit: {
             duration: 200,
             acceleration: 5,
             max_vel: 2,
-            sound: [EnemyAttackSlowSound1, EnemyAttackSlowSound2, EnemyAttackSlowSound3]
+            sound: [EnemyAttackSlowSound1, EnemyAttackSlowSound2, EnemyAttackSlowSound3],
+            animation: EnemyWeapon.animations.swing_slow_hit
           },
-          recovery: { duration: 500, acceleration: 20, max_vel: 4 }
+          recovery: {
+            duration: 500,
+            acceleration: 20,
+            max_vel: 4,
+            animation: EnemyWeapon.animations.swing_recover
+          }
         },
         damage: 500,
         stamina_consume: 6,
         parry_window_duration: 100,
-        scale: 3,
+        scale: 3.5,
         hitbox: {
           shape: {
             points: [
@@ -1216,13 +1366,19 @@ class Enemy extends Character {
               { x: -0.25, y: 0.25 }
             ]
           },
+          origin_ref: { x: 0, y: 24 },
           rotation_ref: -90 / 180 * Math.PI
         },
         hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3]
       },
       fast: {
         phases: {
-          anticipation: { duration: 150, acceleration: 100, max_vel: 100 },
+          anticipation: {
+            duration: 150,
+            acceleration: 100,
+            max_vel: 100,
+            animation: EnemyWeapon.animations.swing_fast_anticipation
+          },
           hit: {
             duration: 200,
             acceleration: 5,
@@ -1233,14 +1389,20 @@ class Enemy extends Character {
               EnemyAttackFastSound3,
               EnemyAttackFastSound4,
               EnemyAttackFastSound5
-            ]
+            ],
+            animation: EnemyWeapon.animations.swing_fast_hit
           },
-          recovery: { duration: 250, acceleration: 20, max_vel: 4 }
+          recovery: {
+            duration: 250,
+            acceleration: 20,
+            max_vel: 4,
+            animation: EnemyWeapon.animations.swing_recover
+          }
         },
         damage: 250,
         stamina_consume: 3,
         parry_window_duration: 100,
-        scale: 3,
+        scale: 3.5,
         hitbox: {
           shape: {
             points: [
@@ -1253,6 +1415,7 @@ class Enemy extends Character {
               { x: -0.25, y: 0.25 }
             ]
           },
+          origin_ref: { x: 0, y: 24 },
           rotation_ref: -90 / 180 * Math.PI
         },
         hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3]
@@ -1349,6 +1512,7 @@ class Enemy extends Character {
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     this.skip_btn_el = get_element(skip_btn_selector, this.enemy_root_el);
     this.vines_root_el = get_element(vines_root_selector, this.enemy_root_el);
+    this.weapon = this.add_component(new EnemyWeapon(this.game, this));
     const rel_rect = this.game.get_relative_rect(this.enemy_root_el);
     this.enemy_root_el.style.top = `${rel_rect.y}px`;
     this.enemy_root_el.style.left = `${rel_rect.x}px`;
@@ -1395,6 +1559,7 @@ class Enemy extends Character {
         if (this.game.changed_state) {
           this.game.play_animation(this.animations.grow_vines(this), 3e3);
           this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
+          this.game.play_animation({ end: () => this.weapon.weapon_el.classList.remove("hidden") }, 5e3);
         }
         if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 1e4) {
           this.phase = "fight";

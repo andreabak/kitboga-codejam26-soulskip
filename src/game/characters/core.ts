@@ -24,6 +24,7 @@ import type {Game} from "../game"
 
 export type HitBox = {
     shape: Shape | Rect
+    origin_ref?: Point
     rotation_ref: number
 }
 
@@ -225,7 +226,11 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
         this._follower.pos_target = value
     }
 
-    get dir_target(): Point | "pos" | null {
+    get velocity(): Point {
+        return this._follower.velocity
+    }
+
+    get dir_target(): Point | number | "pos" | null {
         return this._follower.dir_target
     }
 
@@ -253,11 +258,18 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
     _transform_shape(
         rel_shape: Shape | Rect,
         {
+            origin_ref,
             rotation_ref = 0,
             rotates = true,
             scale_ref = 1.0,
             keep_aspect_ratio = false,
-        }: {rotation_ref?: number; rotates?: boolean; scale_ref?: number; keep_aspect_ratio?: boolean} = {},
+        }: {
+            origin_ref?: Point
+            rotation_ref?: number
+            rotates?: boolean
+            scale_ref?: number
+            keep_aspect_ratio?: boolean
+        } = {},
     ): Shape {
         let shape = rel_shape
         if (!("points" in shape)) {
@@ -272,11 +284,13 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
             rotate: (rotates ? this._follower.direction : 0) - rotation_ref,
             scale: {x: scale.x * scale_ref, y: scale.y * scale_ref},
         })
+        if (origin_ref) shape = transform_shape(shape, {translate: origin_ref})
         return shape
     }
 
     get hurtbox(): Shape {
         return this._transform_shape(this.hurtbox_def.shape, {
+            origin_ref: this.hurtbox_def.origin_ref,
             rotation_ref: this.hurtbox_def.rotation_ref,
             rotates: this.rotates,
         })
@@ -291,6 +305,7 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
             return null
         }
         return this._transform_shape(this.current_attack.hitbox.shape, {
+            origin_ref: this.current_attack.hitbox.origin_ref,
             rotation_ref: this.current_attack.hitbox.rotation_ref,
             rotates: true,
             scale_ref: this.current_attack.scale,

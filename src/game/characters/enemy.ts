@@ -1,7 +1,15 @@
-import {dist, get_element, Point, random_pick, rect_center_dist, shape_bbox} from "@/utils"
+import {dist, get_element, Point, random_pick, rect_center_dist, shape_bbox, TargetFollower} from "@/utils"
 
-import {AnimationHandle, image_animation_def, ImagesAnimationDef, multi_animation_def, subs_anim} from "../animations"
-import {GameUpdateContext, SubsType} from "../core"
+import {
+    AnimationHandle,
+    image_animation_def,
+    ImagesAnimationDef,
+    interpolate_anim_def,
+    InterpolateAnimationParams,
+    multi_animation_def,
+    subs_anim,
+} from "../animations"
+import {GameComponent, GameUpdateContext, SubsType} from "../core"
 import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
 
@@ -32,6 +40,113 @@ import EnemyDamageSound8 from "@/assets/sounds/enemy-damage/770124_6.opus"
 import EnemyDamageSound9 from "@/assets/sounds/enemy-damage/770124_7.opus"
 import EnemyDeathSound from "@/assets/sounds/enemy-death/369005.opus"
 
+const enemy_weapon_selector = ".weapon"
+
+export class EnemyWeapon extends GameComponent {
+    enemy: Enemy
+    weapon_el: HTMLElement
+
+    follower: TargetFollower
+
+    static initial_offset: Point = {x: 0, y: 24}
+    base_offset: Point = {x: 0, y: 24}
+    static initial_rotation = (-165 / 180) * Math.PI
+    base_rotation = (-165 / 180) * Math.PI
+    rotation_ref = (-135 / 180) * Math.PI
+
+    velocity_drift_factor = 3.0
+
+    static animation_base_def = ({
+        position,
+        rotation,
+        params,
+    }: {
+        position?: Point | ((enemy: Enemy) => Point)
+        rotation?: number | ((enemy: Enemy) => number)
+        params?: InterpolateAnimationParams
+    }) =>
+        interpolate_anim_def(
+            (enemy: Enemy) => ({position: enemy.weapon.base_offset, rotation: enemy.weapon.base_rotation}),
+            (enemy: Enemy) => ({
+                position: typeof position === "function" ? position(enemy) : position,
+                rotation: typeof rotation === "function" ? rotation(enemy) : rotation,
+            }),
+            (enemy, state) => {
+                enemy.weapon.base_offset = state.position as Point
+                enemy.weapon.base_rotation = state.rotation as number
+            },
+            params,
+        )
+
+    static animations = {
+        swing_fast_anticipation: EnemyWeapon.animation_base_def({
+            position: {x: -24, y: -16},
+            rotation: (enemy) =>
+                (-90 / 180) * Math.PI + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
+        }),
+        swing_fast_hit: EnemyWeapon.animation_base_def({
+            position: {x: 24, y: 0},
+            rotation: (enemy) =>
+                (-355 / 180) * Math.PI + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
+            params: {shortest_angle: false, ease_fn: (progress) => progress ** 0.5},
+        }),
+        swing_slow_anticipation: EnemyWeapon.animation_base_def({
+            position: {x: -32, y: -24},
+            rotation: (enemy) =>
+                (-60 / 180) * Math.PI + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
+        }),
+        swing_slow_hit: EnemyWeapon.animation_base_def({
+            position: {x: 24, y: 0},
+            rotation: (enemy) =>
+                (-355 / 180) * Math.PI + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
+            params: {shortest_angle: false, ease_fn: (progress) => progress ** 0.5},
+        }),
+        swing_recover: EnemyWeapon.animation_base_def({
+            position: EnemyWeapon.initial_offset,
+            rotation: EnemyWeapon.initial_rotation,
+        }),
+    }
+
+    constructor(game: Game, enemy: Enemy) {
+        super(game)
+
+        this.enemy = enemy
+        this.weapon_el = get_element(enemy_weapon_selector, enemy.enemy_root_el) as HTMLElement
+
+        this.follower = new TargetFollower(
+            {x: 0, y: 0},
+            {x: 0, y: 0},
+            {
+                acceleration: 200,
+                slowing_distance: 10,
+                dir_max_rotation: ((20 * 360) / 180) * Math.PI,
+            },
+        )
+    }
+
+    _update(context: GameUpdateContext) {
+        // if (this.enemy.current_attack == null) {
+        //     this.base_rotation =
+        //         this.initial_rotation + this.enemy.direction - (-90 / 180) * Math.PI + this.rotation_ref
+        // }
+        const offset = {
+            x: this.base_offset.x - this.enemy.velocity.x * this.velocity_drift_factor,
+            y: this.base_offset.y - this.enemy.velocity.y * this.velocity_drift_factor,
+        }
+        const rotation =
+            this.base_rotation -
+            this.rotation_ref +
+            (Math.max(-30, Math.min(-this.enemy.velocity.x * 1.5, 30)) / 180) * Math.PI
+        this.follower.pos_target = offset
+        this.follower.dir_target = rotation
+        if (context.timedelta) this.follower.update(context.timedelta)
+        this.weapon_el.style.transform = `
+            translate(calc(${this.follower.pos.x}px - 50%), calc(${this.follower.pos.y}px - 50%))
+            rotate(${(this.follower.direction * 180) / Math.PI}deg)
+        `
+    }
+}
+
 const enemy_root_selector = ".enemy"
 const skip_btn_selector = ".skip-btn"
 const vines_root_selector = ".vines"
@@ -41,14 +156,16 @@ export class Enemy extends Character<Enemy> {
     skip_btn_el: HTMLDivElement
     vines_root_el: HTMLDivElement
 
+    weapon: EnemyWeapon
+
     width: number
     height: number
 
     base_acceleration: number = 10
     base_max_vel: number = 2
 
-    health: number = 5000.0
-    max_health: number = 5000.0
+    health: number = 10000.0
+    max_health: number = 10000.0
 
     hurtbox_def: HitBox = {shape: {x: -1, y: -1, width: 2, height: 2}, rotation_ref: 0}
 
@@ -62,19 +179,30 @@ export class Enemy extends Character<Enemy> {
     attacks_defs = {
         slow: {
             phases: {
-                anticipation: {duration: 300, acceleration: 100, max_vel: 100},
+                anticipation: {
+                    duration: 300,
+                    acceleration: 100,
+                    max_vel: 100,
+                    animation: EnemyWeapon.animations.swing_slow_anticipation,
+                },
                 hit: {
                     duration: 200,
                     acceleration: 5,
                     max_vel: 2,
                     sound: [EnemyAttackSlowSound1, EnemyAttackSlowSound2, EnemyAttackSlowSound3],
+                    animation: EnemyWeapon.animations.swing_slow_hit,
                 },
-                recovery: {duration: 500, acceleration: 20, max_vel: 4},
+                recovery: {
+                    duration: 500,
+                    acceleration: 20,
+                    max_vel: 4,
+                    animation: EnemyWeapon.animations.swing_recover,
+                },
             },
             damage: 500,
             stamina_consume: 6,
             parry_window_duration: 100,
-            scale: 3,
+            scale: 3.5,
             hitbox: {
                 shape: {
                     points: [
@@ -87,13 +215,19 @@ export class Enemy extends Character<Enemy> {
                         {x: -0.25, y: 0.25},
                     ],
                 },
+                origin_ref: {x: 0, y: 24},
                 rotation_ref: (-90 / 180) * Math.PI,
             },
             hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3],
         },
         fast: {
             phases: {
-                anticipation: {duration: 150, acceleration: 100, max_vel: 100},
+                anticipation: {
+                    duration: 150,
+                    acceleration: 100,
+                    max_vel: 100,
+                    animation: EnemyWeapon.animations.swing_fast_anticipation,
+                },
                 hit: {
                     duration: 200,
                     acceleration: 5,
@@ -105,13 +239,19 @@ export class Enemy extends Character<Enemy> {
                         EnemyAttackFastSound4,
                         EnemyAttackFastSound5,
                     ],
+                    animation: EnemyWeapon.animations.swing_fast_hit,
                 },
-                recovery: {duration: 250, acceleration: 20, max_vel: 4},
+                recovery: {
+                    duration: 250,
+                    acceleration: 20,
+                    max_vel: 4,
+                    animation: EnemyWeapon.animations.swing_recover,
+                },
             },
             damage: 250,
             stamina_consume: 3,
             parry_window_duration: 100,
-            scale: 3,
+            scale: 3.5,
             hitbox: {
                 shape: {
                     points: [
@@ -124,6 +264,7 @@ export class Enemy extends Character<Enemy> {
                         {x: -0.25, y: 0.25},
                     ],
                 },
+                origin_ref: {x: 0, y: 24},
                 rotation_ref: (-90 / 180) * Math.PI,
             },
             hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3],
@@ -237,6 +378,8 @@ export class Enemy extends Character<Enemy> {
         this.skip_btn_el = get_element(skip_btn_selector, this.enemy_root_el) as HTMLDivElement
         this.vines_root_el = get_element(vines_root_selector, this.enemy_root_el) as HTMLDivElement
 
+        this.weapon = this.add_component(new EnemyWeapon(this.game, this))
+
         // make sure we use top+left and not bottom+right
         const rel_rect = this.game.get_relative_rect(this.enemy_root_el)
         this.enemy_root_el.style.top = `${rel_rect.y}px`
@@ -290,6 +433,7 @@ export class Enemy extends Character<Enemy> {
                 if (this.game.changed_state) {
                     this.game.play_animation(this.animations.grow_vines(this), 3000)
                     this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
+                    this.game.play_animation({end: () => this.weapon.weapon_el.classList.remove("hidden")}, 5000)
                 }
                 if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 10000) {
                     this.phase = "fight"

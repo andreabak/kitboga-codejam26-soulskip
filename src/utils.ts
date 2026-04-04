@@ -49,6 +49,10 @@ export function random_pick<T>(items: Array<T>): T {
     return items[Math.floor(Math.random() * items.length)]
 }
 
+export function interpolate(a: number, b: number, alpha: number): number {
+    return a * (1 - alpha) + b * alpha
+}
+
 export type Point = {
     x: number
     y: number
@@ -58,6 +62,9 @@ export type Rect = {
     y: number
     width: number
     height: number
+}
+export function interpolate_point(a: Point, b: Point, alpha: number): Point {
+    return {x: interpolate(a.x, b.x, alpha), y: interpolate(a.y, b.y, alpha)}
 }
 export function rect_to_shape(rect: Rect): Shape {
     return {
@@ -155,7 +162,16 @@ export function dist_pt(p: Point): number {
     return dist(p.x, p.y)
 }
 
-function rotate_vector_clamped(
+export function shortest_delta_angle(a: Point | number, b: Point | number): number {
+    a = typeof a === "number" ? a : Math.atan2(a.y, a.x)
+    b = typeof b === "number" ? b : Math.atan2(b.y, b.x)
+    let delta = b - a
+    delta = delta % (2 * Math.PI)
+    if (delta > Math.PI) delta -= 2 * Math.PI
+    else if (delta < -Math.PI) delta += 2 * Math.PI
+    return delta
+}
+export function rotate_vector_clamped(
     vector: Point | number,
     target: number | Point,
     max_angle_delta: number,
@@ -165,9 +181,7 @@ function rotate_vector_clamped(
 
     if (typeof target === "object" && "x" in target && "y" in target) target = Math.atan2(target.y, target.x)
 
-    let delta = target - angle
-    if (delta > Math.PI) delta -= 2 * Math.PI
-    else if (delta < -Math.PI) delta += 2 * Math.PI
+    let delta = shortest_delta_angle(vector, target)
     delta = Math.max(-max_angle_delta, Math.min(max_angle_delta, delta))
 
     const new_angle = angle + delta
@@ -212,7 +226,7 @@ export function smooth_ema(v0: number, v1: number, sf: number) {
 export class TargetFollower {
     pos: Point
     pos_target: Point
-    dir_target: Point | "pos" | null = "pos"
+    dir_target: Point | number | "pos" | null = "pos"
 
     acceleration: number
     private _vel: Point
@@ -299,9 +313,11 @@ export class TargetFollower {
         }
         vel = dist(this._vel.x, this._vel.y)
 
-        let dir_target: Point | null = null
+        let dir_target: Point | number | null = null
         if (this.dir_target === "pos") {
             if (vel > 0.1) dir_target = this._vel
+        } else if (typeof this.dir_target === "number") {
+            dir_target = this.dir_target
         } else if (this.dir_target != null && "x" in this.dir_target && "y" in this.dir_target) {
             dir_target = {x: this.dir_target.x - this.pos.x, y: this.dir_target.y - this.pos.y}
         }

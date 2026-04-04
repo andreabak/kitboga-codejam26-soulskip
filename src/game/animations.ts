@@ -1,6 +1,6 @@
 import type {Component, SubsType} from "@/game/core"
 import type {Game} from "@/game/game"
-import {Point} from "@/utils"
+import {interpolate, interpolate_point, Point, shortest_delta_angle} from "@/utils"
 
 export type AnimationHandle = {
     update?: ((progress: number) => void) | null
@@ -141,6 +141,58 @@ export function multi_animation_def<
 export type UntimedAnimationDefTypes<C extends Component<object>> = AnimationDef<C> | ImagesAnimationDef<C>
 export type TimedAnimationDefTypes<C extends Component<object>> = TimedAnimationDef<C> | TimedImagesAnimationDef<C>
 export type AnimationDefTypes<C extends Component<object>> = UntimedAnimationDefTypes<C> | TimedAnimationDefTypes<C>
+
+export type InterpolateState = {
+    position?: Point
+    rotation?: number
+    scale?: number
+}
+export type InterpolateAnimationParams = {
+    duration?: number
+    shortest_angle?: boolean
+    ease_fn?: (progress: number) => number
+}
+export function interpolate_anim_def<C extends Component<object>>(
+    start: InterpolateState | ((component: C) => InterpolateState),
+    target: InterpolateState | ((component: C) => InterpolateState),
+    set: (component: C, new_state: InterpolateState) => void,
+    {shortest_angle, ease_fn}?: Omit<InterpolateAnimationParams, "duration">,
+): AnimationDef<C>
+export function interpolate_anim_def<C extends Component<object>>(
+    start: InterpolateState | ((component: C) => InterpolateState),
+    target: InterpolateState | ((component: C) => InterpolateState),
+    set: (component: C, new_state: InterpolateState) => void,
+    {duration, shortest_angle, ease_fn}: InterpolateAnimationParams & {duration: number},
+): TimedAnimationDef<C>
+export function interpolate_anim_def<C extends Component<object>>(
+    start: InterpolateState | ((component: C) => InterpolateState),
+    target: InterpolateState | ((component: C) => InterpolateState),
+    set: (component: C, new_state: InterpolateState) => void,
+    {duration, shortest_angle = true, ease_fn}: InterpolateAnimationParams = {},
+): AnimationDef<C> | TimedAnimationDef<C> {
+    return (component: C): AnimationHandle | TimedAnimationHandle => {
+        const _start = typeof start === "function" ? start(component) : start
+        const _target = typeof target === "function" ? target(component) : target
+        const update = (progress: number) => {
+            const _progress = ease_fn != null ? ease_fn(progress) : progress
+            const state: InterpolateState = {}
+            if (_start.position != null && _target.position != null)
+                state.position = interpolate_point(_start.position, _target.position, _progress)
+            if (_start.rotation != null && _target.rotation != null) {
+                if (shortest_angle)
+                    state.rotation =
+                        _start.rotation + _progress * shortest_delta_angle(_start.rotation, _target.rotation)
+                else state.rotation = interpolate(_start.rotation, _target.rotation, _progress)
+            }
+            if (_start.scale != null && _target.scale != null)
+                state.scale = interpolate(_start.scale, _target.scale, _progress)
+            set(component, state)
+        }
+        const end = () => set(component, _target)
+        if (duration != null) return {duration, update, end} as TimedAnimationHandle
+        else return {update, end} as AnimationHandle
+    }
+}
 
 export function subs_anim(game: Game, subs: SubsType): TimedAnimationHandle {
     if (!subs.length) return {duration: 0}
