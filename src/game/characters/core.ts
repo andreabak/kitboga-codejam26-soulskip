@@ -11,7 +11,15 @@ import {
     transform_shape,
 } from "@/utils"
 
-import {Actor, AnimationDef, AnimationHandle, GameUpdateContext} from "../core"
+import {
+    AnimationDef,
+    AnimationDefTypes,
+    AnimationHandle,
+    image_animation_def,
+    ImageAnimationParams,
+    ImagesAnimationDefMixin,
+} from "../animations"
+import {Actor, GameUpdateContext} from "../core"
 import type {Game} from "../game"
 
 export type HitBox = {
@@ -31,46 +39,31 @@ export type AttackAnimationDef<C extends Character> = (
     attack: Attack<C>,
     phase: AttackPhase<C>,
 ) => AnimationHandle
-
-export type AttackImageAnimationDef<C extends Character> = AttackAnimationDef<C> & {image_src: string}
-export function image_animation_def<C extends Character>(
+export type AttackImageAnimationDef<C extends Character> = AttackAnimationDef<C> & ImagesAnimationDefMixin
+export function attack_image_animation_def<C extends Character>(
     image_src: string,
+    params?: ImageAnimationParams,
     init?: (character: C, attack: Attack<C>, image_el: HTMLElement) => AnimationHandle,
 ): AttackImageAnimationDef<C> {
-    function factory(character: C, attack: Attack<C>): AnimationHandle {
-        const randid = "anim-" + Math.random().toString(36)
-        const image_el = document.createElement("div")
-        image_el.id = randid
-        // using div + background-image prevents further browser HEAD requests
-        image_el.style = `
-            position: absolute;
-            width: ${character.width}px;
-            height: ${character.height}px;
-            top: 0;
-            left: 0;
-            mix-blend-mode: plus-lighter;
-            background-image: url('${image_src}');
-            background-size: contain;
-        `
-        character.root_el.appendChild(image_el)
-        let sub_update,
-            sub_end = undefined
-        if (init != null) {
-            ;({update: sub_update, end: sub_end} = init(character, attack, image_el))
-        }
-        const update = sub_update
-        const end = () => {
-            if (sub_end != null) sub_end()
-            image_el.remove()
-        }
-        if (update != null) {
-            update(0)
-        }
-        return {update, end}
+    const image_factory = image_animation_def(image_src, (character: C) => character.root_el)
+    const factory = (character: C, attack: Attack<C>, phase: AttackPhase<C>) => {
+        return image_factory(
+            character,
+            {
+                ...{
+                    position: {x: 0, y: 0},
+                    size: {x: character.width, y: character.height},
+                },
+                ...(params ?? {}),
+            },
+            (character: C, image_el) => (init != null ? init(character, attack, image_el) : {}),
+        )
     }
-    factory.image_src = image_src
+    factory.image_src = image_factory.image_src
     return factory
 }
+type AttackAnimationDefTypes<C extends Character> = AttackAnimationDef<C> | AttackImageAnimationDef<C>
+type CharacterAnimationDefTypes<C extends Character> = AnimationDefTypes<C> | AttackAnimationDefTypes<C>
 
 export type AttackPhases = "anticipation" | "hit" | "recovery"
 export const ATTACK_PHASES_SEQUENCE: Array<AttackPhases> = ["anticipation", "hit", "recovery"]
@@ -157,6 +150,7 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
     parry_stamina_consume: number = 30
     parry_enemy_stamina_consume_factor: number = 0.1
 
+    animations: Record<string, CharacterAnimationDefTypes<C>> = {}
     sounds: CharacterSounds = {}
 
     constructor(game: Game) {
@@ -180,9 +174,16 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
             this.game.preload_sounds(...(attack_def.hit_sound ?? []))
             for (const attack_phase_def of Object.values(attack_def.phases)) {
                 if (attack_phase_def.animation && "image_src" in attack_phase_def.animation) {
-                    this.game.preload_images(attack_phase_def.animation.image_src)
+                    const images = attack_phase_def.animation.image_src
+                    this.game.preload_images(...(typeof images === "string" ? [images] : images))
                 }
                 this.game.preload_sounds(...(attack_phase_def.sound ?? []))
+            }
+        }
+        for (const animation of Object.values(this.animations)) {
+            if (animation && "image_src" in animation) {
+                const images = animation.image_src
+                this.game.preload_images(...(typeof images === "string" ? [images] : images))
             }
         }
         for (const sound of Object.values(this.sounds)) {

@@ -1,9 +1,14 @@
 import {dist, get_element, Point, random_pick, rect_center_dist, shape_bbox} from "@/utils"
 
-import {GameUpdateContext, subs_anim, SubsType} from "../core"
+import {AnimationHandle, image_animation_def, ImagesAnimationDef, multi_animation_def, subs_anim} from "../animations"
+import {GameUpdateContext, SubsType} from "../core"
 import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
 
+import VineLongImage1 from "@/assets/enemy/vine_long1.png"
+import VineLongImage2 from "@/assets/enemy/vine_long2.png"
+import VineShortImage1 from "@/assets/enemy/vine_short1.png"
+import VineShortImage2 from "@/assets/enemy/vine_short2.png"
 import EnemyAttackHitSound1 from "@/assets/sounds/enemy-attack-hit/420674.opus"
 import EnemyAttackHitSound2 from "@/assets/sounds/enemy-attack-hit/474575.opus"
 import EnemyAttackHitSound3 from "@/assets/sounds/enemy-attack-hit/536258.opus"
@@ -27,10 +32,14 @@ import EnemyDamageSound8 from "@/assets/sounds/enemy-damage/770124_6.opus"
 import EnemyDamageSound9 from "@/assets/sounds/enemy-damage/770124_7.opus"
 import EnemyDeathSound from "@/assets/sounds/enemy-death/369005.opus"
 
-const enemy_root_selector = ".skip-btn"
+const enemy_root_selector = ".enemy"
+const skip_btn_selector = ".skip-btn"
+const vines_root_selector = ".vines"
 
 export class Enemy extends Character<Enemy> {
     enemy_root_el: HTMLDivElement
+    skip_btn_el: HTMLDivElement
+    vines_root_el: HTMLDivElement
 
     width: number
     height: number
@@ -139,6 +148,66 @@ export class Enemy extends Character<Enemy> {
     auto_attack_dist: number = 400
     auto_attack_interval: [number, number] = [1500, 3000]
 
+    animations = {
+        grow_vines: multi_animation_def(
+            {
+                long1: image_animation_def(VineLongImage1, (enemy: Enemy) => enemy.vines_root_el, {remove: false}),
+                long2: image_animation_def(VineLongImage2, (enemy: Enemy) => enemy.vines_root_el, {remove: false}),
+                short1: image_animation_def(VineShortImage1, (enemy: Enemy) => enemy.vines_root_el, {remove: false}),
+                short2: image_animation_def(VineShortImage2, (enemy: Enemy) => enemy.vines_root_el, {remove: false}),
+            },
+            {},
+            (enemy: Enemy, defs) => {
+                const avg_dist = 14
+                const rand_jitter = 5
+                const size_rand: [number, number] = [1.0, 2.0]
+                const rot_rand = 10
+                const btn_rect = enemy.skip_btn_el.getBoundingClientRect()
+                const handles: Array<AnimationHandle> = []
+                type CSSSize = "width" | "height"
+                type CSSSide = "top" | "right" | "bottom" | "left"
+                const axes: Array<[CSSSize, CSSSide, [CSSSide, string], ImagesAnimationDef<Enemy>[], number]> = [
+                    ["width", "left", ["top", "0%"], [defs.short1, defs.short2], 48],
+                    ["width", "left", ["top", "100%"], [defs.short1, defs.short2], 48],
+                    ["height", "top", ["left", "0%"], [defs.long1, defs.long2], 48],
+                    ["height", "top", ["left", "100%"], [defs.long1, defs.long2], 48],
+                ]
+                axes.forEach(([dim, mov_side, [fix_side, fix_pos], anim_pool, size_ref]) => {
+                    let pos: number = (avg_dist + (2 * Math.random() - 1) * rand_jitter) / 2
+                    while (pos < btn_rect[dim]) {
+                        const vine_def = random_pick(anim_pool)
+                        const size = size_ref * (size_rand[0] + Math.random() * (size_rand[1] - size_rand[0]))
+                        const handle = vine_def(enemy, {size: {x: size, y: size}}, (_, image_el) => {
+                            const rotation_offset_deg = 180 + (2 * Math.random() - 1) * rot_rand
+                            image_el.style[fix_side] = fix_pos
+                            image_el.style[mov_side] = `${pos}px`
+                            image_el.style.filter = "drop-shadow(0 0 2px black)"
+                            return {
+                                update: (progress) => {
+                                    const rotation_deg =
+                                        (Math.atan2(
+                                            image_el.offsetTop - btn_rect.height / 2,
+                                            image_el.offsetLeft - btn_rect.width / 2,
+                                        ) *
+                                            180) /
+                                            Math.PI +
+                                        rotation_offset_deg
+                                    image_el.style.transform = `
+                                        translate(-50%, -50%)
+                                        rotate(${rotation_deg}deg)
+                                        scale(${progress})
+                                    `
+                                },
+                            }
+                        })
+                        handles.push(handle)
+                        pos += avg_dist + (2 * Math.random() - 1) * rand_jitter
+                    }
+                })
+                return handles
+            },
+        ),
+    }
     sounds = {
         damage: [
             EnemyDamageSound1,
@@ -165,6 +234,8 @@ export class Enemy extends Character<Enemy> {
         super(game)
 
         this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el) as HTMLDivElement
+        this.skip_btn_el = get_element(skip_btn_selector, this.enemy_root_el) as HTMLDivElement
+        this.vines_root_el = get_element(vines_root_selector, this.enemy_root_el) as HTMLDivElement
 
         // make sure we use top+left and not bottom+right
         const rel_rect = this.game.get_relative_rect(this.enemy_root_el)
@@ -216,7 +287,10 @@ export class Enemy extends Character<Enemy> {
             if (this.phase === "fight-start") {
                 this.invicible = true
                 this.base_max_vel = 1
-                if (this.game.changed_state) this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
+                if (this.game.changed_state) {
+                    this.game.play_animation(this.animations.grow_vines(this), 3000)
+                    this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
+                }
                 if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 10000) {
                     this.phase = "fight"
                     this.invicible = false

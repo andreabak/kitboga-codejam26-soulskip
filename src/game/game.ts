@@ -1,8 +1,9 @@
 import {send_shell_request, ShellEvent} from "@/shell"
 import {aabb_overlap, fade_audio, get_element, Point, random_pick, sat_overlap, shape_bbox, smooth_ema} from "@/utils"
 
+import {AnimationHandle, TimedAnimationHandle} from "./animations"
 import {Character, Enemy, Player} from "./characters"
-import {AnimationHandle, Component, GameComponent, GameState, GameUpdateContext, TimedAnimationHandle} from "./core"
+import {Component, GameComponent, GameState, GameUpdateContext} from "./core"
 import {Hud} from "./hud"
 
 import BattleDefeatSound from "@/assets/sounds/battle-defeat/er-death.opus"
@@ -76,6 +77,7 @@ export class Game extends Component<GameUpdateContext> {
     debug_mode: boolean = false
     debug_enemy_stamina: boolean = true
     debug_hitboxes: boolean = true
+    debug_noreload: boolean = true
 
     sounds = {
         battle_music_intro: [BattleMusicIntroSound],
@@ -178,11 +180,13 @@ export class Game extends Component<GameUpdateContext> {
                 }
             } else if (this.state === "defeat") {
                 this.pick_and_play_sound_effect(this.sounds.battle_defeat)
-                setTimeout(() => send_shell_request({type: "fail"}), 8000)
+                if (!(this.debug_mode && this.debug_noreload))
+                    setTimeout(() => send_shell_request({type: "fail"}), 8000)
                 if (this.battle_music_audio) fade_audio(this.battle_music_audio, {duration: 3000, volume: 0})
             } else if (this.state === "victory") {
                 this.pick_and_play_sound_effect(this.sounds.battle_victory)
-                setTimeout(() => send_shell_request({type: "success"}), 8000)
+                if (!(this.debug_mode && this.debug_noreload))
+                    setTimeout(() => send_shell_request({type: "success"}), 8000)
                 if (this.battle_music_audio) fade_audio(this.battle_music_audio, {duration: 3000, volume: 0})
             }
         }

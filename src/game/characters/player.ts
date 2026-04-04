@@ -2,7 +2,7 @@ import {get_element} from "@/utils"
 
 import {GameUpdateContext} from "../core"
 import type {Game} from "../game"
-import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox, image_animation_def} from "./core"
+import {Attack, attack_image_animation_def, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
 
 import FlaskIcon from "@/assets/flask.webp"
 import AttackFast from "@/assets/player-attack-fast.png"
@@ -77,20 +77,24 @@ class Player extends Character<Player> {
                 hit: {
                     duration: 150,
                     acceleration: 1,
-                    animation: image_animation_def(AttackFast, (player, attack, image_el) => {
-                        const rotation_base_deg = ((player.direction - attack.hitbox.rotation_ref) * 180) / Math.PI
-                        const update = (progress: number) => {
-                            const rotation_offset_deg = 30 - 45 * progress ** 0.25
-                            image_el.style.transform = `
+                    animation: attack_image_animation_def(
+                        AttackFast,
+                        {style: {mixBlendMode: "plus-lighter"}},
+                        (player, attack, image_el) => {
+                            const rotation_base_deg = ((player.direction - attack.hitbox.rotation_ref) * 180) / Math.PI
+                            const update = (progress: number) => {
+                                const rotation_offset_deg = 30 - 45 * progress ** 0.25
+                                image_el.style.transform = `
                                     scale(${attack.scale})
                                     rotate(${rotation_base_deg + rotation_offset_deg}deg)
                                 `
-                            const overblend = 1 - progress
-                            image_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`
-                            image_el.style.opacity = ((1 - progress) ** 0.125).toString()
-                        }
-                        return {update}
-                    }),
+                                const overblend = 1 - progress
+                                image_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`
+                                image_el.style.opacity = ((1 - progress) ** 0.125).toString()
+                            }
+                            return {update}
+                        },
+                    ),
                 },
                 recovery: {duration: 100, acceleration: 50},
             },

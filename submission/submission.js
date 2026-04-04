@@ -16,6 +16,84 @@ class Component {
     }
   }
 }
+class GameComponent extends Component {
+  constructor(game2) {
+    super();
+    __publicField(this, "game");
+    this.game = game2;
+  }
+  preload() {
+  }
+}
+class Actor extends GameComponent {
+}
+function image_animation_def(image_src, element, { duration, remove, position, size, image_size = "contain", style } = {}, init) {
+  function factory(component, params_override, init_override) {
+    const params = { ...{ duration, remove, position, size, image_size, style }, ...params_override ?? {} };
+    const randid = "img-" + Math.random().toString(36);
+    const image_el = document.createElement("div");
+    image_el.id = randid;
+    image_el.style = `
+            position: absolute;
+            background-image: url('${image_src}');
+            background-size: ${params.image_size};
+        `;
+    if (params.position) {
+      image_el.style.top = `${params.position.y}px`;
+      image_el.style.left = `${params.position.x}px`;
+    }
+    if (params.size) {
+      image_el.style.width = `${params.size.x}px`;
+      image_el.style.height = `${params.size.y}px`;
+    }
+    if (params.style) {
+      Object.assign(image_el.style, params.style);
+    }
+    const el = element instanceof HTMLElement ? element : element(component);
+    el.appendChild(image_el);
+    let sub_update, sub_end = void 0;
+    const _init = init_override ?? init;
+    if (_init != null) {
+      ({ update: sub_update, end: sub_end } = _init(component, image_el));
+    }
+    const update = sub_update;
+    const end = () => {
+      if (sub_end != null) sub_end();
+      if (params.remove == null || params.remove === true) image_el.remove();
+    };
+    if (update != null) {
+      update(0);
+    }
+    if (params.duration != null) return { duration: params.duration, update, end };
+    else return { update, end };
+  }
+  factory.image_src = image_src;
+  return factory;
+}
+function multi_animation_def(defs, { duration } = {}, init) {
+  const defs_array = Array.isArray(defs) ? defs : [...Object.values(defs)];
+  function factory(component) {
+    let animations;
+    if (init != null) {
+      animations = init(component, defs);
+    } else {
+      animations = defs_array.map((def) => def(component));
+    }
+    const update = (progress) => animations.forEach((anim) => {
+      if (anim.update) anim.update(progress);
+    });
+    const end = () => animations.forEach((anim) => {
+      if (anim.end) anim.end();
+    });
+    if (duration != null) return { duration, update, end };
+    else return { update, end };
+  }
+  const image_src_set = new Set(
+    defs_array.filter((def) => "image_src" in def).map((img_def) => img_def.image_src).flat()
+  );
+  if (image_src_set.size > 0) factory.image_src = [...image_src_set.values()];
+  return factory;
+}
 function subs_anim(game2, subs) {
   if (!subs.length) return { duration: 0 };
   const duration = Math.max(...subs.map(([, end_s]) => end_s)) * 1e3;
@@ -45,17 +123,6 @@ function subs_anim(game2, subs) {
       }
     }
   };
-}
-class GameComponent extends Component {
-  constructor(game2) {
-    super();
-    __publicField(this, "game");
-    this.game = game2;
-  }
-  preload() {
-  }
-}
-class Actor extends GameComponent {
 }
 async function delay(ms) {
   return await new Promise((resolve) => setTimeout(resolve, ms));
@@ -492,37 +559,22 @@ function add_shell_events_listener(listener) {
 function send_shell_request(request) {
   window.top.postMessage(request, "*");
 }
-function image_animation_def(image_src, init) {
-  function factory(character, attack) {
-    const randid = "anim-" + Math.random().toString(36);
-    const image_el = document.createElement("div");
-    image_el.id = randid;
-    image_el.style = `
-            position: absolute;
-            width: ${character.width}px;
-            height: ${character.height}px;
-            top: 0;
-            left: 0;
-            mix-blend-mode: plus-lighter;
-            background-image: url('${image_src}');
-            background-size: contain;
-        `;
-    character.root_el.appendChild(image_el);
-    let sub_update, sub_end = void 0;
-    if (init != null) {
-      ({ update: sub_update, end: sub_end } = init(character, attack, image_el));
-    }
-    const update = sub_update;
-    const end = () => {
-      if (sub_end != null) sub_end();
-      image_el.remove();
-    };
-    if (update != null) {
-      update(0);
-    }
-    return { update, end };
-  }
-  factory.image_src = image_src;
+function attack_image_animation_def(image_src, params, init) {
+  const image_factory = image_animation_def(image_src, (character) => character.root_el);
+  const factory = (character, attack, phase) => {
+    return image_factory(
+      character,
+      {
+        ...{
+          position: { x: 0, y: 0 },
+          size: { x: character.width, y: character.height }
+        },
+        ...params ?? {}
+      },
+      (character2, image_el) => init != null ? init(character2, attack, image_el) : {}
+    );
+  };
+  factory.image_src = image_factory.image_src;
   return factory;
 }
 const ATTACK_PHASES_SEQUENCE = ["anticipation", "hit", "recovery"];
@@ -567,6 +619,7 @@ class Character extends Actor {
     __publicField(this, "defending", false);
     __publicField(this, "parry_stamina_consume", 30);
     __publicField(this, "parry_enemy_stamina_consume_factor", 0.1);
+    __publicField(this, "animations", {});
     __publicField(this, "sounds", {});
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
@@ -586,9 +639,16 @@ class Character extends Actor {
       this.game.preload_sounds(...attack_def.hit_sound ?? []);
       for (const attack_phase_def of Object.values(attack_def.phases)) {
         if (attack_phase_def.animation && "image_src" in attack_phase_def.animation) {
-          this.game.preload_images(attack_phase_def.animation.image_src);
+          const images = attack_phase_def.animation.image_src;
+          this.game.preload_images(...typeof images === "string" ? [images] : images);
         }
         this.game.preload_sounds(...attack_phase_def.sound ?? []);
+      }
+    }
+    for (const animation of Object.values(this.animations)) {
+      if (animation && "image_src" in animation) {
+        const images = animation.image_src;
+        this.game.preload_images(...typeof images === "string" ? [images] : images);
       }
     }
     for (const sound of Object.values(this.sounds)) {
@@ -932,20 +992,24 @@ class Player extends Character {
           hit: {
             duration: 150,
             acceleration: 1,
-            animation: image_animation_def(AttackFast, (player, attack, image_el) => {
-              const rotation_base_deg = (player.direction - attack.hitbox.rotation_ref) * 180 / Math.PI;
-              const update = (progress) => {
-                const rotation_offset_deg = 30 - 45 * progress ** 0.25;
-                image_el.style.transform = `
+            animation: attack_image_animation_def(
+              AttackFast,
+              { style: { mixBlendMode: "plus-lighter" } },
+              (player, attack, image_el) => {
+                const rotation_base_deg = (player.direction - attack.hitbox.rotation_ref) * 180 / Math.PI;
+                const update = (progress) => {
+                  const rotation_offset_deg = 30 - 45 * progress ** 0.25;
+                  image_el.style.transform = `
                                     scale(${attack.scale})
                                     rotate(${rotation_base_deg + rotation_offset_deg}deg)
                                 `;
-                const overblend = 1 - progress;
-                image_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`;
-                image_el.style.opacity = ((1 - progress) ** 0.125).toString();
-              };
-              return { update };
-            })
+                  const overblend = 1 - progress;
+                  image_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`;
+                  image_el.style.opacity = ((1 - progress) ** 0.125).toString();
+                };
+                return { update };
+              }
+            )
           },
           recovery: { duration: 100, acceleration: 50 }
         },
@@ -1073,6 +1137,10 @@ class Player extends Character {
     }
   }
 }
+const VineLongImage1 = "" + new URL("assets/vine_long1.png", import.meta.url).href;
+const VineLongImage2 = "" + new URL("assets/vine_long2.png", import.meta.url).href;
+const VineShortImage1 = "" + new URL("assets/vine_short1.png", import.meta.url).href;
+const VineShortImage2 = "" + new URL("assets/vine_short2.png", import.meta.url).href;
 const EnemyAttackHitSound1 = "" + new URL("assets/420674.opus", import.meta.url).href;
 const EnemyAttackHitSound2 = "" + new URL("assets/474575.opus", import.meta.url).href;
 const EnemyAttackHitSound3 = "" + new URL("assets/536258.opus", import.meta.url).href;
@@ -1095,11 +1163,15 @@ const EnemyDamageSound7 = "" + new URL("assets/770124_5.opus", import.meta.url).
 const EnemyDamageSound8 = "" + new URL("assets/770124_6.opus", import.meta.url).href;
 const EnemyDamageSound9 = "" + new URL("assets/770124_7.opus", import.meta.url).href;
 const EnemyDeathSound = "" + new URL("assets/369005.opus", import.meta.url).href;
-const enemy_root_selector = ".skip-btn";
+const enemy_root_selector = ".enemy";
+const skip_btn_selector = ".skip-btn";
+const vines_root_selector = ".vines";
 class Enemy extends Character {
   constructor(game2) {
     super(game2);
     __publicField(this, "enemy_root_el");
+    __publicField(this, "skip_btn_el");
+    __publicField(this, "vines_root_el");
     __publicField(this, "width");
     __publicField(this, "height");
     __publicField(this, "base_acceleration", 10);
@@ -1200,6 +1272,60 @@ class Enemy extends Character {
     __publicField(this, "next_attack_ts", 1e10);
     __publicField(this, "auto_attack_dist", 400);
     __publicField(this, "auto_attack_interval", [1500, 3e3]);
+    __publicField(this, "animations", {
+      grow_vines: multi_animation_def(
+        {
+          long1: image_animation_def(VineLongImage1, (enemy) => enemy.vines_root_el, { remove: false }),
+          long2: image_animation_def(VineLongImage2, (enemy) => enemy.vines_root_el, { remove: false }),
+          short1: image_animation_def(VineShortImage1, (enemy) => enemy.vines_root_el, { remove: false }),
+          short2: image_animation_def(VineShortImage2, (enemy) => enemy.vines_root_el, { remove: false })
+        },
+        {},
+        (enemy, defs) => {
+          const avg_dist = 14;
+          const rand_jitter = 5;
+          const size_rand = [1, 2];
+          const rot_rand = 10;
+          const btn_rect = enemy.skip_btn_el.getBoundingClientRect();
+          const handles = [];
+          const axes = [
+            ["width", "left", ["top", "0%"], [defs.short1, defs.short2], 48],
+            ["width", "left", ["top", "100%"], [defs.short1, defs.short2], 48],
+            ["height", "top", ["left", "0%"], [defs.long1, defs.long2], 48],
+            ["height", "top", ["left", "100%"], [defs.long1, defs.long2], 48]
+          ];
+          axes.forEach(([dim, mov_side, [fix_side, fix_pos], anim_pool, size_ref]) => {
+            let pos = (avg_dist + (2 * Math.random() - 1) * rand_jitter) / 2;
+            while (pos < btn_rect[dim]) {
+              const vine_def = random_pick(anim_pool);
+              const size = size_ref * (size_rand[0] + Math.random() * (size_rand[1] - size_rand[0]));
+              const handle = vine_def(enemy, { size: { x: size, y: size } }, (_, image_el) => {
+                const rotation_offset_deg = 180 + (2 * Math.random() - 1) * rot_rand;
+                image_el.style[fix_side] = fix_pos;
+                image_el.style[mov_side] = `${pos}px`;
+                image_el.style.filter = "drop-shadow(0 0 2px black)";
+                return {
+                  update: (progress) => {
+                    const rotation_deg = Math.atan2(
+                      image_el.offsetTop - btn_rect.height / 2,
+                      image_el.offsetLeft - btn_rect.width / 2
+                    ) * 180 / Math.PI + rotation_offset_deg;
+                    image_el.style.transform = `
+                                        translate(-50%, -50%)
+                                        rotate(${rotation_deg}deg)
+                                        scale(${progress})
+                                    `;
+                  }
+                };
+              });
+              handles.push(handle);
+              pos += avg_dist + (2 * Math.random() - 1) * rand_jitter;
+            }
+          });
+          return handles;
+        }
+      )
+    });
     __publicField(this, "sounds", {
       damage: [
         EnemyDamageSound1,
@@ -1221,6 +1347,8 @@ class Enemy extends Character {
       [9.5, 13.5, "Oblivion awaits thy gaze!"]
     ]);
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
+    this.skip_btn_el = get_element(skip_btn_selector, this.enemy_root_el);
+    this.vines_root_el = get_element(vines_root_selector, this.enemy_root_el);
     const rel_rect = this.game.get_relative_rect(this.enemy_root_el);
     this.enemy_root_el.style.top = `${rel_rect.y}px`;
     this.enemy_root_el.style.left = `${rel_rect.x}px`;
@@ -1264,7 +1392,10 @@ class Enemy extends Character {
       if (this.phase === "fight-start") {
         this.invicible = true;
         this.base_max_vel = 1;
-        if (this.game.changed_state) this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
+        if (this.game.changed_state) {
+          this.game.play_animation(this.animations.grow_vines(this), 3e3);
+          this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
+        }
         if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 1e4) {
           this.phase = "fight";
           this.invicible = false;
@@ -1391,6 +1522,7 @@ class Game extends Component {
     __publicField(this, "debug_mode", false);
     __publicField(this, "debug_enemy_stamina", true);
     __publicField(this, "debug_hitboxes", true);
+    __publicField(this, "debug_noreload", true);
     __publicField(this, "sounds", {
       battle_music_intro: [BattleMusicIntroSound],
       battle_music: [BattleMusicSound],
@@ -1476,11 +1608,13 @@ class Game extends Component {
         }
       } else if (this.state === "defeat") {
         this.pick_and_play_sound_effect(this.sounds.battle_defeat);
-        setTimeout(() => send_shell_request({ type: "fail" }), 8e3);
+        if (!(this.debug_mode && this.debug_noreload))
+          setTimeout(() => send_shell_request({ type: "fail" }), 8e3);
         if (this.battle_music_audio) fade_audio(this.battle_music_audio, { duration: 3e3, volume: 0 });
       } else if (this.state === "victory") {
         this.pick_and_play_sound_effect(this.sounds.battle_victory);
-        setTimeout(() => send_shell_request({ type: "success" }), 8e3);
+        if (!(this.debug_mode && this.debug_noreload))
+          setTimeout(() => send_shell_request({ type: "success" }), 8e3);
         if (this.battle_music_audio) fade_audio(this.battle_music_audio, { duration: 3e3, volume: 0 });
       }
     }
@@ -1651,7 +1785,11 @@ function handle_shell_event(event) {
   if (event.type === "adStarted" && game == null) {
     game = new Game();
     {
-      setInterval(() => game == null ? void 0 : game.step(performance.now()), 1e3 / 60);
+      const request_animation = () => {
+        game == null ? void 0 : game.step(performance.now());
+        requestAnimationFrame(request_animation);
+      };
+      request_animation();
     }
   }
   if (game != null) {

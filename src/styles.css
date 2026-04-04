@@ -1,3 +1,9 @@
+:root {
+    shape-rendering: geometricPrecision;
+    text-rendering: geometricPrecision;
+    image-rendering: smooth;
+}
+
 .hidden {
     display: none !important;
 }
@@ -25,12 +31,16 @@
     user-select: none;
 }
 
-.skip-btn {
+.enemy {
     position: absolute;
     bottom: 60px;
+    right: -4px;
+    cursor: pointer;
+}
+.skip-btn {
+    position: relative;
     width: max-content;
     height: 1em;
-    right: -4px;
     padding: 0.5em 1em;
     background: hsla(0, 0%, 100%, 0.85);
     border: 1px solid white;
@@ -38,7 +48,6 @@
     font-size: 1.2rem;
     border-radius: 4px;
     color: black;
-    cursor: pointer;
 }
 
 .player {
@@ -53,7 +62,7 @@
     filter: contrast(0.5) sepia(1) hue-rotate(-30deg) saturate(4);
 }
 
-.skip-btn:not(.attacking) > .attack-indicator,
+.enemy:not(.attacking) > .attack-indicator,
 .player:not(.attacking) > .attack-indicator {
     display: none;
 }
@@ -81,7 +90,7 @@
     opacity: 0.25;
 }
 
-.skip-btn:not(.defending) > .defend-animation,
+.enemy:not(.defending) > .defend-animation,
 .player:not(.defending) > .defend-animation {
     display: none;
 }
