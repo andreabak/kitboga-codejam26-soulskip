@@ -1,6 +1,6 @@
 import {dist, get_element, Point, random_pick, rect_center_dist, shape_bbox} from "@/utils"
 
-import {GameUpdateContext} from "../core"
+import {GameUpdateContext, subs_anim, SubsType} from "../core"
 import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
 
@@ -155,6 +155,12 @@ export class Enemy extends Character<Enemy> {
         death: [EnemyDeathSound],
     }
 
+    intro_speech_subs: SubsType = [
+        [0.0, 5.0, "Thou darest ravage my hallowed slumber!"],
+        [5.0, 9.5, "Such divine display rabidly spurn'd..."],
+        [9.5, 13.5, "Oblivion awaits thy gaze!"],
+    ]
+
     constructor(game: Game) {
         super(game)
 
@@ -210,6 +216,7 @@ export class Enemy extends Character<Enemy> {
             if (this.phase === "fight-start") {
                 this.invicible = true
                 this.base_max_vel = 1
+                if (this.game.changed_state) this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
                 if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 10000) {
                     this.phase = "fight"
                     this.invicible = false

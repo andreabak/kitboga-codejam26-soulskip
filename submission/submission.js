@@ -16,6 +16,36 @@ class Component {
     }
   }
 }
+function subs_anim(game2, subs) {
+  if (!subs.length) return { duration: 0 };
+  const duration = Math.max(...subs.map(([, end_s]) => end_s)) * 1e3;
+  const lines = subs.map(([start, end, text]) => {
+    const line_el = document.createElement("div");
+    line_el.classList.add("sub-line");
+    line_el.textContent = text;
+    return [start, end, line_el];
+  });
+  return {
+    duration,
+    update: (progress) => {
+      const reltime = progress * duration;
+      for (const [start_s, end_s, line_el] of lines) {
+        if (reltime < start_s * 1e3) continue;
+        const in_dom = game2.subs_root_el.contains(line_el);
+        if (reltime < end_s * 1e3) {
+          if (!in_dom) game2.subs_root_el.appendChild(line_el);
+        } else {
+          if (in_dom) line_el.remove();
+        }
+      }
+    },
+    end: () => {
+      for (const [, , line_el] of lines) {
+        line_el.remove();
+      }
+    }
+  };
+}
 class GameComponent extends Component {
   constructor(game2) {
     super();
@@ -1185,6 +1215,11 @@ class Enemy extends Character {
       break: [EnemyBreakSound],
       death: [EnemyDeathSound]
     });
+    __publicField(this, "intro_speech_subs", [
+      [0, 5, "Thou darest ravage my hallowed slumber!"],
+      [5, 9.5, "Such divine display rabidly spurn'd..."],
+      [9.5, 13.5, "Oblivion awaits thy gaze!"]
+    ]);
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     const rel_rect = this.game.get_relative_rect(this.enemy_root_el);
     this.enemy_root_el.style.top = `${rel_rect.y}px`;
@@ -1229,6 +1264,7 @@ class Enemy extends Character {
       if (this.phase === "fight-start") {
         this.invicible = true;
         this.base_max_vel = 1;
+        if (this.game.changed_state) this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
         if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 1e4) {
           this.phase = "fight";
           this.invicible = false;
@@ -1331,6 +1367,7 @@ class VictoryScreen extends GameComponent {
   }
 }
 const game_root_selector = "#game-root";
+const subs_root_selector = ".subs";
 class Game extends Component {
   constructor() {
     super();
@@ -1350,6 +1387,7 @@ class Game extends Component {
     __publicField(this, "hud");
     __publicField(this, "defeat_screen");
     __publicField(this, "victory_screen");
+    __publicField(this, "subs_root_el");
     __publicField(this, "debug_mode", false);
     __publicField(this, "debug_enemy_stamina", true);
     __publicField(this, "debug_hitboxes", true);
@@ -1367,6 +1405,7 @@ class Game extends Component {
     this.hud = this.add_component(new Hud(this));
     this.defeat_screen = this.add_component(new DefeatScreen(this));
     this.victory_screen = this.add_component(new VictoryScreen(this));
+    this.subs_root_el = get_element(subs_root_selector, this.game_root_el);
     this.preload();
   }
   preload() {
@@ -1427,7 +1466,7 @@ class Game extends Component {
     if (this.changed_state) {
       if (this.state === "battle") {
         send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.75)" });
-        send_shell_request({ type: "setVolume", value: 0.67 });
+        send_shell_request({ type: "setVolume", value: 0.5 });
         this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro);
         if (this.battle_music_audio) {
           this.battle_music_audio.addEventListener("ended", () => {

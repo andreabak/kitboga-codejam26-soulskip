@@ -98,6 +98,26 @@
     opacity: 0.5;
 }
 
+.subs {
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    bottom: 30px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.sub-line {
+    font-size: 1.2em;
+    padding: 0.2em 0.5ch 0.1em;
+    color: hsl(60, 100%, 75%);
+    background-color: hsla(0, 0%, 0%, 0.5);
+    width: max-content;
+    font-style: italic;
+    font-weight: 500;
+}
+
 .hud {
     position: absolute;
     width: 100%;

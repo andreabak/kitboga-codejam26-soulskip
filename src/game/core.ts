@@ -34,6 +34,38 @@ export type TimedAnimationHandle = {
 }
 export type TimedAnimationDef<C extends Component<object>> = (component: C) => TimedAnimationHandle
 
+export type SubsType = Array<[number, number, string]>
+export function subs_anim(game: Game, subs: SubsType): TimedAnimationHandle {
+    if (!subs.length) return {duration: 0}
+    const duration = Math.max(...subs.map(([, end_s]) => end_s)) * 1000
+    const lines: Array<[number, number, HTMLElement]> = subs.map(([start, end, text]) => {
+        const line_el = document.createElement("div")
+        line_el.classList.add("sub-line")
+        line_el.textContent = text
+        return [start, end, line_el]
+    })
+    return {
+        duration,
+        update: (progress) => {
+            const reltime = progress * duration
+            for (const [start_s, end_s, line_el] of lines) {
+                if (reltime < start_s * 1000) continue
+                const in_dom = game.subs_root_el.contains(line_el)
+                if (reltime < end_s * 1000) {
+                    if (!in_dom) game.subs_root_el.appendChild(line_el)
+                } else {
+                    if (in_dom) line_el.remove()
+                }
+            }
+        },
+        end: () => {
+            for (const [, , line_el] of lines) {
+                line_el.remove()
+            }
+        },
+    }
+}
+
 export type GameUpdateContext = {
     /*
      * timestamp of update tick

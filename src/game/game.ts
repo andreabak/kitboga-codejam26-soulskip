@@ -43,6 +43,7 @@ class VictoryScreen extends GameComponent {
 }
 
 const game_root_selector = "#game-root"
+const subs_root_selector = ".subs"
 
 export class Game extends Component<GameUpdateContext> {
     private _state: GameState = "chill"
@@ -70,6 +71,8 @@ export class Game extends Component<GameUpdateContext> {
     defeat_screen: DefeatScreen
     victory_screen: VictoryScreen
 
+    subs_root_el: HTMLDivElement
+
     debug_mode: boolean = false
     debug_enemy_stamina: boolean = true
     debug_hitboxes: boolean = true
@@ -95,6 +98,8 @@ export class Game extends Component<GameUpdateContext> {
 
         this.defeat_screen = this.add_component(new DefeatScreen(this))
         this.victory_screen = this.add_component(new VictoryScreen(this))
+
+        this.subs_root_el = get_element(subs_root_selector, this.game_root_el) as HTMLDivElement
 
         this.preload()
     }
@@ -163,7 +168,7 @@ export class Game extends Component<GameUpdateContext> {
         if (this.changed_state) {
             if (this.state === "battle") {
                 send_shell_request({type: "setVideoFilter", value: "blur(3px) brightness(0.75)"})
-                send_shell_request({type: "setVolume", value: 0.67})
+                send_shell_request({type: "setVolume", value: 0.5})
                 this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro)
                 if (this.battle_music_audio) {
                     this.battle_music_audio.addEventListener("ended", () => {
