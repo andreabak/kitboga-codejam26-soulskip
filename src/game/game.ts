@@ -1,22 +1,13 @@
 import {send_shell_request, ShellEvent} from "@/shell"
-import {
-    aabb_overlap,
-    delay,
-    fade_audio,
-    get_element,
-    Point,
-    random_pick,
-    sat_overlap,
-    shape_bbox,
-    smooth_ema,
-} from "@/utils"
+import {aabb_overlap, fade_audio, get_element, Point, random_pick, sat_overlap, shape_bbox, smooth_ema} from "@/utils"
 
 import {Character, Enemy, Player} from "./characters"
 import {AnimationHandle, Component, GameComponent, GameState, GameUpdateContext, TimedAnimationHandle} from "./core"
 import {Hud} from "./hud"
 
 import BattleDefeatSound from "@/assets/sounds/battle-defeat/er-death.opus"
-import BattleMusicSound from "@/assets/sounds/battle-music/er-boss.opus"
+import BattleMusicIntroSound from "@/assets/sounds/battle-music/cinema-blockbuster-trailer-21-by-ende-intro.opus"
+import BattleMusicSound from "@/assets/sounds/battle-music/cinema-blockbuster-trailer-21-by-ende-loop1.opus"
 import BattleVictorySound from "@/assets/sounds/battle-victory/er-victory.opus"
 
 const defeat_screen_selector = ".defeat-screen"
@@ -84,10 +75,12 @@ export class Game extends Component<GameUpdateContext> {
     debug_hitboxes: boolean = true
 
     sounds = {
+        battle_music_intro: [BattleMusicIntroSound],
         battle_music: [BattleMusicSound],
         battle_defeat: [BattleDefeatSound],
         battle_victory: [BattleVictorySound],
     }
+    battle_music_audio: HTMLAudioElement | null = null
 
     constructor() {
         super()
@@ -169,20 +162,23 @@ export class Game extends Component<GameUpdateContext> {
         this.game_root_el.classList.toggle("hide-mouse", this.state !== "chill")
         if (this.changed_state) {
             if (this.state === "battle") {
-                send_shell_request({type: "setVideoFilter", value: "blur(3px) brightness(0.8)"})
-                const battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music)
-                if (battle_music_audio) {
-                    battle_music_audio.addEventListener("play", async () => {
-                        await delay(3500)
-                        await fade_audio(battle_music_audio, {duration: 15000, volume: 0, stop_after: true})
+                send_shell_request({type: "setVideoFilter", value: "blur(3px) brightness(0.75)"})
+                send_shell_request({type: "setVolume", value: 0.67})
+                this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro)
+                if (this.battle_music_audio) {
+                    this.battle_music_audio.addEventListener("ended", () => {
+                        if (this.state === "battle")
+                            this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music)
                     })
                 }
             } else if (this.state === "defeat") {
                 this.pick_and_play_sound_effect(this.sounds.battle_defeat)
                 setTimeout(() => send_shell_request({type: "fail"}), 8000)
+                if (this.battle_music_audio) fade_audio(this.battle_music_audio, {duration: 3000, volume: 0})
             } else if (this.state === "victory") {
                 this.pick_and_play_sound_effect(this.sounds.battle_victory)
                 setTimeout(() => send_shell_request({type: "success"}), 8000)
+                if (this.battle_music_audio) fade_audio(this.battle_music_audio, {duration: 3000, volume: 0})
             }
         }
         if (["defeat", "victory"].includes(this.state)) {

@@ -209,9 +209,11 @@ export class Enemy extends Character<Enemy> {
         if (this.game.state === "battle") {
             if (this.phase === "fight-start") {
                 this.invicible = true
-                if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 5000) {
+                this.base_max_vel = 1
+                if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 10000) {
                     this.phase = "fight"
                     this.invicible = false
+                    this.base_max_vel = Enemy.prototype.base_max_vel
                 }
             } else if (this.phase === "fight") {
                 const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y)

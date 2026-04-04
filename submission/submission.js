@@ -1228,9 +1228,11 @@ class Enemy extends Character {
     if (this.game.state === "battle") {
       if (this.phase === "fight-start") {
         this.invicible = true;
-        if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 5e3) {
+        this.base_max_vel = 1;
+        if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 1e4) {
           this.phase = "fight";
           this.invicible = false;
+          this.base_max_vel = Enemy.prototype.base_max_vel;
         }
       } else if (this.phase === "fight") {
         const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y);
@@ -1303,7 +1305,8 @@ class Enemy extends Character {
   }
 }
 const BattleDefeatSound = "" + new URL("assets/er-death.opus", import.meta.url).href;
-const BattleMusicSound = "" + new URL("assets/er-boss.opus", import.meta.url).href;
+const BattleMusicIntroSound = "" + new URL("assets/cinema-blockbuster-trailer-21-by-ende-intro.opus", import.meta.url).href;
+const BattleMusicSound = "" + new URL("assets/cinema-blockbuster-trailer-21-by-ende-loop1.opus", import.meta.url).href;
 const BattleVictorySound = "" + new URL("assets/er-victory.opus", import.meta.url).href;
 const defeat_screen_selector = ".defeat-screen";
 class DefeatScreen extends GameComponent {
@@ -1351,10 +1354,12 @@ class Game extends Component {
     __publicField(this, "debug_enemy_stamina", true);
     __publicField(this, "debug_hitboxes", true);
     __publicField(this, "sounds", {
+      battle_music_intro: [BattleMusicIntroSound],
       battle_music: [BattleMusicSound],
       battle_defeat: [BattleDefeatSound],
       battle_victory: [BattleVictorySound]
     });
+    __publicField(this, "battle_music_audio", null);
     this.game_root_el = get_element(game_root_selector);
     this.game_root_el.classList.toggle("hidden", false);
     this.player = this.add_character(this.add_component(new Player(this)));
@@ -1421,20 +1426,23 @@ class Game extends Component {
     this.game_root_el.classList.toggle("hide-mouse", this.state !== "chill");
     if (this.changed_state) {
       if (this.state === "battle") {
-        send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.8)" });
-        const battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music);
-        if (battle_music_audio) {
-          battle_music_audio.addEventListener("play", async () => {
-            await delay(3500);
-            await fade_audio(battle_music_audio, { duration: 15e3, volume: 0, stop_after: true });
+        send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.75)" });
+        send_shell_request({ type: "setVolume", value: 0.67 });
+        this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro);
+        if (this.battle_music_audio) {
+          this.battle_music_audio.addEventListener("ended", () => {
+            if (this.state === "battle")
+              this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music);
           });
         }
       } else if (this.state === "defeat") {
         this.pick_and_play_sound_effect(this.sounds.battle_defeat);
         setTimeout(() => send_shell_request({ type: "fail" }), 8e3);
+        if (this.battle_music_audio) fade_audio(this.battle_music_audio, { duration: 3e3, volume: 0 });
       } else if (this.state === "victory") {
         this.pick_and_play_sound_effect(this.sounds.battle_victory);
         setTimeout(() => send_shell_request({ type: "success" }), 8e3);
+        if (this.battle_music_audio) fade_audio(this.battle_music_audio, { duration: 3e3, volume: 0 });
       }
     }
     if (["defeat", "victory"].includes(this.state)) {

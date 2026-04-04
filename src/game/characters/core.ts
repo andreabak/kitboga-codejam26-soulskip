@@ -511,8 +511,10 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
         if (!this.invicible && health_damage >= 0) {
             this.health -= health_damage
             this.last_damage_ts = context.timeref
+            // FIXME: don't play these sound effects if defended, maybe refactor health_consume into a fn, then make this if block exclusive with the defend one
             if (this.health <= 0) {
                 this.health = 0
+                // FIXME: should trigger also in defend, maybe move elsewhere (where transition) and leave reverse if block
                 this.game.pick_and_play_sound_effect(this.sounds.death)
             } else {
                 this.game.pick_and_play_sound_effect(this.sounds.damage)
