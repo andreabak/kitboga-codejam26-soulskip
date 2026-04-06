@@ -3,7 +3,15 @@ import {get_element, Point} from "@/utils"
 import {image_animation_def, ImageAnimationParams, multi_animation_def} from "../animations"
 import {GameComponent, GameUpdateContext} from "../core"
 import type {Game} from "../game"
-import {Attack, ATTACK_PHASES_SEQUENCE, attack_swing_animation_def, AttackDef, Character, HitBox} from "./core"
+import {
+    Attack,
+    ATTACK_PHASES_SEQUENCE,
+    attack_swing_animation_def,
+    AttackDef,
+    blood_splat_animation_def,
+    Character,
+    HitBox,
+} from "./core"
 
 import FlaskIcon from "@/assets/flask.webp"
 import AttackSwing from "@/assets/player/attack-swing.png"
@@ -216,6 +224,9 @@ class Player extends Character<Player> {
                 style: {mixBlendMode: "plus-lighter"},
             }),
         ),
+        damage: blood_splat_animation_def({
+            style: {width: "32px", height: "32px", filter: "brightness(0.7) contrast(1.2)"},
+        }),
     }
     sounds = {
         defend: [PlayerDefendSound1, PlayerDefendSound2, PlayerDefendSound3],
@@ -337,6 +348,22 @@ class Player extends Character<Player> {
             this.game.play_animation(this.animations.parry(this), 100)
         }
         return do_parry
+    }
+    attack_damage(
+        health_damage: number,
+        {
+            attack,
+            attacking_character,
+            context,
+        }: {attack: Attack<Player>; attacking_character: Character; context: GameUpdateContext},
+    ) {
+        super.attack_damage(health_damage, {
+            attack,
+            attacking_character,
+            context,
+        })
+        if (!this.defending)
+            this.game.play_animation(this.animations.damage(this, {}, undefined, {attacking_character}))
     }
 
     use_item(item_name: PlayerItemName): void {

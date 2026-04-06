@@ -4,16 +4,22 @@ import {
     AnimationHandle,
     image_animation_def,
     ImagesAnimationDef,
-    ImageSequence,
     interpolate_anim_def,
     InterpolateAnimationParams,
     multi_animation_def,
     subs_anim,
-    ViteGlob,
 } from "../animations"
 import {GameComponent, GameUpdateContext, SubsType} from "../core"
 import type {Game} from "../game"
-import {Attack, ATTACK_PHASES_SEQUENCE, attack_swing_animation_def, AttackDef, Character, HitBox} from "./core"
+import {
+    Attack,
+    ATTACK_PHASES_SEQUENCE,
+    attack_swing_animation_def,
+    AttackDef,
+    blood_splat_animation_def,
+    Character,
+    HitBox,
+} from "./core"
 
 import AttackSwing from "@/assets/enemy/attack-swing.png"
 import VineLongImage1 from "@/assets/enemy/vine_long1.png"
@@ -42,31 +48,6 @@ import EnemyDamageSound7 from "@/assets/sounds/enemy-damage/770124_5.opus"
 import EnemyDamageSound8 from "@/assets/sounds/enemy-damage/770124_6.opus"
 import EnemyDamageSound9 from "@/assets/sounds/enemy-damage/770124_7.opus"
 import EnemyDeathSound from "@/assets/sounds/enemy-death/369005.opus"
-
-const BloodEffect1Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/enemy/blood/jasontomlee_vfx_blood_2/*", {
-        eager: true,
-    }) as ViteGlob,
-    60,
-)
-const BloodEffect2Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/enemy/blood/jasontomlee_vfx_blood_4/*", {
-        eager: true,
-    }) as ViteGlob,
-    60,
-)
-const BloodEffect3Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/enemy/blood/jasontomlee_vfx_blood_5/*", {
-        eager: true,
-    }) as ViteGlob,
-    60,
-)
-const BloodEffect4Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/enemy/blood/jasontomlee_vfx_blood_6/*", {
-        eager: true,
-    }) as ViteGlob,
-    60,
-)
 
 const enemy_weapon_selector = ".weapon"
 
@@ -393,45 +374,9 @@ export class Enemy extends Character<Enemy> {
                 return handles
             },
         ),
-        damage: image_animation_def(
-            [BloodEffect1Seq, BloodEffect2Seq, BloodEffect3Seq, BloodEffect4Seq],
-            (character: Character) => character.game.animations_root_el,
-            {
-                duration: 730,
-                style: {width: "48px", height: "48px", filter: "hue-rotate(90deg) brightness(1.5) contrast(1.4)"},
-            },
-            (
-                character: Character,
-                image_el: HTMLElement,
-                {attacking_character}: {attacking_character?: Character} = {},
-            ) => {
-                let dist_vector: Point | null = null
-                let dir_vector: Point
-                if (attacking_character) {
-                    dist_vector = {
-                        x: attacking_character.pos.x - character.pos.x,
-                        y: attacking_character.pos.y - character.pos.y,
-                    }
-                    const direction = Math.atan2(dist_vector.y, dist_vector.x)
-                    dir_vector = {x: Math.cos(direction), y: Math.sin(direction)}
-                } else {
-                    dir_vector = {...character.direction_vector}
-                }
-                const relpos = {x: (character.width / 2) * dir_vector.x, y: (character.height / 2) * dir_vector.y}
-                if (dist_vector != null) {
-                    relpos.x = Math.min(relpos.x, dist_vector.x / 2)
-                    relpos.y = Math.min(relpos.y, dist_vector.y / 2)
-                }
-                const pos = {
-                    x: character.pos.x + relpos.x,
-                    y: character.pos.y + relpos.y,
-                }
-                image_el.style.top = `${pos.y}px`
-                image_el.style.left = `${pos.x}px`
-                image_el.style.transform = `translate(-50%, -50%) rotate(${(character.direction * 180) / Math.PI}deg)`
-                return {}
-            },
-        ),
+        damage: blood_splat_animation_def({
+            style: {width: "54px", height: "54px", filter: "hue-rotate(90deg) brightness(1.5) contrast(1.4)"},
+        }),
     }
     sounds = {
         damage: [
@@ -616,7 +561,8 @@ export class Enemy extends Character<Enemy> {
             attacking_character,
             context,
         })
-        this.game.play_animation(this.animations.damage(this, {}, undefined, {attacking_character}))
+        if (!this.defending)
+            this.game.play_animation(this.animations.damage(this, {}, undefined, {attacking_character}))
     }
 
     calc_next_attack_ts(now_ts: number) {

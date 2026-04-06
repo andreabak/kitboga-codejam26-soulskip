@@ -69,15 +69,21 @@ export type ImageAnimationParams = {
     style?: Partial<CSSStyleDeclaration>
 }
 export function image_animation_def<C extends Component<object>>(
-    image_src: string | ImageSequence | Array<string | ImageSequence>,
+    image_src: string | Array<string>,
     element: HTMLElement | ((component: C) => HTMLElement),
-    {remove, position, size, image_size, style}?: Omit<ImageAnimationParams, "duration">,
+    params?: Omit<ImageAnimationParams, "duration">,
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
 ): ImagesAnimationDef<C>
 export function image_animation_def<C extends Component<object>>(
+    image_src: ImageSequence | Array<ImageSequence>,
+    element: HTMLElement | ((component: C) => HTMLElement),
+    params?: Omit<ImageAnimationParams, "duration">,
+    init?: (component: C, image_el: HTMLElement) => AnimationHandle,
+): TimedImagesAnimationDef<C>
+export function image_animation_def<C extends Component<object>>(
     image_src: string | ImageSequence | Array<string | ImageSequence>,
     element: HTMLElement | ((component: C) => HTMLElement),
-    {duration, remove, position, size, image_size, style}: ImageAnimationParams & {duration: number},
+    params: ImageAnimationParams & {duration: number},
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
 ): TimedImagesAnimationDef<C>
 export function image_animation_def<C extends Component<object>>(
@@ -134,7 +140,8 @@ export function image_animation_def<C extends Component<object>>(
             if (params.remove == null || params.remove === true) image_el.remove()
         }
         update(0)
-        if (params.duration != null) return {duration: params.duration, update, end} as TimedAnimationHandle
+        const _duration = params.duration ?? (_img instanceof ImageSequence ? _img.duration : undefined)
+        if (_duration != null) return {duration: _duration, update, end} as TimedAnimationHandle
         else return {update, end} as AnimationHandle
     }
     factory.image_src = (Array.isArray(image_src) ? image_src : [image_src])

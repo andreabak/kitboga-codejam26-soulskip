@@ -18,9 +18,36 @@ import {
     image_animation_def,
     ImageAnimationParams,
     ImagesAnimationDefMixin,
+    ImageSequence,
+    ViteGlob,
 } from "../animations"
 import {Actor, GameUpdateContext} from "../core"
 import type {Game} from "../game"
+
+const BloodEffect1Seq = ImageSequence.from_frames_dir(
+    import.meta.glob("@/assets/vfx/blood/jasontomlee_vfx_blood_2/*", {
+        eager: true,
+    }) as ViteGlob,
+    15,
+)
+const BloodEffect2Seq = ImageSequence.from_frames_dir(
+    import.meta.glob("@/assets/vfx/blood/jasontomlee_vfx_blood_4/*", {
+        eager: true,
+    }) as ViteGlob,
+    15,
+)
+const BloodEffect3Seq = ImageSequence.from_frames_dir(
+    import.meta.glob("@/assets/vfx/blood/jasontomlee_vfx_blood_5/*", {
+        eager: true,
+    }) as ViteGlob,
+    15,
+)
+const BloodEffect4Seq = ImageSequence.from_frames_dir(
+    import.meta.glob("@/assets/vfx/blood/jasontomlee_vfx_blood_6/*", {
+        eager: true,
+    }) as ViteGlob,
+    15,
+)
 
 export type HitBox = {
     shape: Shape | Rect
@@ -102,6 +129,50 @@ export function attack_swing_animation_def<C extends Character>(
                 image_el.style.opacity = ((1 - progress) ** 0.125).toString()
             }
             return {update}
+        },
+    )
+}
+
+export function blood_splat_animation_def(params: ImageAnimationParams) {
+    return image_animation_def(
+        [BloodEffect1Seq, BloodEffect2Seq, BloodEffect3Seq, BloodEffect4Seq],
+        (character: Character) => character.game.animations_root_el,
+        params,
+        (
+            character: Character,
+            image_el: HTMLElement,
+            {attacking_character}: {attacking_character?: Character} = {},
+        ) => {
+            const hurtbox_bbox = shape_bbox(character.hurtbox_abs)
+            const hurtbox_center = {
+                x: hurtbox_bbox.x + hurtbox_bbox.width / 2,
+                y: hurtbox_bbox.y + hurtbox_bbox.height / 2,
+            }
+            let dist_vector: Point | null = null
+            let dir_vector: Point
+            if (attacking_character) {
+                dist_vector = {
+                    x: attacking_character.pos.x - hurtbox_center.x,
+                    y: attacking_character.pos.y - hurtbox_center.y,
+                }
+                const direction = Math.atan2(dist_vector.y, dist_vector.x)
+                dir_vector = {x: Math.cos(direction), y: Math.sin(direction)}
+            } else {
+                dir_vector = {...character.direction_vector}
+            }
+            const relpos = {x: (hurtbox_bbox.width / 2) * dir_vector.x, y: (hurtbox_bbox.height / 2) * dir_vector.y}
+            if (dist_vector != null) {
+                relpos.x = Math.min(relpos.x, dist_vector.x / 2)
+                relpos.y = Math.min(relpos.y, dist_vector.y / 2)
+            }
+            const pos = {
+                x: hurtbox_center.x + relpos.x,
+                y: hurtbox_center.y + relpos.y,
+            }
+            image_el.style.top = `${pos.y}px`
+            image_el.style.left = `${pos.x}px`
+            image_el.style.transform = `translate(-50%, -50%) rotate(${(character.direction * 180) / Math.PI}deg)`
+            return {}
         },
     )
 }
