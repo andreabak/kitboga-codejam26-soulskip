@@ -2,10 +2,10 @@ import {get_element} from "@/utils"
 
 import {GameUpdateContext} from "../core"
 import type {Game} from "../game"
-import {Attack, attack_image_animation_def, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
+import {Attack, ATTACK_PHASES_SEQUENCE, attack_swing_animation_def, AttackDef, Character, HitBox} from "./core"
 
 import FlaskIcon from "@/assets/flask.webp"
-import AttackFast from "@/assets/player-attack-fast.png"
+import AttackSwing from "@/assets/player/attack-swing.png"
 import ShieldIcon from "@/assets/shield.webp"
 import PlayerAttackHitSound1 from "@/assets/sounds/player-attack-hit/442903.opus"
 import PlayerAttackHitSound2 from "@/assets/sounds/player-attack-hit/547042.opus"
@@ -77,24 +77,11 @@ class Player extends Character<Player> {
                 hit: {
                     duration: 150,
                     acceleration: 1,
-                    animation: attack_image_animation_def(
-                        AttackFast,
-                        {style: {mixBlendMode: "plus-lighter"}},
-                        (player, attack, image_el) => {
-                            const rotation_base_deg = ((player.direction - attack.hitbox.rotation_ref) * 180) / Math.PI
-                            const update = (progress: number) => {
-                                const rotation_offset_deg = 30 - 45 * progress ** 0.25
-                                image_el.style.transform = `
-                                    scale(${attack.scale})
-                                    rotate(${rotation_base_deg + rotation_offset_deg}deg)
-                                `
-                                const overblend = 1 - progress
-                                image_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`
-                                image_el.style.opacity = ((1 - progress) ** 0.125).toString()
-                            }
-                            return {update}
-                        },
-                    ),
+                    animation: attack_swing_animation_def(AttackSwing, {
+                        base_color: [255, 255, 255],
+                        ref_angle_deg: -30,
+                        swing_angle_deg: 45,
+                    }),
                 },
                 recovery: {duration: 100, acceleration: 50},
             },

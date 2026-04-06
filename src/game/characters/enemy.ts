@@ -11,8 +11,9 @@ import {
 } from "../animations"
 import {GameComponent, GameUpdateContext, SubsType} from "../core"
 import type {Game} from "../game"
-import {Attack, ATTACK_PHASES_SEQUENCE, AttackDef, Character, HitBox} from "./core"
+import {Attack, ATTACK_PHASES_SEQUENCE, attack_swing_animation_def, AttackDef, Character, HitBox} from "./core"
 
+import AttackSwing from "@/assets/enemy/attack-swing.png"
 import VineLongImage1 from "@/assets/enemy/vine_long1.png"
 import VineLongImage2 from "@/assets/enemy/vine_long2.png"
 import VineShortImage1 from "@/assets/enemy/vine_short1.png"
@@ -50,8 +51,8 @@ export class EnemyWeapon extends GameComponent {
 
     static initial_offset: Point = {x: 0, y: 24}
     base_offset: Point = {x: 0, y: 24}
-    static initial_rotation = (-165 / 180) * Math.PI
-    base_rotation = (-165 / 180) * Math.PI
+    static initial_rotation = (-150 / 180) * Math.PI
+    base_rotation = (-150 / 180) * Math.PI
     rotation_ref = (-135 / 180) * Math.PI
 
     velocity_drift_factor = 3.0
@@ -125,10 +126,9 @@ export class EnemyWeapon extends GameComponent {
     }
 
     _update(context: GameUpdateContext) {
-        // if (this.enemy.current_attack == null) {
-        //     this.base_rotation =
-        //         this.initial_rotation + this.enemy.direction - (-90 / 180) * Math.PI + this.rotation_ref
-        // }
+        if (this.enemy.current_attack == null) {
+            if (this.enemy.low_stamina) this.base_rotation = (-190 / 180) * Math.PI
+        }
         const offset = {
             x: this.base_offset.x - this.enemy.velocity.x * this.velocity_drift_factor,
             y: this.base_offset.y - this.enemy.velocity.y * this.velocity_drift_factor,
@@ -190,7 +190,16 @@ export class Enemy extends Character<Enemy> {
                     acceleration: 5,
                     max_vel: 2,
                     sound: [EnemyAttackSlowSound1, EnemyAttackSlowSound2, EnemyAttackSlowSound3],
-                    animation: EnemyWeapon.animations.swing_slow_hit,
+                    animation: multi_animation_def([
+                        EnemyWeapon.animations.swing_slow_hit,
+                        attack_swing_animation_def(
+                            AttackSwing,
+                            {base_color: [255, 227, 85], ref_angle_deg: -210, swing_angle_deg: 50},
+                            {
+                                style: {backgroundRepeat: "no-repeat", backgroundPosition: "center"},
+                            },
+                        ),
+                    ]),
                 },
                 recovery: {
                     duration: 500,
@@ -239,7 +248,16 @@ export class Enemy extends Character<Enemy> {
                         EnemyAttackFastSound4,
                         EnemyAttackFastSound5,
                     ],
-                    animation: EnemyWeapon.animations.swing_fast_hit,
+                    animation: multi_animation_def([
+                        EnemyWeapon.animations.swing_fast_hit,
+                        attack_swing_animation_def(
+                            AttackSwing,
+                            {base_color: [255, 227, 85], ref_angle_deg: -210, swing_angle_deg: 60},
+                            {
+                                style: {backgroundRepeat: "no-repeat", backgroundPosition: "center"},
+                            },
+                        ),
+                    ]),
                 },
                 recovery: {
                     duration: 250,
@@ -284,7 +302,7 @@ export class Enemy extends Character<Enemy> {
     // TODO: AI
     private _phase: "rest" | "fight-start" | "fight" | "defeat" = "rest"
     phases_ts: Partial<Record<typeof Enemy.prototype._phase, number>> = {}
-    follow_dist_offset: number = 5
+    follow_dist_offset: number = 30
     next_attack_ts: number = 1e10
     auto_attack_dist: number = 400
     auto_attack_interval: [number, number] = [1500, 3000]

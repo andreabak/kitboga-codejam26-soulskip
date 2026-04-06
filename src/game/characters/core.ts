@@ -48,12 +48,13 @@ export function attack_image_animation_def<C extends Character>(
 ): AttackImageAnimationDef<C> {
     const image_factory = image_animation_def(image_src, (character: C) => character.root_el)
     const factory = (character: C, attack: Attack<C>, phase: AttackPhase<C>) => {
+        const uniform_scale = (character.width + character.height) / 2
         return image_factory(
             character,
             {
                 ...{
                     position: {x: 0, y: 0},
-                    size: {x: character.width, y: character.height},
+                    size: {x: uniform_scale, y: uniform_scale},
                 },
                 ...(params ?? {}),
             },
@@ -65,6 +66,45 @@ export function attack_image_animation_def<C extends Character>(
 }
 type AttackAnimationDefTypes<C extends Character> = AttackAnimationDef<C> | AttackImageAnimationDef<C>
 type CharacterAnimationDefTypes<C extends Character> = AnimationDefTypes<C> | AttackAnimationDefTypes<C>
+
+export function attack_swing_animation_def<C extends Character>(
+    image_src: string,
+    {
+        base_color,
+        ref_angle_deg = 0,
+        swing_angle_deg = 30,
+        swing_ease_fn,
+    }: {
+        base_color: [number, number, number]
+        ref_angle_deg?: number
+        swing_angle_deg?: number
+        swing_ease_fn?: (progress: number) => number
+    },
+    params?: ImageAnimationParams,
+) {
+    return attack_image_animation_def(
+        image_src,
+        {...{style: {mixBlendMode: "plus-lighter", ...(params?.style ?? {})}}, ...(params ?? {})},
+        (character: C, attack, image_el) => {
+            const rotation_base_deg = ((character.direction - attack.hitbox.rotation_ref) * 180) / Math.PI
+            const update = (progress: number) => {
+                const _progress = typeof swing_ease_fn === "function" ? swing_ease_fn(progress) : progress ** 0.25
+                const rotation_offset_deg = -ref_angle_deg - swing_angle_deg * _progress
+                image_el.style.transform = `
+                    scale(${attack.scale})
+                    rotate(${rotation_base_deg + rotation_offset_deg}deg)
+                `
+                const overblend = 1 - progress
+                image_el.style.filter = `
+                    drop-shadow(0 0 0 rgba(${base_color[0]}, ${base_color[1]}, ${base_color[2]}, ${overblend}))
+                    drop-shadow(0 0 0 rgba(${base_color[0]}, ${base_color[1]}, ${base_color[2]}, ${overblend}))
+                `
+                image_el.style.opacity = ((1 - progress) ** 0.125).toString()
+            }
+            return {update}
+        },
+    )
+}
 
 export type AttackPhases = "anticipation" | "hit" | "recovery"
 export const ATTACK_PHASES_SEQUENCE: Array<AttackPhases> = ["anticipation", "hit", "recovery"]

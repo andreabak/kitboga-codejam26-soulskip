@@ -110,12 +110,13 @@ export function multi_animation_def<
     init?: (component: C, defs: D) => Array<AnimationHandle>,
 ): AnimationDefTypes<C> {
     const defs_array = Array.isArray(defs) ? defs : [...Object.values(defs as object)]
-    function factory(component: C): AnimationHandle | TimedAnimationHandle {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function factory(component: C, ...rest: any): AnimationHandle | TimedAnimationHandle {
         let animations: Array<AnimationHandle>
         if (init != null) {
             animations = init(component, defs)
         } else {
-            animations = defs_array.map((def) => def(component))
+            animations = defs_array.map((def) => def(component, ...rest))
         }
         const update = (progress: number) =>
             animations.forEach((anim) => {

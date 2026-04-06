@@ -312,12 +312,12 @@ function image_animation_def(image_src, element, { duration, remove, position, s
 }
 function multi_animation_def(defs, { duration } = {}, init) {
   const defs_array = Array.isArray(defs) ? defs : [...Object.values(defs)];
-  function factory(component) {
+  function factory(component, ...rest) {
     let animations;
     if (init != null) {
       animations = init(component, defs);
     } else {
-      animations = defs_array.map((def) => def(component));
+      animations = defs_array.map((def) => def(component, ...rest));
     }
     const update = (progress) => animations.forEach((anim) => {
       if (anim.update) anim.update(progress);
@@ -600,12 +600,13 @@ function send_shell_request(request) {
 function attack_image_animation_def(image_src, params, init) {
   const image_factory = image_animation_def(image_src, (character) => character.root_el);
   const factory = (character, attack, phase) => {
+    const uniform_scale = (character.width + character.height) / 2;
     return image_factory(
       character,
       {
         ...{
           position: { x: 0, y: 0 },
-          size: { x: character.width, y: character.height }
+          size: { x: uniform_scale, y: uniform_scale }
         },
         ...params ?? {}
       },
@@ -614,6 +615,35 @@ function attack_image_animation_def(image_src, params, init) {
   };
   factory.image_src = image_factory.image_src;
   return factory;
+}
+function attack_swing_animation_def(image_src, {
+  base_color,
+  ref_angle_deg = 0,
+  swing_angle_deg = 30,
+  swing_ease_fn
+}, params) {
+  return attack_image_animation_def(
+    image_src,
+    { ...{ style: { mixBlendMode: "plus-lighter", ...(params == null ? void 0 : params.style) ?? {} } }, ...params ?? {} },
+    (character, attack, image_el) => {
+      const rotation_base_deg = (character.direction - attack.hitbox.rotation_ref) * 180 / Math.PI;
+      const update = (progress) => {
+        const _progress = typeof swing_ease_fn === "function" ? swing_ease_fn(progress) : progress ** 0.25;
+        const rotation_offset_deg = -ref_angle_deg - swing_angle_deg * _progress;
+        image_el.style.transform = `
+                    scale(${attack.scale})
+                    rotate(${rotation_base_deg + rotation_offset_deg}deg)
+                `;
+        const overblend = 1 - progress;
+        image_el.style.filter = `
+                    drop-shadow(0 0 0 rgba(${base_color[0]}, ${base_color[1]}, ${base_color[2]}, ${overblend}))
+                    drop-shadow(0 0 0 rgba(${base_color[0]}, ${base_color[1]}, ${base_color[2]}, ${overblend}))
+                `;
+        image_el.style.opacity = ((1 - progress) ** 0.125).toString();
+      };
+      return { update };
+    }
+  );
 }
 const ATTACK_PHASES_SEQUENCE = ["anticipation", "hit", "recovery"];
 class Character extends Actor {
@@ -983,7 +1013,7 @@ class Character extends Actor {
   }
 }
 const FlaskIcon = "" + new URL("assets/flask.webp", import.meta.url).href;
-const AttackFast = "" + new URL("assets/player-attack-fast.png", import.meta.url).href;
+const AttackSwing$1 = "" + new URL("assets/attack-swing.png", import.meta.url).href;
 const ShieldIcon = "" + new URL("assets/shield.webp", import.meta.url).href;
 const PlayerAttackHitSound1 = "" + new URL("assets/442903.opus", import.meta.url).href;
 const PlayerAttackHitSound2 = "" + new URL("assets/547042.opus", import.meta.url).href;
@@ -1037,24 +1067,11 @@ class Player extends Character {
           hit: {
             duration: 150,
             acceleration: 1,
-            animation: attack_image_animation_def(
-              AttackFast,
-              { style: { mixBlendMode: "plus-lighter" } },
-              (player, attack, image_el) => {
-                const rotation_base_deg = (player.direction - attack.hitbox.rotation_ref) * 180 / Math.PI;
-                const update = (progress) => {
-                  const rotation_offset_deg = 30 - 45 * progress ** 0.25;
-                  image_el.style.transform = `
-                                    scale(${attack.scale})
-                                    rotate(${rotation_base_deg + rotation_offset_deg}deg)
-                                `;
-                  const overblend = 1 - progress;
-                  image_el.style.filter = `drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend})) drop-shadow(0 0 0 rgba(255, 255, 255, ${overblend}))`;
-                  image_el.style.opacity = ((1 - progress) ** 0.125).toString();
-                };
-                return { update };
-              }
-            )
+            animation: attack_swing_animation_def(AttackSwing$1, {
+              base_color: [255, 255, 255],
+              ref_angle_deg: -30,
+              swing_angle_deg: 45
+            })
           },
           recovery: { duration: 100, acceleration: 50 }
         },
@@ -1182,6 +1199,7 @@ class Player extends Character {
     }
   }
 }
+const AttackSwing = "" + new URL("assets/attack-swing2.png", import.meta.url).href;
 const VineLongImage1 = "" + new URL("assets/vine_long1.png", import.meta.url).href;
 const VineLongImage2 = "" + new URL("assets/vine_long2.png", import.meta.url).href;
 const VineShortImage1 = "" + new URL("assets/vine_short1.png", import.meta.url).href;
@@ -1216,7 +1234,7 @@ const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
     __publicField(this, "weapon_el");
     __publicField(this, "follower");
     __publicField(this, "base_offset", { x: 0, y: 24 });
-    __publicField(this, "base_rotation", -165 / 180 * Math.PI);
+    __publicField(this, "base_rotation", -150 / 180 * Math.PI);
     __publicField(this, "rotation_ref", -135 / 180 * Math.PI);
     __publicField(this, "velocity_drift_factor", 3);
     this.enemy = enemy;
@@ -1232,6 +1250,9 @@ const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
     );
   }
   _update(context) {
+    if (this.enemy.current_attack == null) {
+      if (this.enemy.low_stamina) this.base_rotation = -190 / 180 * Math.PI;
+    }
     const offset = {
       x: this.base_offset.x - this.enemy.velocity.x * this.velocity_drift_factor,
       y: this.base_offset.y - this.enemy.velocity.y * this.velocity_drift_factor
@@ -1247,7 +1268,7 @@ const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
   }
 };
 __publicField(_EnemyWeapon, "initial_offset", { x: 0, y: 24 });
-__publicField(_EnemyWeapon, "initial_rotation", -165 / 180 * Math.PI);
+__publicField(_EnemyWeapon, "initial_rotation", -150 / 180 * Math.PI);
 __publicField(_EnemyWeapon, "animation_base_def", ({
   position,
   rotation,
@@ -1341,7 +1362,16 @@ class Enemy extends Character {
             acceleration: 5,
             max_vel: 2,
             sound: [EnemyAttackSlowSound1, EnemyAttackSlowSound2, EnemyAttackSlowSound3],
-            animation: EnemyWeapon.animations.swing_slow_hit
+            animation: multi_animation_def([
+              EnemyWeapon.animations.swing_slow_hit,
+              attack_swing_animation_def(
+                AttackSwing,
+                { base_color: [255, 227, 85], ref_angle_deg: -210, swing_angle_deg: 50 },
+                {
+                  style: { backgroundRepeat: "no-repeat", backgroundPosition: "center" }
+                }
+              )
+            ])
           },
           recovery: {
             duration: 500,
@@ -1390,7 +1420,16 @@ class Enemy extends Character {
               EnemyAttackFastSound4,
               EnemyAttackFastSound5
             ],
-            animation: EnemyWeapon.animations.swing_fast_hit
+            animation: multi_animation_def([
+              EnemyWeapon.animations.swing_fast_hit,
+              attack_swing_animation_def(
+                AttackSwing,
+                { base_color: [255, 227, 85], ref_angle_deg: -210, swing_angle_deg: 60 },
+                {
+                  style: { backgroundRepeat: "no-repeat", backgroundPosition: "center" }
+                }
+              )
+            ])
           },
           recovery: {
             duration: 250,
@@ -1431,7 +1470,7 @@ class Enemy extends Character {
     // TODO: AI
     __publicField(this, "_phase", "rest");
     __publicField(this, "phases_ts", {});
-    __publicField(this, "follow_dist_offset", 5);
+    __publicField(this, "follow_dist_offset", 30);
     __publicField(this, "next_attack_ts", 1e10);
     __publicField(this, "auto_attack_dist", 400);
     __publicField(this, "auto_attack_interval", [1500, 3e3]);
