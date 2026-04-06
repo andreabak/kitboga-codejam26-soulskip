@@ -1,6 +1,39 @@
 import type {Component, SubsType} from "@/game/core"
 import type {Game} from "@/game/game"
-import {interpolate, interpolate_point, Point, shortest_delta_angle} from "@/utils"
+import {interpolate, interpolate_point, Point, random_pick, shortest_delta_angle} from "@/utils"
+
+export type ViteGlob = Record<string, {default: string}>
+export class ImageSequence {
+    frames_src: Array<string>
+    fps: number
+
+    constructor(frames_src: Array<string>, fps: number) {
+        if (!frames_src.length) throw new Error("frames_src must not be empty")
+        this.frames_src = frames_src
+        this.fps = fps
+    }
+
+    get duration(): number {
+        return (1000 / this.fps) * this.frames_src.length
+    }
+
+    frame_at_progress(progress: number): string {
+        if (progress < 0) {
+            return this.frames_src[0]
+        } else if (progress < 1) {
+            return this.frames_src[Math.floor(progress * this.frames_src.length)]
+        } else {
+            return this.frames_src.at(-1) as string
+        }
+    }
+
+    static from_frames_dir(frames_glob: ViteGlob, fps: number): ImageSequence {
+        const files = Object.entries(frames_glob)
+        files.sort(([a], [b]) => a.localeCompare(b))
+        const frames = files.map(([, mod]) => mod.default as string)
+        return new ImageSequence(frames, fps)
+    }
+}
 
 export type AnimationHandle = {
     update?: ((progress: number) => void) | null
@@ -19,7 +52,8 @@ export type ImagesAnimationDefMixin = {image_src: string | Array<string>}
 type ImagesAnimationFactory<C extends Component<object>, H extends AnimationHandle> = (
     component: C,
     params_override?: ImageAnimationParams,
-    init_override?: (component: C, image_el: HTMLElement) => H,
+    init_override?: (component: C, image_el: HTMLElement, ...rest: unknown[]) => H,
+    ...rest: unknown[]
 ) => H
 export type ImagesAnimationDef<C extends Component<object>> = ImagesAnimationFactory<C, AnimationHandle> &
     ImagesAnimationDefMixin
@@ -35,19 +69,19 @@ export type ImageAnimationParams = {
     style?: Partial<CSSStyleDeclaration>
 }
 export function image_animation_def<C extends Component<object>>(
-    image_src: string,
+    image_src: string | ImageSequence | Array<string | ImageSequence>,
     element: HTMLElement | ((component: C) => HTMLElement),
     {remove, position, size, image_size, style}?: Omit<ImageAnimationParams, "duration">,
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
 ): ImagesAnimationDef<C>
 export function image_animation_def<C extends Component<object>>(
-    image_src: string,
+    image_src: string | ImageSequence | Array<string | ImageSequence>,
     element: HTMLElement | ((component: C) => HTMLElement),
     {duration, remove, position, size, image_size, style}: ImageAnimationParams & {duration: number},
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
 ): TimedImagesAnimationDef<C>
 export function image_animation_def<C extends Component<object>>(
-    image_src: string,
+    image_src: string | ImageSequence | Array<string | ImageSequence>,
     element: HTMLElement | ((component: C) => HTMLElement),
     {duration, remove, position, size, image_size = "contain", style}: ImageAnimationParams = {},
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
@@ -55,16 +89,20 @@ export function image_animation_def<C extends Component<object>>(
     function factory(
         component: C,
         params_override?: ImageAnimationParams,
-        init_override?: (component: C, image_el: HTMLElement) => AnimationHandle,
+        init_override?: (component: C, image_el: HTMLElement, ...rest: unknown[]) => AnimationHandle,
+        ...rest: unknown[]
     ): AnimationHandle {
         const params = {...{duration, remove, position, size, image_size, style}, ...(params_override ?? {})}
         const randid = "img-" + Math.random().toString(36)
+        const _img =
+            typeof image_src === "string" || image_src instanceof ImageSequence ? image_src : random_pick(image_src)
+        const _img_src = typeof _img === "string" ? _img : _img.frame_at_progress(0)
+        // using div + background-image prevents further browser HEAD requests
         const image_el = document.createElement("div")
         image_el.id = randid
-        // using div + background-image prevents further browser HEAD requests
         image_el.style = `
             position: absolute;
-            background-image: url('${image_src}');
+            background-image: url('${_img_src}');
             background-size: ${params.image_size};
         `
         if (params.position) {
@@ -80,24 +118,28 @@ export function image_animation_def<C extends Component<object>>(
         }
         const el = element instanceof HTMLElement ? element : element(component)
         el.appendChild(image_el)
-        let sub_update,
-            sub_end = undefined
+        let sub_update: ((progress: number) => void) | null | undefined = undefined
+        let sub_end: (() => void) | null | undefined = undefined
         const _init = init_override ?? init
         if (_init != null) {
-            ;({update: sub_update, end: sub_end} = _init(component, image_el))
+            ;({update: sub_update, end: sub_end} = _init(component, image_el, ...rest))
         }
-        const update = sub_update
+        const update = (progress: number) => {
+            if (sub_update != null) sub_update(progress)
+            if (_img instanceof ImageSequence)
+                image_el.style.backgroundImage = `url('${_img.frame_at_progress(progress)}')`
+        }
         const end = () => {
             if (sub_end != null) sub_end()
             if (params.remove == null || params.remove === true) image_el.remove()
         }
-        if (update != null) {
-            update(0)
-        }
+        update(0)
         if (params.duration != null) return {duration: params.duration, update, end} as TimedAnimationHandle
         else return {update, end} as AnimationHandle
     }
-    factory.image_src = image_src
+    factory.image_src = (Array.isArray(image_src) ? image_src : [image_src])
+        .map((i) => (i instanceof ImageSequence ? i.frames_src : i))
+        .flat()
     return factory
 }
 

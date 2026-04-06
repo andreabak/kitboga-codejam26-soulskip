@@ -588,7 +588,7 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
             }
         }
         if (!this.invicible && health_damage >= 0) {
-            this.consume_health(health_damage, {context})
+            this.attack_damage(health_damage, {attack, attacking_character, context})
             if (this.health <= 0) {
                 this.game.pick_and_play_sound_effect(this.sounds.death)
             } else if (!this.defending) {
@@ -623,5 +623,19 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
         attacking_character.consume_stamina(attack.damage * this.parry_enemy_stamina_consume_factor, {context})
         this.consume_stamina(this.parry_stamina_consume, {context})
         return true // no damage to us
+    }
+    attack_damage(
+        health_damage: number,
+        {
+            attack,
+            attacking_character,
+            context,
+        }: {
+            attack: Attack<C>
+            attacking_character: Character
+            context: GameUpdateContext
+        },
+    ): void {
+        this.consume_health(health_damage, {context})
     }
 }

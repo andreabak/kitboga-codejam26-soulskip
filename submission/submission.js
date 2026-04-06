@@ -267,15 +267,44 @@ class TargetFollower {
     return this.pos;
   }
 }
+class ImageSequence {
+  constructor(frames_src, fps) {
+    __publicField(this, "frames_src");
+    __publicField(this, "fps");
+    if (!frames_src.length) throw new Error("frames_src must not be empty");
+    this.frames_src = frames_src;
+    this.fps = fps;
+  }
+  get duration() {
+    return 1e3 / this.fps * this.frames_src.length;
+  }
+  frame_at_progress(progress) {
+    if (progress < 0) {
+      return this.frames_src[0];
+    } else if (progress < 1) {
+      return this.frames_src[Math.floor(progress * this.frames_src.length)];
+    } else {
+      return this.frames_src.at(-1);
+    }
+  }
+  static from_frames_dir(frames_glob, fps) {
+    const files = Object.entries(frames_glob);
+    files.sort(([a], [b]) => a.localeCompare(b));
+    const frames = files.map(([, mod]) => mod.default);
+    return new ImageSequence(frames, fps);
+  }
+}
 function image_animation_def(image_src, element, { duration, remove, position, size, image_size = "contain", style } = {}, init) {
-  function factory(component, params_override, init_override) {
+  function factory(component, params_override, init_override, ...rest) {
     const params = { ...{ duration, remove, position, size, image_size, style }, ...params_override ?? {} };
     const randid = "img-" + Math.random().toString(36);
+    const _img = typeof image_src === "string" || image_src instanceof ImageSequence ? image_src : random_pick(image_src);
+    const _img_src = typeof _img === "string" ? _img : _img.frame_at_progress(0);
     const image_el = document.createElement("div");
     image_el.id = randid;
     image_el.style = `
             position: absolute;
-            background-image: url('${image_src}');
+            background-image: url('${_img_src}');
             background-size: ${params.image_size};
         `;
     if (params.position) {
@@ -291,23 +320,26 @@ function image_animation_def(image_src, element, { duration, remove, position, s
     }
     const el = element instanceof HTMLElement ? element : element(component);
     el.appendChild(image_el);
-    let sub_update, sub_end = void 0;
+    let sub_update = void 0;
+    let sub_end = void 0;
     const _init = init_override ?? init;
     if (_init != null) {
-      ({ update: sub_update, end: sub_end } = _init(component, image_el));
+      ({ update: sub_update, end: sub_end } = _init(component, image_el, ...rest));
     }
-    const update = sub_update;
+    const update = (progress) => {
+      if (sub_update != null) sub_update(progress);
+      if (_img instanceof ImageSequence)
+        image_el.style.backgroundImage = `url('${_img.frame_at_progress(progress)}')`;
+    };
     const end = () => {
       if (sub_end != null) sub_end();
       if (params.remove == null || params.remove === true) image_el.remove();
     };
-    if (update != null) {
-      update(0);
-    }
+    update(0);
     if (params.duration != null) return { duration: params.duration, update, end };
     else return { update, end };
   }
-  factory.image_src = image_src;
+  factory.image_src = (Array.isArray(image_src) ? image_src : [image_src]).map((i) => i instanceof ImageSequence ? i.frames_src : i).flat();
   return factory;
 }
 function multi_animation_def(defs, { duration } = {}, init) {
@@ -1006,7 +1038,7 @@ class Character extends Actor {
       }
     }
     if (!this.invicible && health_damage >= 0) {
-      this.consume_health(health_damage, { context });
+      this.attack_damage(health_damage, { attack, attacking_character, context });
       if (this.health <= 0) {
         this.game.pick_and_play_sound_effect(this.sounds.death);
       } else if (!this.defending) {
@@ -1032,6 +1064,13 @@ class Character extends Actor {
     attacking_character.consume_stamina(attack.damage * this.parry_enemy_stamina_consume_factor, { context });
     this.consume_stamina(this.parry_stamina_consume, { context });
     return true;
+  }
+  attack_damage(health_damage, {
+    attack,
+    attacking_character,
+    context
+  }) {
+    this.consume_health(health_damage, { context });
   }
 }
 const FlaskIcon = "" + new URL("assets/flask.webp", import.meta.url).href;
@@ -1331,6 +1370,226 @@ __publicField(_Player, "stars_animation_def", (stars_imgs, params) => multi_anim
   }
 ));
 let Player = _Player;
+const _00000$3 = "" + new URL("assets/00000.png", import.meta.url).href;
+const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00000$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00001$3 = "" + new URL("assets/00001.png", import.meta.url).href;
+const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00001$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00002$3 = "" + new URL("assets/00002.png", import.meta.url).href;
+const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00002$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00003$3 = "" + new URL("assets/00003.png", import.meta.url).href;
+const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00003$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00004$3 = "" + new URL("assets/00004.png", import.meta.url).href;
+const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00004$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00005$3 = "" + new URL("assets/00005.png", import.meta.url).href;
+const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00005$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00006$3 = "" + new URL("assets/00006.png", import.meta.url).href;
+const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00006$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00007$3 = "" + new URL("assets/00006.png", import.meta.url).href;
+const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00007$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00008$3 = "" + new URL("assets/00008.png", import.meta.url).href;
+const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00008$3
+}, Symbol.toStringTag, { value: "Module" }));
+const _00009$2 = "" + new URL("assets/00008.png", import.meta.url).href;
+const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00009$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00010$2 = "" + new URL("assets/00010.png", import.meta.url).href;
+const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00010$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00011$1 = "" + new URL("assets/00011.png", import.meta.url).href;
+const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00011$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00000$2 = "" + new URL("assets/000002.png", import.meta.url).href;
+const __vite_glob_1_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00000$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00001$2 = "" + new URL("assets/000012.png", import.meta.url).href;
+const __vite_glob_1_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00001$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00002$2 = "" + new URL("assets/000022.png", import.meta.url).href;
+const __vite_glob_1_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00002$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00003$2 = "" + new URL("assets/000032.png", import.meta.url).href;
+const __vite_glob_1_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00003$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00004$2 = "" + new URL("assets/000042.png", import.meta.url).href;
+const __vite_glob_1_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00004$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00005$2 = "" + new URL("assets/000052.png", import.meta.url).href;
+const __vite_glob_1_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00005$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00006$2 = "" + new URL("assets/000062.png", import.meta.url).href;
+const __vite_glob_1_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00006$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00007$2 = "" + new URL("assets/00007.png", import.meta.url).href;
+const __vite_glob_1_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00007$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00008$2 = "" + new URL("assets/000082.png", import.meta.url).href;
+const __vite_glob_1_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00008$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00009$1 = "" + new URL("assets/00009.png", import.meta.url).href;
+const __vite_glob_1_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00009$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00010$1 = "" + new URL("assets/000102.png", import.meta.url).href;
+const __vite_glob_1_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00010$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00000$1 = "" + new URL("assets/000003.png", import.meta.url).href;
+const __vite_glob_2_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00000$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00001$1 = "" + new URL("assets/000013.png", import.meta.url).href;
+const __vite_glob_2_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00001$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00002$1 = "" + new URL("assets/000023.png", import.meta.url).href;
+const __vite_glob_2_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00002$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00003$1 = "" + new URL("assets/000033.png", import.meta.url).href;
+const __vite_glob_2_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00003$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00004$1 = "" + new URL("assets/000043.png", import.meta.url).href;
+const __vite_glob_2_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00004$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00005$1 = "" + new URL("assets/000053.png", import.meta.url).href;
+const __vite_glob_2_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00005$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00006$1 = "" + new URL("assets/000063.png", import.meta.url).href;
+const __vite_glob_2_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00006$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00007$1 = "" + new URL("assets/000072.png", import.meta.url).href;
+const __vite_glob_2_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00007$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00008$1 = "" + new URL("assets/000083.png", import.meta.url).href;
+const __vite_glob_2_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00008$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00000 = "" + new URL("assets/000004.png", import.meta.url).href;
+const __vite_glob_3_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00000
+}, Symbol.toStringTag, { value: "Module" }));
+const _00001 = "" + new URL("assets/000014.png", import.meta.url).href;
+const __vite_glob_3_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00001
+}, Symbol.toStringTag, { value: "Module" }));
+const _00002 = "" + new URL("assets/000024.png", import.meta.url).href;
+const __vite_glob_3_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00002
+}, Symbol.toStringTag, { value: "Module" }));
+const _00003 = "" + new URL("assets/000034.png", import.meta.url).href;
+const __vite_glob_3_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00003
+}, Symbol.toStringTag, { value: "Module" }));
+const _00004 = "" + new URL("assets/000044.png", import.meta.url).href;
+const __vite_glob_3_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00004
+}, Symbol.toStringTag, { value: "Module" }));
+const _00005 = "" + new URL("assets/000054.png", import.meta.url).href;
+const __vite_glob_3_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00005
+}, Symbol.toStringTag, { value: "Module" }));
+const _00006 = "" + new URL("assets/000064.png", import.meta.url).href;
+const __vite_glob_3_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00006
+}, Symbol.toStringTag, { value: "Module" }));
+const _00007 = "" + new URL("assets/000064.png", import.meta.url).href;
+const __vite_glob_3_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00007
+}, Symbol.toStringTag, { value: "Module" }));
+const _00008 = "" + new URL("assets/000084.png", import.meta.url).href;
+const __vite_glob_3_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00008
+}, Symbol.toStringTag, { value: "Module" }));
+const _00009 = "" + new URL("assets/000084.png", import.meta.url).href;
+const __vite_glob_3_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00009
+}, Symbol.toStringTag, { value: "Module" }));
+const _00010 = "" + new URL("assets/000084.png", import.meta.url).href;
+const __vite_glob_3_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00010
+}, Symbol.toStringTag, { value: "Module" }));
+const _00011 = "" + new URL("assets/000112.png", import.meta.url).href;
+const __vite_glob_3_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00011
+}, Symbol.toStringTag, { value: "Module" }));
 const AttackSwing = "" + new URL("assets/attack-swing2.png", import.meta.url).href;
 const VineLongImage1 = "" + new URL("assets/vine_long1.png", import.meta.url).href;
 const VineLongImage2 = "" + new URL("assets/vine_long2.png", import.meta.url).href;
@@ -1358,6 +1617,70 @@ const EnemyDamageSound7 = "" + new URL("assets/770124_5.opus", import.meta.url).
 const EnemyDamageSound8 = "" + new URL("assets/770124_6.opus", import.meta.url).href;
 const EnemyDamageSound9 = "" + new URL("assets/770124_7.opus", import.meta.url).href;
 const EnemyDeathSound = "" + new URL("assets/369005.opus", import.meta.url).href;
+const BloodEffect1Seq = ImageSequence.from_frames_dir(
+  /* @__PURE__ */ Object.assign({
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00000.png": __vite_glob_0_0,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00001.png": __vite_glob_0_1,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00002.png": __vite_glob_0_2,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00003.png": __vite_glob_0_3,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00004.png": __vite_glob_0_4,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00005.png": __vite_glob_0_5,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00006.png": __vite_glob_0_6,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00007.png": __vite_glob_0_7,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00008.png": __vite_glob_0_8,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00009.png": __vite_glob_0_9,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00010.png": __vite_glob_0_10,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_2/00011.png": __vite_glob_0_11
+  }),
+  60
+);
+const BloodEffect2Seq = ImageSequence.from_frames_dir(
+  /* @__PURE__ */ Object.assign({
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00000.png": __vite_glob_1_0,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00001.png": __vite_glob_1_1,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00002.png": __vite_glob_1_2,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00003.png": __vite_glob_1_3,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00004.png": __vite_glob_1_4,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00005.png": __vite_glob_1_5,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00006.png": __vite_glob_1_6,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00007.png": __vite_glob_1_7,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00008.png": __vite_glob_1_8,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00009.png": __vite_glob_1_9,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_4/00010.png": __vite_glob_1_10
+  }),
+  60
+);
+const BloodEffect3Seq = ImageSequence.from_frames_dir(
+  /* @__PURE__ */ Object.assign({
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00000.png": __vite_glob_2_0,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00001.png": __vite_glob_2_1,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00002.png": __vite_glob_2_2,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00003.png": __vite_glob_2_3,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00004.png": __vite_glob_2_4,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00005.png": __vite_glob_2_5,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00006.png": __vite_glob_2_6,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00007.png": __vite_glob_2_7,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_5/00008.png": __vite_glob_2_8
+  }),
+  60
+);
+const BloodEffect4Seq = ImageSequence.from_frames_dir(
+  /* @__PURE__ */ Object.assign({
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00000.png": __vite_glob_3_0,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00001.png": __vite_glob_3_1,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00002.png": __vite_glob_3_2,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00003.png": __vite_glob_3_3,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00004.png": __vite_glob_3_4,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00005.png": __vite_glob_3_5,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00006.png": __vite_glob_3_6,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00007.png": __vite_glob_3_7,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00008.png": __vite_glob_3_8,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00009.png": __vite_glob_3_9,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00010.png": __vite_glob_3_10,
+    "/assets/enemy/blood/jasontomlee_vfx_blood_6/00011.png": __vite_glob_3_11
+  }),
+  60
+);
 const enemy_weapon_selector = ".weapon";
 const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
   constructor(game2, enemy) {
@@ -1658,6 +1981,41 @@ class Enemy extends Character {
           });
           return handles;
         }
+      ),
+      damage: image_animation_def(
+        [BloodEffect1Seq, BloodEffect2Seq, BloodEffect3Seq, BloodEffect4Seq],
+        (character) => character.game.animations_root_el,
+        {
+          duration: 730,
+          style: { width: "48px", height: "48px", filter: "hue-rotate(90deg) brightness(1.5) contrast(1.4)" }
+        },
+        (character, image_el, { attacking_character } = {}) => {
+          let dist_vector = null;
+          let dir_vector;
+          if (attacking_character) {
+            dist_vector = {
+              x: attacking_character.pos.x - character.pos.x,
+              y: attacking_character.pos.y - character.pos.y
+            };
+            const direction = Math.atan2(dist_vector.y, dist_vector.x);
+            dir_vector = { x: Math.cos(direction), y: Math.sin(direction) };
+          } else {
+            dir_vector = { ...character.direction_vector };
+          }
+          const relpos = { x: character.width / 2 * dir_vector.x, y: character.height / 2 * dir_vector.y };
+          if (dist_vector != null) {
+            relpos.x = Math.min(relpos.x, dist_vector.x / 2);
+            relpos.y = Math.min(relpos.y, dist_vector.y / 2);
+          }
+          const pos = {
+            x: character.pos.x + relpos.x,
+            y: character.pos.y + relpos.y
+          };
+          image_el.style.top = `${pos.y}px`;
+          image_el.style.left = `${pos.x}px`;
+          image_el.style.transform = `translate(-50%, -50%) rotate(${character.direction * 180 / Math.PI}deg)`;
+          return {};
+        }
       )
     });
     __publicField(this, "sounds", {
@@ -1793,6 +2151,18 @@ class Enemy extends Character {
     if (this.current_attack_chain != null && this.current_attack_chain.index >= this.current_attack_chain.def.length - 1)
       this.current_attack_chain = null;
     this.next_attack_ts = this.calc_next_attack_ts(context.timeref);
+  }
+  attack_damage(health_damage, {
+    attack,
+    attacking_character,
+    context
+  }) {
+    super.attack_damage(health_damage, {
+      attack,
+      attacking_character,
+      context
+    });
+    this.game.play_animation(this.animations.damage(this, {}, void 0, { attacking_character }));
   }
   calc_next_attack_ts(now_ts) {
     return now_ts + this.auto_attack_interval[0] + Math.random() * (this.auto_attack_interval[1] - this.auto_attack_interval[0]);
