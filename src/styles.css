@@ -282,6 +282,9 @@
 .equipped .slot.equip-bottom {
     grid-area: bottom;
 }
+.equipped .slot * {
+    pointer-events: none;
+}
 .equipped .slot .item {
     height: 100%;
     width: 100%;

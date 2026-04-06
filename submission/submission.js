@@ -520,7 +520,7 @@ class EquippedItemsHud extends GameComponent {
       const slot_name = slot.dataset.slot;
       if (!slot_name) continue;
       slots_elements_map[slot_name] = slot;
-      slot.addEventListener("click", () => this._use_slot_item(slot));
+      slot.addEventListener("mousedown", () => this._use_slot_item(slot));
     }
     this.slots_elements = slots_elements_map;
   }
@@ -687,6 +687,10 @@ class Character extends Actor {
     __publicField(this, "defending", false);
     __publicField(this, "parry_stamina_consume", 30);
     __publicField(this, "parry_enemy_stamina_consume_factor", 0.1);
+    __publicField(this, "last_cure_ts", -Infinity);
+    __publicField(this, "cure_duration", 500);
+    __publicField(this, "curing_max_vel", 2);
+    __publicField(this, "curing", false);
     __publicField(this, "animations", {});
     __publicField(this, "sounds", {});
     this._follower = new TargetFollower(
@@ -823,18 +827,28 @@ class Character extends Actor {
     return this.health <= 0;
   }
   get can_attack() {
-    return !this.attacking && !this.low_stamina && !this.dead;
+    return !this.curing && !this.attacking && !this.low_stamina && !this.dead;
   }
   get can_defend() {
-    return !this.attacking && !this.low_stamina && !this.dead;
+    return !this.curing && !this.attacking && !this.low_stamina && !this.dead;
   }
   get can_parry() {
-    return !this.attacking && !this.low_stamina && !this.dead;
+    return !this.curing && !this.attacking && !this.low_stamina && !this.dead;
   }
   consume_stamina(amount, { context }) {
     this.stamina -= amount;
     if (this.stamina < 0) this.stamina = 0;
     this.last_stamina_consume_ts = context.timeref;
+  }
+  consume_health(amount, { context }) {
+    this.health -= amount;
+    if (this.health < 0) this.health = 0;
+    this.last_damage_ts = context.timeref;
+  }
+  recover_health(amount) {
+    if (this.dead) return;
+    this.health += amount;
+    if (this.health > this.max_health) this.health = this.max_health;
   }
   _update(context) {
     var _a;
@@ -848,6 +862,7 @@ class Character extends Actor {
     if (!this.low_stamina && vel_mag > this.stamina_movement_vel_min) {
       this.consume_stamina(vel_mag * this.stamina_movement_consume_factor * s_delta, { context });
     }
+    this.curing = context.timeref < this.last_cure_ts + this.cure_duration;
     if (this.attack_requested) {
       this.attack_requested = false;
       if (this.can_attack) {
@@ -913,11 +928,11 @@ class Character extends Actor {
   }
   calc_acceleration() {
     var _a;
-    return this.attacking ? ((_a = this.current_attack_phase) == null ? void 0 : _a.acceleration) ?? this.base_acceleration : this.defending ? this.defend_acceleration : this.low_stamina ? this.low_stamina_accel : this.base_acceleration;
+    return this.attacking ? ((_a = this.current_attack_phase) == null ? void 0 : _a.acceleration) ?? this.base_acceleration : this.defending ? this.defend_acceleration : this.curing ? this.curing_max_vel : this.low_stamina ? this.low_stamina_accel : this.base_acceleration;
   }
   calc_max_vel() {
     var _a;
-    return this.dead ? 0 : this.attacking ? ((_a = this.current_attack_phase) == null ? void 0 : _a.max_vel) ?? this.base_max_vel : this.defending ? this.defend_max_vel : this.low_stamina ? this.low_stamina_max_vel : this.base_max_vel;
+    return this.dead ? 0 : this.attacking ? ((_a = this.current_attack_phase) == null ? void 0 : _a.max_vel) ?? this.base_max_vel : this.defending ? this.defend_max_vel : this.curing ? this.curing_max_vel : this.low_stamina ? this.low_stamina_max_vel : this.base_max_vel;
   }
   _attack_start(attack, { context }) {
   }
@@ -990,12 +1005,10 @@ class Character extends Actor {
       this.game.pick_and_play_sound_effect(this.sounds.defend);
     }
     if (!this.invicible && health_damage >= 0) {
-      this.health -= health_damage;
-      this.last_damage_ts = context.timeref;
+      this.consume_health(health_damage, { context });
       if (this.health <= 0) {
-        this.health = 0;
         this.game.pick_and_play_sound_effect(this.sounds.death);
-      } else {
+      } else if (!this.defending) {
         this.game.pick_and_play_sound_effect(this.sounds.damage);
       }
       this.game.pick_and_play_sound_effect(attack.hit_sound);
@@ -1021,7 +1034,8 @@ const PlayerAttackHitSound3 = "" + new URL("assets/574820.opus", import.meta.url
 const PlayerAttackHitSound4 = "" + new URL("assets/574821.opus", import.meta.url).href;
 const PlayerAttackSound1 = "" + new URL("assets/268227.opus", import.meta.url).href;
 const PlayerAttackSound2 = "" + new URL("assets/724716.opus", import.meta.url).href;
-const PlayerCureSound = "" + new URL("assets/er-cure.opus", import.meta.url).href;
+const PlayerCureSound1 = "" + new URL("assets/797763_1.opus", import.meta.url).href;
+const PlayerCureSound2 = "" + new URL("assets/797763_2.opus", import.meta.url).href;
 const PlayerDamageSound1 = "" + new URL("assets/488225.opus", import.meta.url).href;
 const PlayerDamageSound2 = "" + new URL("assets/629664.opus", import.meta.url).href;
 const PlayerDeathSound = "" + new URL("assets/398068.opus", import.meta.url).href;
@@ -1107,7 +1121,7 @@ class Player extends Character {
       parry: [PlayerParrySound],
       damage: [PlayerDamageSound1, PlayerDamageSound2],
       death: [PlayerDeathSound],
-      cure: [PlayerCureSound]
+      cure: [PlayerCureSound1, PlayerCureSound2]
     });
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
     this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
@@ -1186,14 +1200,16 @@ class Player extends Character {
     const item = this.items[item_name];
     if (!item) console.warn(`Player has no item "${item_name}"`);
     if (!this.dead && (!item.consumable || item.owned > 0)) {
+      let used = false;
       if (item.name === "flask") {
-        this.health += this.max_health * this.flask_health_recover_pct;
-        if (this.health > this.max_health) {
-          this.health = this.max_health;
+        if (!this.attacking && !this.defending && !this.curing) {
+          this.recover_health(this.max_health * this.flask_health_recover_pct);
+          this.last_cure_ts = this.game.timeref;
+          this.game.pick_and_play_sound_effect(this.sounds.cure);
+          used = true;
         }
-        this.game.pick_and_play_sound_effect(this.sounds.cure);
       }
-      if (item.consumable) {
+      if (item.consumable && used) {
         item.owned -= 1;
       }
     }

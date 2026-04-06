@@ -13,7 +13,8 @@ import PlayerAttackHitSound3 from "@/assets/sounds/player-attack-hit/574820.opus
 import PlayerAttackHitSound4 from "@/assets/sounds/player-attack-hit/574821.opus"
 import PlayerAttackSound1 from "@/assets/sounds/player-attack/268227.opus"
 import PlayerAttackSound2 from "@/assets/sounds/player-attack/724716.opus"
-import PlayerCureSound from "@/assets/sounds/player-cure/er-cure.opus"
+import PlayerCureSound1 from "@/assets/sounds/player-cure/797763_1.opus"
+import PlayerCureSound2 from "@/assets/sounds/player-cure/797763_2.opus"
 import PlayerDamageSound1 from "@/assets/sounds/player-damage/488225.opus"
 import PlayerDamageSound2 from "@/assets/sounds/player-damage/629664.opus"
 import PlayerDeathSound from "@/assets/sounds/player-death/398068.opus"
@@ -119,7 +120,7 @@ class Player extends Character<Player> {
         parry: [PlayerParrySound],
         damage: [PlayerDamageSound1, PlayerDamageSound2],
         death: [PlayerDeathSound],
-        cure: [PlayerCureSound],
+        cure: [PlayerCureSound1, PlayerCureSound2],
     }
 
     constructor(game: Game) {
@@ -218,14 +219,16 @@ class Player extends Character<Player> {
         const item = this.items[item_name]
         if (!item) console.warn(`Player has no item "${item_name}"`)
         if (!this.dead && (!item.consumable || item.owned > 0)) {
+            let used = false
             if (item.name === "flask") {
-                this.health += this.max_health * this.flask_health_recover_pct
-                if (this.health > this.max_health) {
-                    this.health = this.max_health
+                if (!this.attacking && !this.defending && !this.curing) {
+                    this.recover_health(this.max_health * this.flask_health_recover_pct)
+                    this.last_cure_ts = this.game.timeref
+                    this.game.pick_and_play_sound_effect(this.sounds.cure)
+                    used = true
                 }
-                this.game.pick_and_play_sound_effect(this.sounds.cure)
             }
-            if (item.consumable) {
+            if (item.consumable && used) {
                 item.owned -= 1
             }
         }

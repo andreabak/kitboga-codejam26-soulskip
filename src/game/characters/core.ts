@@ -191,6 +191,11 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
     parry_stamina_consume: number = 30
     parry_enemy_stamina_consume_factor: number = 0.1
 
+    last_cure_ts: number = -Infinity
+    cure_duration: number = 500
+    curing_max_vel: number = 2.0
+    curing: boolean = false
+
     animations: Record<string, CharacterAnimationDefTypes<C>> = {}
     sounds: CharacterSounds = {}
 
@@ -364,21 +369,32 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
     }
 
     get can_attack(): boolean {
-        return !this.attacking && !this.low_stamina && !this.dead
+        return !this.curing && !this.attacking && !this.low_stamina && !this.dead
     }
 
     get can_defend(): boolean {
-        return !this.attacking && !this.low_stamina && !this.dead
+        return !this.curing && !this.attacking && !this.low_stamina && !this.dead
     }
 
     get can_parry(): boolean {
-        return !this.attacking && !this.low_stamina && !this.dead
+        return !this.curing && !this.attacking && !this.low_stamina && !this.dead
     }
 
     consume_stamina(amount: number, {context}: {context: GameUpdateContext}) {
         this.stamina -= amount
         if (this.stamina < 0) this.stamina = 0
         this.last_stamina_consume_ts = context.timeref
+    }
+
+    consume_health(amount: number, {context}: {context: GameUpdateContext}) {
+        this.health -= amount
+        if (this.health < 0) this.health = 0
+        this.last_damage_ts = context.timeref
+    }
+    recover_health(amount: number) {
+        if (this.dead) return
+        this.health += amount
+        if (this.health > this.max_health) this.health = this.max_health
     }
 
     _update(context: GameUpdateContext) {
@@ -393,6 +409,8 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
         if (!this.low_stamina && vel_mag > this.stamina_movement_vel_min) {
             this.consume_stamina(vel_mag * this.stamina_movement_consume_factor * s_delta, {context})
         }
+
+        this.curing = context.timeref < this.last_cure_ts + this.cure_duration
 
         if (this.attack_requested) {
             this.attack_requested = false
@@ -467,9 +485,11 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
             ? (this.current_attack_phase?.acceleration ?? this.base_acceleration)
             : this.defending
               ? this.defend_acceleration
-              : this.low_stamina
-                ? this.low_stamina_accel
-                : this.base_acceleration
+              : this.curing
+                ? this.curing_max_vel
+                : this.low_stamina
+                  ? this.low_stamina_accel
+                  : this.base_acceleration
     }
 
     calc_max_vel(): number {
@@ -479,9 +499,11 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
               ? (this.current_attack_phase?.max_vel ?? this.base_max_vel)
               : this.defending
                 ? this.defend_max_vel
-                : this.low_stamina
-                  ? this.low_stamina_max_vel
-                  : this.base_max_vel
+                : this.curing
+                  ? this.curing_max_vel
+                  : this.low_stamina
+                    ? this.low_stamina_max_vel
+                    : this.base_max_vel
     }
 
     abstract new_attack(): AttackDef<C>
@@ -565,14 +587,10 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
             this.game.pick_and_play_sound_effect(this.sounds.defend)
         }
         if (!this.invicible && health_damage >= 0) {
-            this.health -= health_damage
-            this.last_damage_ts = context.timeref
-            // FIXME: don't play these sound effects if defended, maybe refactor health_consume into a fn, then make this if block exclusive with the defend one
+            this.consume_health(health_damage, {context})
             if (this.health <= 0) {
-                this.health = 0
-                // FIXME: should trigger also in defend, maybe move elsewhere (where transition) and leave reverse if block
                 this.game.pick_and_play_sound_effect(this.sounds.death)
-            } else {
+            } else if (!this.defending) {
                 this.game.pick_and_play_sound_effect(this.sounds.damage)
             }
             this.game.pick_and_play_sound_effect(attack.hit_sound)

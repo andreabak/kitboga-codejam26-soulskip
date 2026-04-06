@@ -180,7 +180,7 @@ class EquippedItemsHud extends GameComponent {
             const slot_name = slot.dataset.slot
             if (!slot_name) continue
             slots_elements_map[slot_name] = slot
-            slot.addEventListener("click", () => this._use_slot_item(slot))
+            slot.addEventListener("mousedown", () => this._use_slot_item(slot))
         }
         this.slots_elements = slots_elements_map as Record<EquipmentSlot, HTMLDivElement>
     }
