@@ -1027,6 +1027,10 @@ class Character extends Actor {
 }
 const FlaskIcon = "" + new URL("assets/flask.webp", import.meta.url).href;
 const AttackSwing$1 = "" + new URL("assets/attack-swing.png", import.meta.url).href;
+const PlayerParryStar1 = "" + new URL("assets/parry-star_1.svg", import.meta.url).href;
+const PlayerParryStar2 = "" + new URL("assets/parry-star_2.svg", import.meta.url).href;
+const PlayerParryStar3 = "" + new URL("assets/parry-star_3.svg", import.meta.url).href;
+const PlayerParryStar4 = "" + new URL("assets/parry-star_4.svg", import.meta.url).href;
 const ShieldIcon = "" + new URL("assets/shield.webp", import.meta.url).href;
 const PlayerAttackHitSound1 = "" + new URL("assets/442903.opus", import.meta.url).href;
 const PlayerAttackHitSound2 = "" + new URL("assets/547042.opus", import.meta.url).href;
@@ -1042,7 +1046,8 @@ const PlayerDeathSound = "" + new URL("assets/398068.opus", import.meta.url).hre
 const PlayerDefendSound1 = "" + new URL("assets/364530.opus", import.meta.url).href;
 const PlayerDefendSound2 = "" + new URL("assets/442769.opus", import.meta.url).href;
 const PlayerDefendSound3 = "" + new URL("assets/574043.opus", import.meta.url).href;
-const PlayerParrySound = "" + new URL("assets/er-parry.opus", import.meta.url).href;
+const PlayerParrySound1 = "" + new URL("assets/448009.opus", import.meta.url).href;
+const PlayerParrySound2 = "" + new URL("assets/591155.opus", import.meta.url).href;
 const SwordIcon = "" + new URL("assets/sword.svg", import.meta.url).href;
 const player_root_selector = ".player";
 class Player extends Character {
@@ -1116,9 +1121,45 @@ class Player extends Character {
       sword: { name: "sword", icon_src: SwordIcon, consumable: false }
     });
     __publicField(this, "flask_health_recover_pct", 0.65);
+    __publicField(this, "animations", {
+      parry: multi_animation_def(
+        [
+          image_animation_def(PlayerParryStar1, (player) => player.game.animations_root_el),
+          image_animation_def(PlayerParryStar2, (player) => player.game.animations_root_el),
+          image_animation_def(PlayerParryStar3, (player) => player.game.animations_root_el),
+          image_animation_def(PlayerParryStar4, (player) => player.game.animations_root_el)
+        ],
+        {},
+        (player, defs) => {
+          const enemy = player.game.enemy;
+          const midpoint = { x: (player.pos.x + enemy.pos.x) / 2, y: (player.pos.y + enemy.pos.y) / 2 };
+          const size = { x: 512, y: 512 };
+          return defs.map(
+            (def, index) => def(
+              player,
+              { position: midpoint, size, style: { mixBlendMode: "plus-lighter" } },
+              (player2, image_el) => {
+                const rot_start = Math.random() * 365;
+                const rot_deg = 45 * (2 * (index % 2) - 1);
+                return {
+                  update: (progress) => {
+                    image_el.style.transform = `
+                                    translate(-50%, -50%)
+                                    rotate(${rot_start + rot_deg * progress ** 0.125}deg)
+                                    scale(${progress ** 0.25})
+                                `;
+                    image_el.style.opacity = (1 - progress ** 2).toString();
+                  }
+                };
+              }
+            )
+          );
+        }
+      )
+    });
     __publicField(this, "sounds", {
       defend: [PlayerDefendSound1, PlayerDefendSound2, PlayerDefendSound3],
-      parry: [PlayerParrySound],
+      parry: [PlayerParrySound1, PlayerParrySound2],
       damage: [PlayerDamageSound1, PlayerDamageSound2],
       death: [PlayerDeathSound],
       cure: [PlayerCureSound1, PlayerCureSound2]
@@ -1193,6 +1234,7 @@ class Player extends Character {
     if (do_parry) {
       this.game.timescale = 0.1;
       setTimeout(() => this.game.timescale = 1, 500);
+      this.game.play_animation(this.animations.parry(this), 100);
     }
     return do_parry;
   }
@@ -1718,6 +1760,7 @@ class VictoryScreen extends GameComponent {
   }
 }
 const game_root_selector = "#game-root";
+const animations_root_selector = ".animations";
 const subs_root_selector = ".subs";
 class Game extends Component {
   constructor() {
@@ -1730,6 +1773,7 @@ class Game extends Component {
     __publicField(this, "_last_step_ts", null);
     __publicField(this, "_video_playback_rate_base", 1);
     __publicField(this, "game_root_el");
+    __publicField(this, "animations_root_el");
     __publicField(this, "animations", {});
     __publicField(this, "sound_effects", {});
     __publicField(this, "player");
@@ -1752,6 +1796,7 @@ class Game extends Component {
     __publicField(this, "battle_music_audio", null);
     this.game_root_el = get_element(game_root_selector);
     this.game_root_el.classList.toggle("hidden", false);
+    this.animations_root_el = get_element(animations_root_selector, this.game_root_el);
     this.player = this.add_character(this.add_component(new Player(this)));
     this.enemy = this.add_character(this.add_component(new Enemy(this)));
     this.hud = this.add_component(new Hud(this));

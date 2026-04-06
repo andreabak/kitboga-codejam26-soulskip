@@ -1,11 +1,16 @@
 import {get_element} from "@/utils"
 
+import {image_animation_def, multi_animation_def} from "../animations"
 import {GameUpdateContext} from "../core"
 import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, attack_swing_animation_def, AttackDef, Character, HitBox} from "./core"
 
 import FlaskIcon from "@/assets/flask.webp"
 import AttackSwing from "@/assets/player/attack-swing.png"
+import PlayerParryStar1 from "@/assets/player/parry-star_1.svg"
+import PlayerParryStar2 from "@/assets/player/parry-star_2.svg"
+import PlayerParryStar3 from "@/assets/player/parry-star_3.svg"
+import PlayerParryStar4 from "@/assets/player/parry-star_4.svg"
 import ShieldIcon from "@/assets/shield.webp"
 import PlayerAttackHitSound1 from "@/assets/sounds/player-attack-hit/442903.opus"
 import PlayerAttackHitSound2 from "@/assets/sounds/player-attack-hit/547042.opus"
@@ -21,7 +26,8 @@ import PlayerDeathSound from "@/assets/sounds/player-death/398068.opus"
 import PlayerDefendSound1 from "@/assets/sounds/player-defend/364530.opus"
 import PlayerDefendSound2 from "@/assets/sounds/player-defend/442769.opus"
 import PlayerDefendSound3 from "@/assets/sounds/player-defend/574043.opus"
-import PlayerParrySound from "@/assets/sounds/player-parry/er-parry.opus"
+import PlayerParrySound1 from "@/assets/sounds/player-parry/448009.opus"
+import PlayerParrySound2 from "@/assets/sounds/player-parry/591155.opus"
 import SwordIcon from "@/assets/sword.svg"
 
 export type PlayerItemName = "flask" | "shield" | "sword"
@@ -115,9 +121,45 @@ class Player extends Character<Player> {
     }
     flask_health_recover_pct: number = 0.65
 
+    animations = {
+        parry: multi_animation_def(
+            [
+                image_animation_def(PlayerParryStar1, (player: Player) => player.game.animations_root_el),
+                image_animation_def(PlayerParryStar2, (player: Player) => player.game.animations_root_el),
+                image_animation_def(PlayerParryStar3, (player: Player) => player.game.animations_root_el),
+                image_animation_def(PlayerParryStar4, (player: Player) => player.game.animations_root_el),
+            ],
+            {},
+            (player: Player, defs) => {
+                const enemy = player.game.enemy
+                const midpoint = {x: (player.pos.x + enemy.pos.x) / 2, y: (player.pos.y + enemy.pos.y) / 2}
+                const size = {x: 512, y: 512}
+                return defs.map((def, index) =>
+                    def(
+                        player,
+                        {position: midpoint, size, style: {mixBlendMode: "plus-lighter"}},
+                        (player, image_el) => {
+                            const rot_start = Math.random() * 365
+                            const rot_deg = 45 * (2 * (index % 2) - 1)
+                            return {
+                                update: (progress) => {
+                                    image_el.style.transform = `
+                                    translate(-50%, -50%)
+                                    rotate(${rot_start + rot_deg * progress ** 0.125}deg)
+                                    scale(${progress ** 0.25})
+                                `
+                                    image_el.style.opacity = (1 - progress ** 2).toString()
+                                },
+                            }
+                        },
+                    ),
+                )
+            },
+        ),
+    }
     sounds = {
         defend: [PlayerDefendSound1, PlayerDefendSound2, PlayerDefendSound3],
-        parry: [PlayerParrySound],
+        parry: [PlayerParrySound1, PlayerParrySound2],
         damage: [PlayerDamageSound1, PlayerDamageSound2],
         death: [PlayerDeathSound],
         cure: [PlayerCureSound1, PlayerCureSound2],
@@ -211,6 +253,7 @@ class Player extends Character<Player> {
             // slow down game effect
             this.game.timescale = 0.1
             setTimeout(() => (this.game.timescale = 1.0), 500)
+            this.game.play_animation(this.animations.parry(this), 100)
         }
         return do_parry
     }

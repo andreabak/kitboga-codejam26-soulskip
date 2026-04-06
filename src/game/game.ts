@@ -44,6 +44,7 @@ class VictoryScreen extends GameComponent {
 }
 
 const game_root_selector = "#game-root"
+const animations_root_selector = ".animations"
 const subs_root_selector = ".subs"
 
 export class Game extends Component<GameUpdateContext> {
@@ -59,6 +60,7 @@ export class Game extends Component<GameUpdateContext> {
 
     game_root_el: HTMLDivElement
 
+    animations_root_el: HTMLDivElement
     animations: Record<string, {start_ts: number; duration: number; handle: AnimationHandle}> = {}
 
     sound_effects: Record<string, HTMLAudioElement> = {}
@@ -92,6 +94,8 @@ export class Game extends Component<GameUpdateContext> {
 
         this.game_root_el = get_element(game_root_selector) as HTMLDivElement
         this.game_root_el.classList.toggle("hidden", false)
+
+        this.animations_root_el = get_element(animations_root_selector, this.game_root_el) as HTMLDivElement
 
         this.player = this.add_character(this.add_component(new Player(this)))
         this.enemy = this.add_character(this.add_component(new Enemy(this)))
