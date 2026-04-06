@@ -999,10 +999,11 @@ class Character extends Actor {
     }
     let health_damage = attack.damage;
     if (this.defending && !this.low_stamina) {
-      const stamina_consume = attack.damage * this.defend_stamina_consume_factor;
-      this.consume_stamina(stamina_consume, { context });
-      health_damage *= 1 - this.defend_damage_reduction;
-      this.game.pick_and_play_sound_effect(this.sounds.defend);
+      const defend = this.attack_defend({ attack, attacking_character, context });
+      if (typeof defend === "number") {
+        health_damage = defend;
+        this.game.pick_and_play_sound_effect(this.sounds.defend);
+      }
     }
     if (!this.invicible && health_damage >= 0) {
       this.consume_health(health_damage, { context });
@@ -1014,6 +1015,14 @@ class Character extends Actor {
       this.game.pick_and_play_sound_effect(attack.hit_sound);
     }
     return true;
+  }
+  attack_defend({
+    attack,
+    attacking_character,
+    context
+  }) {
+    this.consume_stamina(attack.damage * this.defend_stamina_consume_factor, { context });
+    return attack.damage * (1 - this.defend_damage_reduction);
   }
   attack_parry({
     attack,
@@ -1049,11 +1058,57 @@ const PlayerDefendSound3 = "" + new URL("assets/574043.opus", import.meta.url).h
 const PlayerParrySound1 = "" + new URL("assets/448009.opus", import.meta.url).href;
 const PlayerParrySound2 = "" + new URL("assets/591155.opus", import.meta.url).href;
 const SwordIcon = "" + new URL("assets/sword.svg", import.meta.url).href;
+const player_shield_selector = ".shield";
+class PlayerShield extends GameComponent {
+  constructor(game2, player) {
+    super(game2);
+    __publicField(this, "player");
+    __publicField(this, "shield_el");
+    __publicField(this, "player_distance", 20);
+    __publicField(this, "offset", { x: 6, y: 12 });
+    __publicField(this, "rotation_ref", 90 / 180 * Math.PI);
+    this.player = player;
+    this.shield_el = get_element(player_shield_selector, player.player_root_el);
+  }
+  _update(context) {
+    const rotation = this.player.direction;
+    const _transf_rot = rotation - this.rotation_ref;
+    const _transf_rot_sin = Math.sin(_transf_rot);
+    const _transf_rot_cos = Math.cos(_transf_rot);
+    const rot_pinch_limit = 30 / 180 * Math.PI;
+    const rotation_pinch_factor = Math.abs(_transf_rot_sin) ** 9 * Math.sign(_transf_rot_sin) * Math.sign(_transf_rot_cos);
+    const rotation_pinch = rot_pinch_limit * rotation_pinch_factor;
+    const pos = { x: Math.cos(rotation) * this.player_distance, y: Math.sin(rotation) * this.player_distance };
+    const shadow_dist = 4;
+    const shadow_pos = {
+      x: -pos.x / this.player_distance * shadow_dist,
+      y: -pos.y / this.player_distance * shadow_dist
+    };
+    this.shield_el.classList.toggle("hidden", !(this.game.state === "battle" && this.player.defending));
+    this.shield_el.style.top = `calc(50% + ${pos.y + this.offset.y}px)`;
+    this.shield_el.style.left = `calc(50% + ${pos.x + this.offset.x}px)`;
+    this.shield_el.style.transform = `
+            translate(-50%, -50%)
+            rotateX(45deg)
+            rotateY(${(rotation - this.rotation_ref - rotation_pinch) * 180 / Math.PI}deg)
+        `;
+    this.shield_el.style.filter = `
+            brightness(${1 - 0.3 * Math.abs(_transf_rot_sin) ** 0.5 - 0.5 * (-Math.sign(_transf_rot_cos) / 2 - 0.5)})
+            drop-shadow(${shadow_pos.x}px ${shadow_pos.y}px 8px rgba(0, 0, 0, 0.5))
+        `;
+  }
+  get pos_abs() {
+    const rect = this.shield_el.getBoundingClientRect();
+    const game_rect = this.game.rect;
+    return { x: rect.x - game_rect.x + rect.width / 2, y: rect.y - game_rect.y + rect.height / 2 };
+  }
+}
 const player_root_selector = ".player";
-class Player extends Character {
+const _Player = class _Player extends Character {
   constructor(game2) {
     super(game2);
     __publicField(this, "player_root_el");
+    __publicField(this, "shield");
     __publicField(this, "width", 48);
     __publicField(this, "height", 48);
     __publicField(this, "base_acceleration", 500);
@@ -1122,39 +1177,18 @@ class Player extends Character {
     });
     __publicField(this, "flask_health_recover_pct", 0.65);
     __publicField(this, "animations", {
-      parry: multi_animation_def(
-        [
-          image_animation_def(PlayerParryStar1, (player) => player.game.animations_root_el),
-          image_animation_def(PlayerParryStar2, (player) => player.game.animations_root_el),
-          image_animation_def(PlayerParryStar3, (player) => player.game.animations_root_el),
-          image_animation_def(PlayerParryStar4, (player) => player.game.animations_root_el)
-        ],
-        {},
-        (player, defs) => {
-          const enemy = player.game.enemy;
-          const midpoint = { x: (player.pos.x + enemy.pos.x) / 2, y: (player.pos.y + enemy.pos.y) / 2 };
-          const size = { x: 512, y: 512 };
-          return defs.map(
-            (def, index) => def(
-              player,
-              { position: midpoint, size, style: { mixBlendMode: "plus-lighter" } },
-              (player2, image_el) => {
-                const rot_start = Math.random() * 365;
-                const rot_deg = 45 * (2 * (index % 2) - 1);
-                return {
-                  update: (progress) => {
-                    image_el.style.transform = `
-                                    translate(-50%, -50%)
-                                    rotate(${rot_start + rot_deg * progress ** 0.125}deg)
-                                    scale(${progress ** 0.25})
-                                `;
-                    image_el.style.opacity = (1 - progress ** 2).toString();
-                  }
-                };
-              }
-            )
-          );
-        }
+      defend: _Player.stars_animation_def([PlayerParryStar1, PlayerParryStar2], (player) => ({
+        position: player.shield.pos_abs,
+        size: { x: 256, y: 256 },
+        style: { mixBlendMode: "plus-lighter", filter: "sepia(1) saturation(2) opacity(0.75)" }
+      })),
+      parry: _Player.stars_animation_def(
+        [PlayerParryStar1, PlayerParryStar2, PlayerParryStar3, PlayerParryStar4],
+        (player) => ({
+          position: player.shield.pos_abs,
+          size: { x: 512, y: 512 },
+          style: { mixBlendMode: "plus-lighter" }
+        })
       )
     });
     __publicField(this, "sounds", {
@@ -1165,6 +1199,7 @@ class Player extends Character {
       cure: [PlayerCureSound1, PlayerCureSound2]
     });
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
+    this.shield = this.add_component(new PlayerShield(this.game, this));
     this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
     this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this));
     this.game.game_root_el.addEventListener("mouseup", this._on_mouseup.bind(this));
@@ -1225,6 +1260,21 @@ class Player extends Character {
     super._attack_start(attack, { context });
     this.player_root_el.style.setProperty("--attack-scale", attack.scale.toString());
   }
+  attack_defend({
+    attack,
+    attacking_character,
+    context
+  }) {
+    const defend = super.attack_defend({
+      attack,
+      attacking_character,
+      context
+    });
+    if (typeof defend === "number") {
+      this.game.play_animation(this.animations.defend(this), 250);
+    }
+    return defend;
+  }
   attack_parry({
     attack,
     attacking_character,
@@ -1256,7 +1306,31 @@ class Player extends Character {
       }
     }
   }
-}
+};
+__publicField(_Player, "stars_animation_def", (stars_imgs, params) => multi_animation_def(
+  stars_imgs.map((img) => image_animation_def(img, (player) => player.game.animations_root_el)),
+  {},
+  (player, defs) => {
+    const _params = params(player);
+    return defs.map(
+      (def, index) => def(player, _params, (player2, image_el) => {
+        const rot_start = Math.random() * 365;
+        const rot_deg = 45 * (2 * (index % 2) - 1);
+        return {
+          update: (progress) => {
+            image_el.style.transform = `
+                                    translate(-50%, -50%)
+                                    rotate(${rot_start + rot_deg * progress ** 0.125}deg)
+                                    scale(${progress ** 0.25})
+                                `;
+            image_el.style.opacity = (1 - progress ** 2).toString();
+          }
+        };
+      })
+    );
+  }
+));
+let Player = _Player;
 const AttackSwing = "" + new URL("assets/attack-swing2.png", import.meta.url).href;
 const VineLongImage1 = "" + new URL("assets/vine_long1.png", import.meta.url).href;
 const VineLongImage2 = "" + new URL("assets/vine_long2.png", import.meta.url).href;
@@ -1760,6 +1834,7 @@ class VictoryScreen extends GameComponent {
   }
 }
 const game_root_selector = "#game-root";
+const attacks_indicators_selector = ".attack-indicator, .defend-indicator";
 const animations_root_selector = ".animations";
 const subs_root_selector = ".subs";
 class Game extends Component {
@@ -1786,6 +1861,7 @@ class Game extends Component {
     __publicField(this, "debug_mode", false);
     __publicField(this, "debug_enemy_stamina", true);
     __publicField(this, "debug_hitboxes", true);
+    __publicField(this, "debug_attacks", true);
     __publicField(this, "debug_noreload", true);
     __publicField(this, "sounds", {
       battle_music_intro: [BattleMusicIntroSound],
@@ -1890,6 +1966,7 @@ class Game extends Component {
         0.5 * (context.timedelta ?? 0) / 1e3
       );
     }
+    this.game_root_el.querySelectorAll(attacks_indicators_selector).forEach((e) => e.classList.toggle("hidden", !(this.debug_mode && this.debug_attacks)));
     this._update_animations(context);
   }
   play_animation(handle, duration) {

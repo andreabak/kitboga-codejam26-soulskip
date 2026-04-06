@@ -581,10 +581,11 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
         }
         let health_damage = attack.damage
         if (this.defending && !this.low_stamina) {
-            const stamina_consume = attack.damage * this.defend_stamina_consume_factor
-            this.consume_stamina(stamina_consume, {context})
-            health_damage *= 1.0 - this.defend_damage_reduction
-            this.game.pick_and_play_sound_effect(this.sounds.defend)
+            const defend = this.attack_defend({attack, attacking_character, context})
+            if (typeof defend === "number") {
+                health_damage = defend
+                this.game.pick_and_play_sound_effect(this.sounds.defend)
+            }
         }
         if (!this.invicible && health_damage >= 0) {
             this.consume_health(health_damage, {context})
@@ -598,6 +599,18 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
         return true
     }
 
+    attack_defend({
+        attack,
+        attacking_character,
+        context,
+    }: {
+        attack: Attack<C>
+        attacking_character: Character
+        context: GameUpdateContext
+    }): number | false {
+        this.consume_stamina(attack.damage * this.defend_stamina_consume_factor, {context})
+        return attack.damage * (1.0 - this.defend_damage_reduction)
+    }
     attack_parry({
         attack,
         attacking_character,

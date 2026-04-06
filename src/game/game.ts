@@ -44,6 +44,7 @@ class VictoryScreen extends GameComponent {
 }
 
 const game_root_selector = "#game-root"
+const attacks_indicators_selector = ".attack-indicator, .defend-indicator"
 const animations_root_selector = ".animations"
 const subs_root_selector = ".subs"
 
@@ -79,6 +80,7 @@ export class Game extends Component<GameUpdateContext> {
     debug_mode: boolean = false
     debug_enemy_stamina: boolean = true
     debug_hitboxes: boolean = true
+    debug_attacks: boolean = true
     debug_noreload: boolean = true
 
     sounds = {
@@ -201,6 +203,9 @@ export class Game extends Component<GameUpdateContext> {
                 (0.5 * (context.timedelta ?? 0)) / 1000,
             )
         }
+        this.game_root_el
+            .querySelectorAll(attacks_indicators_selector)
+            .forEach((e) => (e as HTMLElement).classList.toggle("hidden", !(this.debug_mode && this.debug_attacks)))
         this._update_animations(context)
     }
 

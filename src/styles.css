@@ -61,6 +61,25 @@
 .player.hurt .pointer {
     filter: contrast(0.5) sepia(1) hue-rotate(-30deg) saturate(4);
 }
+.player .shield {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    opacity: 1;
+    transition:
+        opacity 0.1s,
+        width 0.1s,
+        height 0.1s;
+}
+.player .shield.hidden {
+    display: initial !important;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
 
 .enemy:not(.attacking) > .attack-indicator,
 .player:not(.attacking) > .attack-indicator {
@@ -71,8 +90,8 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 100%;
-    height: 100%;
+    width: 128px;
+    height: 128px;
     transform: translate(-50%, -50%) scale(var(--attack-scale));
     border-radius: 50%;
     background-color: red;
@@ -90,11 +109,11 @@
     opacity: 0.25;
 }
 
-.enemy:not(.defending) > .defend-animation,
-.player:not(.defending) > .defend-animation {
+.enemy:not(.defending) > .defend-indicator,
+.player:not(.defending) > .defend-indicator {
     display: none;
 }
-.defend-animation {
+.defend-indicator {
     position: absolute;
     width: 56px;
     height: 56px;

@@ -1,7 +1,7 @@
-import {get_element} from "@/utils"
+import {get_element, Point} from "@/utils"
 
-import {image_animation_def, multi_animation_def} from "../animations"
-import {GameUpdateContext} from "../core"
+import {image_animation_def, ImageAnimationParams, multi_animation_def} from "../animations"
+import {GameComponent, GameUpdateContext} from "../core"
 import type {Game} from "../game"
 import {Attack, ATTACK_PHASES_SEQUENCE, attack_swing_animation_def, AttackDef, Character, HitBox} from "./core"
 
@@ -44,10 +44,67 @@ export type PlayerItemEquipment = PlayerItemBase & {
 }
 export type PlayerItem = PlayerItemConsumable | PlayerItemEquipment
 
+const player_shield_selector = ".shield"
+
+class PlayerShield extends GameComponent {
+    player: Player
+    shield_el: HTMLElement
+
+    player_distance = 20
+    offset: Point = {x: 6, y: 12}
+    rotation_ref = (90 / 180) * Math.PI
+
+    constructor(game: Game, player: Player) {
+        super(game)
+
+        this.player = player
+        this.shield_el = get_element(player_shield_selector, player.player_root_el) as HTMLElement
+    }
+
+    _update(context: GameUpdateContext) {
+        const rotation = this.player.direction
+        const _transf_rot = rotation - this.rotation_ref
+        const _transf_rot_sin = Math.sin(_transf_rot)
+        const _transf_rot_cos = Math.cos(_transf_rot)
+        const rot_pinch_limit = (30 / 180) * Math.PI
+        const rotation_pinch_factor =
+            Math.abs(_transf_rot_sin) ** 9 * Math.sign(_transf_rot_sin) * Math.sign(_transf_rot_cos)
+        const rotation_pinch = rot_pinch_limit * rotation_pinch_factor
+        const pos = {x: Math.cos(rotation) * this.player_distance, y: Math.sin(rotation) * this.player_distance}
+        const shadow_dist = 4
+        const shadow_pos = {
+            x: (-pos.x / this.player_distance) * shadow_dist,
+            y: (-pos.y / this.player_distance) * shadow_dist,
+        }
+
+        this.shield_el.classList.toggle("hidden", !(this.game.state === "battle" && this.player.defending))
+
+        this.shield_el.style.top = `calc(50% + ${pos.y + this.offset.y}px)`
+        this.shield_el.style.left = `calc(50% + ${pos.x + this.offset.x}px)`
+        this.shield_el.style.transform = `
+            translate(-50%, -50%)
+            rotateX(45deg)
+            rotateY(${((rotation - this.rotation_ref - rotation_pinch) * 180) / Math.PI}deg)
+        `
+        this.shield_el.style.filter = `
+            brightness(${1 - 0.3 * Math.abs(_transf_rot_sin) ** 0.5 - 0.5 * (-Math.sign(_transf_rot_cos) / 2 - 0.5)})
+            drop-shadow(${shadow_pos.x}px ${shadow_pos.y}px 8px rgba(0, 0, 0, 0.5))
+        `
+    }
+
+    get pos_abs(): Point {
+        const rect = this.shield_el.getBoundingClientRect()
+        const game_rect = this.game.rect
+        return {x: rect.x - game_rect.x + rect.width / 2, y: rect.y - game_rect.y + rect.height / 2}
+    }
+}
+
 const player_root_selector = ".player"
 
 class Player extends Character<Player> {
     player_root_el: HTMLDivElement
+
+    shield: PlayerShield
 
     width: number = 48
     height: number = 48
@@ -121,40 +178,43 @@ class Player extends Character<Player> {
     }
     flask_health_recover_pct: number = 0.65
 
-    animations = {
-        parry: multi_animation_def(
-            [
-                image_animation_def(PlayerParryStar1, (player: Player) => player.game.animations_root_el),
-                image_animation_def(PlayerParryStar2, (player: Player) => player.game.animations_root_el),
-                image_animation_def(PlayerParryStar3, (player: Player) => player.game.animations_root_el),
-                image_animation_def(PlayerParryStar4, (player: Player) => player.game.animations_root_el),
-            ],
+    static stars_animation_def = (stars_imgs: Array<string>, params: (player: Player) => ImageAnimationParams) =>
+        multi_animation_def(
+            stars_imgs.map((img) => image_animation_def(img, (player: Player) => player.game.animations_root_el)),
             {},
             (player: Player, defs) => {
-                const enemy = player.game.enemy
-                const midpoint = {x: (player.pos.x + enemy.pos.x) / 2, y: (player.pos.y + enemy.pos.y) / 2}
-                const size = {x: 512, y: 512}
+                const _params = params(player)
                 return defs.map((def, index) =>
-                    def(
-                        player,
-                        {position: midpoint, size, style: {mixBlendMode: "plus-lighter"}},
-                        (player, image_el) => {
-                            const rot_start = Math.random() * 365
-                            const rot_deg = 45 * (2 * (index % 2) - 1)
-                            return {
-                                update: (progress) => {
-                                    image_el.style.transform = `
+                    def(player, _params, (player, image_el) => {
+                        const rot_start = Math.random() * 365
+                        const rot_deg = 45 * (2 * (index % 2) - 1)
+                        return {
+                            update: (progress) => {
+                                image_el.style.transform = `
                                     translate(-50%, -50%)
                                     rotate(${rot_start + rot_deg * progress ** 0.125}deg)
                                     scale(${progress ** 0.25})
                                 `
-                                    image_el.style.opacity = (1 - progress ** 2).toString()
-                                },
-                            }
-                        },
-                    ),
+                                image_el.style.opacity = (1 - progress ** 2).toString()
+                            },
+                        }
+                    }),
                 )
             },
+        )
+    animations = {
+        defend: Player.stars_animation_def([PlayerParryStar1, PlayerParryStar2], (player) => ({
+            position: player.shield.pos_abs,
+            size: {x: 256, y: 256},
+            style: {mixBlendMode: "plus-lighter", filter: "sepia(1) saturation(2) opacity(0.75)"},
+        })),
+        parry: Player.stars_animation_def(
+            [PlayerParryStar1, PlayerParryStar2, PlayerParryStar3, PlayerParryStar4],
+            (player) => ({
+                position: player.shield.pos_abs,
+                size: {x: 512, y: 512},
+                style: {mixBlendMode: "plus-lighter"},
+            }),
         ),
     }
     sounds = {
@@ -169,6 +229,8 @@ class Player extends Character<Player> {
         super(game)
 
         this.player_root_el = get_element(player_root_selector, this.game.game_root_el) as HTMLDivElement
+
+        this.shield = this.add_component(new PlayerShield(this.game, this))
 
         this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this))
         this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this))
@@ -238,6 +300,25 @@ class Player extends Character<Player> {
     _attack_start(attack: Attack<Player>, {context}: {context: GameUpdateContext}) {
         super._attack_start(attack, {context})
         this.player_root_el.style.setProperty("--attack-scale", attack.scale.toString())
+    }
+    attack_defend({
+        attack,
+        attacking_character,
+        context,
+    }: {
+        attack: Attack<Player>
+        attacking_character: Character
+        context: GameUpdateContext
+    }): number | false {
+        const defend = super.attack_defend({
+            attack,
+            attacking_character,
+            context,
+        })
+        if (typeof defend === "number") {
+            this.game.play_animation(this.animations.defend(this), 250)
+        }
+        return defend
     }
     attack_parry({
         attack,
