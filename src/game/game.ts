@@ -1,3 +1,4 @@
+import {config} from "@/config"
 import {send_shell_request, ShellEvent} from "@/shell"
 import {aabb_overlap, fade_audio, get_element, Point, random_pick, sat_overlap, shape_bbox, smooth_ema} from "@/utils"
 
@@ -43,6 +44,8 @@ class VictoryScreen extends GameComponent {
     }
 }
 
+const game_cfg = config.game
+
 const game_root_selector = "#game-root"
 const attacks_indicators_selector = ".attack-indicator, .defend-indicator"
 const animations_root_selector = ".animations"
@@ -77,11 +80,11 @@ export class Game extends Component<GameUpdateContext> {
 
     subs_root_el: HTMLDivElement
 
-    debug_mode: boolean = false
-    debug_enemy_stamina: boolean = true
-    debug_hitboxes: boolean = true
-    debug_attacks: boolean = true
-    debug_noreload: boolean = true
+    debug_mode: boolean = game_cfg.debug_mode
+    debug_enemy_stamina: boolean = game_cfg.debug_enemy_stamina
+    debug_hitboxes: boolean = game_cfg.debug_hitboxes
+    debug_attacks: boolean = game_cfg.debug_attacks
+    debug_noreload: boolean = game_cfg.debug_noreload
 
     sounds = {
         battle_music_intro: [BattleMusicIntroSound],

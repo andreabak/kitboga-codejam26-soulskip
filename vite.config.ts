@@ -21,8 +21,11 @@ export default defineConfig(({mode}) => {
                 input: path.resolve(__dirname, "src", "submission.html"),
                 output: {
                     entryFileNames: "[name].js",
-                    chunkFileNames: "[name]-[hash].js",
-                    assetFileNames: "assets/[name][extname]"
+                    chunkFileNames: "[name].js",
+                    assetFileNames: "assets/[name][extname]",
+                    manualChunks: {
+                        "config": ["@/config"]
+                    }
                 },
             },
         },

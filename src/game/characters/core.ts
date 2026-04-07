@@ -1,3 +1,4 @@
+import {CharacterBaseConfig, config, MergedCharacterConfig} from "@/config"
 import {
     aabb_overlap,
     dist_pt,
@@ -214,57 +215,59 @@ export type CharacterSounds = {
     death?: Array<string> | null
 } & Record<string, Array<string> | null>
 
+const base_cfg = config.characters.defaults
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export abstract class Character<C extends Character<C> = any> extends Actor {
     private _follower: TargetFollower
-    base_acceleration: number = 250
-    base_max_vel: number = 100
+    base_acceleration: number = base_cfg.base_acceleration
+    base_max_vel: number = base_cfg.base_max_vel
+    slowing_distance: number = base_cfg.slowing_distance
 
     abstract width: number
     abstract height: number
-    origin: Point = {x: 24, y: 24} // TODO: unused
     rotates: boolean = false
 
-    health: number = 100.0
-    max_health: number = 100.0 // TODO: sanity check
+    health: number = base_cfg.initial_health ?? base_cfg.max_health
+    max_health: number = base_cfg.max_health // TODO: sanity check
     last_damage_ts: number = -Infinity
-    invicible: boolean = false
+    invicible: boolean = base_cfg.invicible
 
-    stamina: number = 100.0
-    max_stamina: number = 100.0 // TODO: sanity check
-    stamina_movement_consume_factor: number = 8.0
-    stamina_movement_vel_min: number = 40.0
-    stamina_recover: number = 100.0
-    stamina_recover_delay: number = 1000
+    stamina: number = base_cfg.initial_stamina ?? base_cfg.max_stamina
+    max_stamina: number = base_cfg.max_stamina // TODO: sanity check
+    stamina_movement_consume_factor: number = base_cfg.stamina_movement_consume_factor
+    stamina_movement_vel_min: number = base_cfg.stamina_movement_vel_min
+    stamina_recover: number = base_cfg.stamina_recover
+    stamina_recover_delay: number = base_cfg.stamina_recover_delay
     last_stamina_consume_ts: number = -Infinity
-    low_stamina_max_vel: number = 5
-    low_stamina_accel: number = 100
+    low_stamina_max_vel: number = base_cfg.low_stamina_max_vel
+    low_stamina_accel: number = base_cfg.low_stamina_accel
     low_stamina: boolean = false
-    low_stamina_enter_threshold: number = 1 // TODO: sanity check
-    low_stamina_exit_threshold: number = 100 // TODO: sanity check
+    low_stamina_enter_threshold: number = base_cfg.low_stamina_enter_threshold // TODO: sanity check
+    low_stamina_exit_threshold: number = base_cfg.low_stamina_exit_threshold // TODO: sanity check
 
     abstract hurtbox_def: HitBox
 
     attack_requested: boolean = false
     current_attack: Attack<C> | null = null
-    attack_stamina_consume_multiplier: number = 1.0
+    attack_stamina_consume_multiplier: number = base_cfg.attack_stamina_consume_multiplier
     last_attack_hits: Array<Character> = []
     abstract attacks_defs: Record<string, AttackDef<C>>
 
     defend_requested: boolean = false
     defend_request_ts: number = -Infinity
-    defend_damage_reduction: number = 0.75
-    defend_stamina_consume_factor: number = 0.3
-    defend_acceleration: number = 50
-    defend_max_vel: number = 5
+    defend_damage_reduction: number = base_cfg.defend_damage_reduction
+    defend_stamina_consume_factor: number = base_cfg.defend_stamina_consume_factor
+    defend_acceleration: number = base_cfg.defend_acceleration
+    defend_max_vel: number = base_cfg.defend_max_vel
     defending: boolean = false
 
-    parry_stamina_consume: number = 30
-    parry_enemy_stamina_consume_factor: number = 0.1
+    parry_stamina_consume: number = base_cfg.parry_stamina_consume
+    parry_enemy_stamina_consume_factor: number = base_cfg.parry_enemy_stamina_consume_factor
 
     last_cure_ts: number = -Infinity
-    cure_duration: number = 500
-    curing_max_vel: number = 2.0
+    cure_duration: number = base_cfg.cure_duration
+    curing_max_vel: number = base_cfg.curing_max_vel
     curing: boolean = false
 
     animations: Record<string, CharacterAnimationDefTypes<C>> = {}
@@ -272,17 +275,40 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
 
     constructor(game: Game) {
         super(game)
+
+        this.apply_config(base_cfg)
+
         this._follower = new TargetFollower(
             {x: 0, y: 0},
             {x: 0, y: 0},
             {
                 acceleration: this.base_acceleration,
                 max_vel: this.base_max_vel,
-                slowing_distance: 25,
+                slowing_distance: this.slowing_distance,
                 vel_max_rotation: ((20 * 360) / 180) * Math.PI,
                 dir_max_rotation: ((2 * 360) / 180) * Math.PI,
             },
         )
+    }
+
+    apply_config(cfg: CharacterBaseConfig | MergedCharacterConfig<C, string>) {
+        const {attacks_defs: attacks_defs_cfg, ...restcfg} = {attacks_defs: undefined, ...cfg}
+        Object.assign(this, restcfg)
+        this.health = cfg.initial_health ?? cfg.max_health
+        this.stamina = cfg.initial_stamina ?? cfg.max_stamina
+        if (attacks_defs_cfg) {
+            for (const [attack_name, attack_cfg] of Object.entries(attacks_defs_cfg)) {
+                if (attack_cfg == null) continue
+                const attack_def = this.attacks_defs[attack_name]
+                const {phases: phases_cfg, ...restattackcfg} = attack_cfg
+                Object.assign(attack_def, restattackcfg)
+                for (const [phase_name, phase_cfg] of Object.entries(phases_cfg)) {
+                    if (phase_cfg == null) continue
+                    const phase_def = attack_def.phases[phase_name as AttackPhases]
+                    Object.assign(phase_def, phase_cfg)
+                }
+            }
+        }
     }
 
     preload() {

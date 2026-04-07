@@ -1,3 +1,4 @@
+import {config} from "@/config"
 import {get_element, Point} from "@/utils"
 
 import {image_animation_def, ImageAnimationParams, multi_animation_def} from "../animations"
@@ -8,6 +9,7 @@ import {
     ATTACK_PHASES_SEQUENCE,
     attack_swing_animation_def,
     AttackDef,
+    AttackImageAnimationDef,
     blood_splat_animation_def,
     Character,
     HitBox,
@@ -107,6 +109,8 @@ class PlayerShield extends GameComponent {
     }
 }
 
+const player_cfg = {...config.characters.defaults, ...config.characters.player}
+
 const player_root_selector = ".player"
 
 class Player extends Character<Player> {
@@ -117,28 +121,9 @@ class Player extends Character<Player> {
     width: number = 48
     height: number = 48
 
-    base_acceleration: number = 500
-    base_max_vel: number = 100
-
-    health: number = 1850.0
-    max_health: number = 1850.0
-
-    stamina: number = 200.0
-    max_stamina: number = 200.0
-    stamina_movement_consume_factor: number = 5.0
-    stamina_movement_vel_min: number = 60.0
-    stamina_recover: number = 100.0
-    stamina_recover_delay: number = 500
-    last_stamina_consume_ts: number = -Infinity
-    low_stamina_max_vel: number = 1
-    low_stamina_accel: number = 100
-    low_stamina: boolean = false
-    low_stamina_enter_threshold: number = 1 // TODO: sanity check
-    low_stamina_exit_threshold: number = 200 // TODO: sanity check
-
     hurtbox_def: HitBox = {shape: {x: 0, y: 0, width: 0.75, height: 1}, rotation_ref: 0}
 
-    attacks_defs: Record<string, AttackDef<Player>> = {
+    attacks_defs = {
         fast: {
             phases: {
                 anticipation: {
@@ -153,7 +138,8 @@ class Player extends Character<Player> {
                         base_color: [255, 255, 255],
                         ref_angle_deg: -30,
                         swing_angle_deg: 45,
-                    }),
+                        // eslint-disable-next-line
+                    }) as AttackImageAnimationDef<any>,
                 },
                 recovery: {duration: 100, acceleration: 50},
             },
@@ -184,7 +170,7 @@ class Player extends Character<Player> {
         shield: {name: "shield", icon_src: ShieldIcon, consumable: false},
         sword: {name: "sword", icon_src: SwordIcon, consumable: false},
     }
-    flask_health_recover_pct: number = 0.65
+    flask_health_recover_pct: number = player_cfg.flask_health_recover_pct
 
     static stars_animation_def = (stars_imgs: Array<string>, params: (player: Player) => ImageAnimationParams) =>
         multi_animation_def(
@@ -238,6 +224,8 @@ class Player extends Character<Player> {
 
     constructor(game: Game) {
         super(game)
+
+        this.apply_config(player_cfg)
 
         this.player_root_el = get_element(player_root_selector, this.game.game_root_el) as HTMLDivElement
 

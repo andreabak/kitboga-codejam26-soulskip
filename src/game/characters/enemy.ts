@@ -1,3 +1,4 @@
+import {config} from "@/config"
 import {dist, get_element, Point, random_pick, rect_center_dist, shape_bbox, TargetFollower} from "@/utils"
 
 import {
@@ -156,6 +157,8 @@ export class EnemyWeapon extends GameComponent {
     }
 }
 
+const enemy_cfg = {...config.characters.defaults, ...config.characters.enemy}
+
 const enemy_root_selector = ".enemy"
 const skip_btn_selector = ".skip-btn"
 const vines_root_selector = ".vines"
@@ -170,20 +173,7 @@ export class Enemy extends Character<Enemy> {
     width: number
     height: number
 
-    base_acceleration: number = 10
-    base_max_vel: number = 2
-
-    health: number = 10000.0
-    max_health: number = 10000.0
-
     hurtbox_def: HitBox = {shape: {x: -1, y: -1, width: 2, height: 2}, rotation_ref: 0}
-
-    max_stamina: number = 150.0 // TODO: sanity check
-    stamina_recover: number = 25
-    stamina_recover_delay: number = 2000
-    low_stamina_max_vel: number = 0
-    low_stamina_enter_threshold: number = 1 // TODO: sanity check
-    low_stamina_exit_threshold: number = 150 // TODO: sanity check
 
     attacks_defs = {
         slow: {
@@ -297,11 +287,8 @@ export class Enemy extends Character<Enemy> {
             hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3],
         },
     }
-    attacks_chains_defs: Record<string, Array<keyof typeof Enemy.prototype.attacks_defs>> = {
-        fast_flurry: ["fast", "fast", "fast"],
-        fast_slow_flurry: ["fast", "fast", "slow"],
-        slow_fast_duplet: ["slow", "fast"],
-    }
+    attacks_chains_defs: Record<string, Array<keyof typeof Enemy.prototype.attacks_defs>> =
+        enemy_cfg.attacks_chains_defs
     current_attack_chain: {
         def: (typeof Enemy.prototype.attacks_chains_defs)[keyof typeof Enemy.prototype.attacks_chains_defs]
         index: number
@@ -311,10 +298,10 @@ export class Enemy extends Character<Enemy> {
     // TODO: AI
     private _phase: "rest" | "fight-start" | "fight" | "defeat" = "rest"
     phases_ts: Partial<Record<typeof Enemy.prototype._phase, number>> = {}
-    follow_dist_offset: number = 30
-    next_attack_ts: number = 1e10
-    auto_attack_dist: number = 400
-    auto_attack_interval: [number, number] = [1500, 3000]
+    follow_dist_offset: number = enemy_cfg.follow_dist_offset
+    next_attack_ts: number = Infinity
+    auto_attack_dist: number = enemy_cfg.auto_attack_dist
+    auto_attack_interval: [number, number] = enemy_cfg.auto_attack_interval
 
     animations = {
         grow_vines: multi_animation_def(
@@ -405,6 +392,8 @@ export class Enemy extends Character<Enemy> {
     constructor(game: Game) {
         super(game)
 
+        this.apply_config(enemy_cfg)
+
         this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el) as HTMLDivElement
         this.skip_btn_el = get_element(skip_btn_selector, this.enemy_root_el) as HTMLDivElement
         this.vines_root_el = get_element(vines_root_selector, this.enemy_root_el) as HTMLDivElement
@@ -463,14 +452,14 @@ export class Enemy extends Character<Enemy> {
                 this.base_acceleration = 0.033
                 if (this.game.changed_state) {
                     this.game.pick_and_play_sound_effect(this.sounds.intro)
-                    this.game.play_animation(this.animations.grow_vines(this), 3000)
+                    this.game.play_animation(this.animations.grow_vines(this), 5000)
                     this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
                     this.game.play_animation({end: () => this.weapon.weapon_el.classList.remove("hidden")}, 5000)
                 }
                 if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 11000) {
                     this.phase = "fight"
                     this.invicible = false
-                    this.base_acceleration = 10
+                    this.base_acceleration = enemy_cfg.base_acceleration
                 }
             } else if (this.phase === "fight") {
                 const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y)

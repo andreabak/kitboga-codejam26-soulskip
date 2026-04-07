@@ -206,13 +206,13 @@ export function interpolate_anim_def<C extends Component<object>>(
     start: InterpolateState | ((component: C) => InterpolateState),
     target: InterpolateState | ((component: C) => InterpolateState),
     set: (component: C, new_state: InterpolateState) => void,
-    {shortest_angle, ease_fn}?: Omit<InterpolateAnimationParams, "duration">,
+    params?: Omit<InterpolateAnimationParams, "duration">,
 ): AnimationDef<C>
 export function interpolate_anim_def<C extends Component<object>>(
     start: InterpolateState | ((component: C) => InterpolateState),
     target: InterpolateState | ((component: C) => InterpolateState),
     set: (component: C, new_state: InterpolateState) => void,
-    {duration, shortest_angle, ease_fn}: InterpolateAnimationParams & {duration: number},
+    params: InterpolateAnimationParams & {duration: number},
 ): TimedAnimationDef<C>
 export function interpolate_anim_def<C extends Component<object>>(
     start: InterpolateState | ((component: C) => InterpolateState),

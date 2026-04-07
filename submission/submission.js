@@ -1,6 +1,7 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+import { c as config } from "./config.js";
 class Component {
   constructor() {
     __publicField(this, "_children", []);
@@ -1002,64 +1003,84 @@ function blood_splat_animation_def(params) {
   );
 }
 const ATTACK_PHASES_SEQUENCE = ["anticipation", "hit", "recovery"];
+const base_cfg = config.characters.defaults;
 class Character extends Actor {
   constructor(game2) {
     super(game2);
     __publicField(this, "_follower");
-    __publicField(this, "base_acceleration", 250);
-    __publicField(this, "base_max_vel", 100);
-    __publicField(this, "origin", { x: 24, y: 24 });
-    // TODO: unused
+    __publicField(this, "base_acceleration", base_cfg.base_acceleration);
+    __publicField(this, "base_max_vel", base_cfg.base_max_vel);
+    __publicField(this, "slowing_distance", base_cfg.slowing_distance);
     __publicField(this, "rotates", false);
-    __publicField(this, "health", 100);
-    __publicField(this, "max_health", 100);
+    __publicField(this, "health", base_cfg.initial_health ?? base_cfg.max_health);
+    __publicField(this, "max_health", base_cfg.max_health);
     // TODO: sanity check
     __publicField(this, "last_damage_ts", -Infinity);
-    __publicField(this, "invicible", false);
-    __publicField(this, "stamina", 100);
-    __publicField(this, "max_stamina", 100);
+    __publicField(this, "invicible", base_cfg.invicible);
+    __publicField(this, "stamina", base_cfg.initial_stamina ?? base_cfg.max_stamina);
+    __publicField(this, "max_stamina", base_cfg.max_stamina);
     // TODO: sanity check
-    __publicField(this, "stamina_movement_consume_factor", 8);
-    __publicField(this, "stamina_movement_vel_min", 40);
-    __publicField(this, "stamina_recover", 100);
-    __publicField(this, "stamina_recover_delay", 1e3);
+    __publicField(this, "stamina_movement_consume_factor", base_cfg.stamina_movement_consume_factor);
+    __publicField(this, "stamina_movement_vel_min", base_cfg.stamina_movement_vel_min);
+    __publicField(this, "stamina_recover", base_cfg.stamina_recover);
+    __publicField(this, "stamina_recover_delay", base_cfg.stamina_recover_delay);
     __publicField(this, "last_stamina_consume_ts", -Infinity);
-    __publicField(this, "low_stamina_max_vel", 5);
-    __publicField(this, "low_stamina_accel", 100);
+    __publicField(this, "low_stamina_max_vel", base_cfg.low_stamina_max_vel);
+    __publicField(this, "low_stamina_accel", base_cfg.low_stamina_accel);
     __publicField(this, "low_stamina", false);
-    __publicField(this, "low_stamina_enter_threshold", 1);
+    __publicField(this, "low_stamina_enter_threshold", base_cfg.low_stamina_enter_threshold);
     // TODO: sanity check
-    __publicField(this, "low_stamina_exit_threshold", 100);
+    __publicField(this, "low_stamina_exit_threshold", base_cfg.low_stamina_exit_threshold);
     __publicField(this, "attack_requested", false);
     __publicField(this, "current_attack", null);
-    __publicField(this, "attack_stamina_consume_multiplier", 1);
+    __publicField(this, "attack_stamina_consume_multiplier", base_cfg.attack_stamina_consume_multiplier);
     __publicField(this, "last_attack_hits", []);
     __publicField(this, "defend_requested", false);
     __publicField(this, "defend_request_ts", -Infinity);
-    __publicField(this, "defend_damage_reduction", 0.75);
-    __publicField(this, "defend_stamina_consume_factor", 0.3);
-    __publicField(this, "defend_acceleration", 50);
-    __publicField(this, "defend_max_vel", 5);
+    __publicField(this, "defend_damage_reduction", base_cfg.defend_damage_reduction);
+    __publicField(this, "defend_stamina_consume_factor", base_cfg.defend_stamina_consume_factor);
+    __publicField(this, "defend_acceleration", base_cfg.defend_acceleration);
+    __publicField(this, "defend_max_vel", base_cfg.defend_max_vel);
     __publicField(this, "defending", false);
-    __publicField(this, "parry_stamina_consume", 30);
-    __publicField(this, "parry_enemy_stamina_consume_factor", 0.1);
+    __publicField(this, "parry_stamina_consume", base_cfg.parry_stamina_consume);
+    __publicField(this, "parry_enemy_stamina_consume_factor", base_cfg.parry_enemy_stamina_consume_factor);
     __publicField(this, "last_cure_ts", -Infinity);
-    __publicField(this, "cure_duration", 500);
-    __publicField(this, "curing_max_vel", 2);
+    __publicField(this, "cure_duration", base_cfg.cure_duration);
+    __publicField(this, "curing_max_vel", base_cfg.curing_max_vel);
     __publicField(this, "curing", false);
     __publicField(this, "animations", {});
     __publicField(this, "sounds", {});
+    this.apply_config(base_cfg);
     this._follower = new TargetFollower(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
       {
         acceleration: this.base_acceleration,
         max_vel: this.base_max_vel,
-        slowing_distance: 25,
+        slowing_distance: this.slowing_distance,
         vel_max_rotation: 20 * 360 / 180 * Math.PI,
         dir_max_rotation: 2 * 360 / 180 * Math.PI
       }
     );
+  }
+  apply_config(cfg) {
+    const { attacks_defs: attacks_defs_cfg, ...restcfg } = { attacks_defs: void 0, ...cfg };
+    Object.assign(this, restcfg);
+    this.health = cfg.initial_health ?? cfg.max_health;
+    this.stamina = cfg.initial_stamina ?? cfg.max_stamina;
+    if (attacks_defs_cfg) {
+      for (const [attack_name, attack_cfg] of Object.entries(attacks_defs_cfg)) {
+        if (attack_cfg == null) continue;
+        const attack_def = this.attacks_defs[attack_name];
+        const { phases: phases_cfg, ...restattackcfg } = attack_cfg;
+        Object.assign(attack_def, restattackcfg);
+        for (const [phase_name, phase_cfg] of Object.entries(phases_cfg)) {
+          if (phase_cfg == null) continue;
+          const phase_def = attack_def.phases[phase_name];
+          Object.assign(phase_def, phase_cfg);
+        }
+      }
+    }
   }
   preload() {
     super.preload();
@@ -1466,6 +1487,7 @@ class PlayerShield extends GameComponent {
     return { x: rect.x - game_rect.x + rect.width / 2, y: rect.y - game_rect.y + rect.height / 2 };
   }
 }
+const player_cfg = { ...config.characters.defaults, ...config.characters.player };
 const player_root_selector = ".player";
 const _Player = class _Player extends Character {
   constructor(game2) {
@@ -1474,24 +1496,6 @@ const _Player = class _Player extends Character {
     __publicField(this, "shield");
     __publicField(this, "width", 48);
     __publicField(this, "height", 48);
-    __publicField(this, "base_acceleration", 500);
-    __publicField(this, "base_max_vel", 100);
-    __publicField(this, "health", 1850);
-    __publicField(this, "max_health", 1850);
-    __publicField(this, "stamina", 200);
-    __publicField(this, "max_stamina", 200);
-    __publicField(this, "stamina_movement_consume_factor", 5);
-    __publicField(this, "stamina_movement_vel_min", 60);
-    __publicField(this, "stamina_recover", 100);
-    __publicField(this, "stamina_recover_delay", 500);
-    __publicField(this, "last_stamina_consume_ts", -Infinity);
-    __publicField(this, "low_stamina_max_vel", 1);
-    __publicField(this, "low_stamina_accel", 100);
-    __publicField(this, "low_stamina", false);
-    __publicField(this, "low_stamina_enter_threshold", 1);
-    // TODO: sanity check
-    __publicField(this, "low_stamina_exit_threshold", 200);
-    // TODO: sanity check
     __publicField(this, "hurtbox_def", { shape: { x: 0, y: 0, width: 0.75, height: 1 }, rotation_ref: 0 });
     __publicField(this, "attacks_defs", {
       fast: {
@@ -1508,6 +1512,7 @@ const _Player = class _Player extends Character {
               base_color: [255, 255, 255],
               ref_angle_deg: -30,
               swing_angle_deg: 45
+              // eslint-disable-next-line
             })
           },
           recovery: { duration: 100, acceleration: 50 }
@@ -1538,7 +1543,7 @@ const _Player = class _Player extends Character {
       shield: { name: "shield", icon_src: ShieldIcon, consumable: false },
       sword: { name: "sword", icon_src: SwordIcon, consumable: false }
     });
-    __publicField(this, "flask_health_recover_pct", 0.65);
+    __publicField(this, "flask_health_recover_pct", player_cfg.flask_health_recover_pct);
     __publicField(this, "animations", {
       defend: _Player.stars_animation_def([PlayerParryStar1, PlayerParryStar2], (player) => ({
         position: player.shield.pos_abs,
@@ -1564,6 +1569,7 @@ const _Player = class _Player extends Character {
       death: [PlayerDeathSound],
       cure: [PlayerCureSound1, PlayerCureSound2]
     });
+    this.apply_config(player_cfg);
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
     this.shield = this.add_component(new PlayerShield(this.game, this));
     this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
@@ -1834,6 +1840,7 @@ __publicField(_EnemyWeapon, "animations", {
   })
 });
 let EnemyWeapon = _EnemyWeapon;
+const enemy_cfg = { ...config.characters.defaults, ...config.characters.enemy };
 const enemy_root_selector = ".enemy";
 const skip_btn_selector = ".skip-btn";
 const vines_root_selector = ".vines";
@@ -1846,20 +1853,7 @@ class Enemy extends Character {
     __publicField(this, "weapon");
     __publicField(this, "width");
     __publicField(this, "height");
-    __publicField(this, "base_acceleration", 10);
-    __publicField(this, "base_max_vel", 2);
-    __publicField(this, "health", 1e4);
-    __publicField(this, "max_health", 1e4);
     __publicField(this, "hurtbox_def", { shape: { x: -1, y: -1, width: 2, height: 2 }, rotation_ref: 0 });
-    __publicField(this, "max_stamina", 150);
-    // TODO: sanity check
-    __publicField(this, "stamina_recover", 25);
-    __publicField(this, "stamina_recover_delay", 2e3);
-    __publicField(this, "low_stamina_max_vel", 0);
-    __publicField(this, "low_stamina_enter_threshold", 1);
-    // TODO: sanity check
-    __publicField(this, "low_stamina_exit_threshold", 150);
-    // TODO: sanity check
     __publicField(this, "attacks_defs", {
       slow: {
         phases: {
@@ -1972,20 +1966,16 @@ class Enemy extends Character {
         hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3]
       }
     });
-    __publicField(this, "attacks_chains_defs", {
-      fast_flurry: ["fast", "fast", "fast"],
-      fast_slow_flurry: ["fast", "fast", "slow"],
-      slow_fast_duplet: ["slow", "fast"]
-    });
+    __publicField(this, "attacks_chains_defs", enemy_cfg.attacks_chains_defs);
     __publicField(this, "current_attack_chain", null);
     // TODO: aggro: number = 0.0
     // TODO: AI
     __publicField(this, "_phase", "rest");
     __publicField(this, "phases_ts", {});
-    __publicField(this, "follow_dist_offset", 30);
-    __publicField(this, "next_attack_ts", 1e10);
-    __publicField(this, "auto_attack_dist", 400);
-    __publicField(this, "auto_attack_interval", [1500, 3e3]);
+    __publicField(this, "follow_dist_offset", enemy_cfg.follow_dist_offset);
+    __publicField(this, "next_attack_ts", Infinity);
+    __publicField(this, "auto_attack_dist", enemy_cfg.auto_attack_dist);
+    __publicField(this, "auto_attack_interval", enemy_cfg.auto_attack_interval);
     __publicField(this, "animations", {
       grow_vines: multi_animation_def(
         {
@@ -2064,6 +2054,7 @@ class Enemy extends Character {
       [5, 11, "Such divine display rabidly spurn'd..."],
       [11, 15, "Oblivion awaits thy gaze!"]
     ]);
+    this.apply_config(enemy_cfg);
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     this.skip_btn_el = get_element(skip_btn_selector, this.enemy_root_el);
     this.vines_root_el = get_element(vines_root_selector, this.enemy_root_el);
@@ -2113,14 +2104,14 @@ class Enemy extends Character {
         this.base_acceleration = 0.033;
         if (this.game.changed_state) {
           this.game.pick_and_play_sound_effect(this.sounds.intro);
-          this.game.play_animation(this.animations.grow_vines(this), 3e3);
+          this.game.play_animation(this.animations.grow_vines(this), 5e3);
           this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
           this.game.play_animation({ end: () => this.weapon.weapon_el.classList.remove("hidden") }, 5e3);
         }
         if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 11e3) {
           this.phase = "fight";
           this.invicible = false;
-          this.base_acceleration = 10;
+          this.base_acceleration = enemy_cfg.base_acceleration;
         }
       } else if (this.phase === "fight") {
         const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y);
@@ -2231,6 +2222,7 @@ class VictoryScreen extends GameComponent {
     this.victory_screen_el.classList.toggle("hidden", this.game.state !== "victory");
   }
 }
+const game_cfg = config.game;
 const game_root_selector = "#game-root";
 const attacks_indicators_selector = ".attack-indicator, .defend-indicator";
 const animations_root_selector = ".animations";
@@ -2256,11 +2248,11 @@ class Game extends Component {
     __publicField(this, "defeat_screen");
     __publicField(this, "victory_screen");
     __publicField(this, "subs_root_el");
-    __publicField(this, "debug_mode", false);
-    __publicField(this, "debug_enemy_stamina", true);
-    __publicField(this, "debug_hitboxes", true);
-    __publicField(this, "debug_attacks", true);
-    __publicField(this, "debug_noreload", true);
+    __publicField(this, "debug_mode", game_cfg.debug_mode);
+    __publicField(this, "debug_enemy_stamina", game_cfg.debug_enemy_stamina);
+    __publicField(this, "debug_hitboxes", game_cfg.debug_hitboxes);
+    __publicField(this, "debug_attacks", game_cfg.debug_attacks);
+    __publicField(this, "debug_noreload", game_cfg.debug_noreload);
     __publicField(this, "sounds", {
       battle_music_intro: [BattleMusicIntroSound],
       battle_music: [BattleMusicSound],
