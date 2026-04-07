@@ -176,12 +176,17 @@ export class Game extends Component<GameUpdateContext> {
         if (this.changed_state) {
             if (this.state === "battle") {
                 send_shell_request({type: "setVideoFilter", value: "blur(3px) brightness(0.75)"})
-                send_shell_request({type: "setVolume", value: 0.5})
-                this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro)
+                send_shell_request({type: "setVolume", value: 0.3})
+                this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro, {
+                    volume: 0.125,
+                })
                 if (this.battle_music_audio) {
+                    fade_audio(this.battle_music_audio, {duration: 15000, volume: 1.0})
                     this.battle_music_audio.addEventListener("ended", () => {
                         if (this.state === "battle")
-                            this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music)
+                            this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music, {
+                                loop: true,
+                            })
                     })
                 }
             } else if (this.state === "defeat") {
@@ -238,7 +243,10 @@ export class Game extends Component<GameUpdateContext> {
             this.load_sound_effect(src)
         }
     }
-    play_sound_effect(src: string, {volume = 1.0}: {volume?: number} = {}): HTMLAudioElement {
+    play_sound_effect(
+        src: string,
+        {volume = 1.0, loop = false}: {volume?: number; loop?: boolean} = {},
+    ): HTMLAudioElement {
         let audio: HTMLAudioElement
         if (src in this.sound_effects) {
             audio = this.sound_effects[src]
@@ -247,16 +255,17 @@ export class Game extends Component<GameUpdateContext> {
         }
         audio.currentTime = 0
         audio.volume = volume
+        audio.loop = loop
         audio.play()
         return audio
     }
     pick_and_play_sound_effect(
         sounds?: Array<string> | null,
-        {volume = 1.0}: {volume?: number} = {},
+        {volume = 1.0, loop = false}: {volume?: number; loop?: boolean} = {},
     ): HTMLAudioElement | null {
         if (sounds == null || !sounds.length) return null
         const sound = random_pick(sounds)
-        return this.play_sound_effect(sound, {volume})
+        return this.play_sound_effect(sound, {volume, loop})
     }
     preload_images(...srcs: Array<string>) {
         for (const src of srcs) {

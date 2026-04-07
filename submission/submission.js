@@ -1737,6 +1737,7 @@ const EnemyDamageSound7 = "" + new URL("assets/770124_5.opus", import.meta.url).
 const EnemyDamageSound8 = "" + new URL("assets/770124_6.opus", import.meta.url).href;
 const EnemyDamageSound9 = "" + new URL("assets/770124_7.opus", import.meta.url).href;
 const EnemyDeathSound = "" + new URL("assets/369005.opus", import.meta.url).href;
+const EnemyIntroSound = "" + new URL("assets/intro-abk.opus", import.meta.url).href;
 const enemy_weapon_selector = ".weapon";
 const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
   constructor(game2, enemy) {
@@ -2043,6 +2044,7 @@ class Enemy extends Character {
       })
     });
     __publicField(this, "sounds", {
+      intro: [EnemyIntroSound],
       damage: [
         EnemyDamageSound1,
         EnemyDamageSound2,
@@ -2059,8 +2061,8 @@ class Enemy extends Character {
     });
     __publicField(this, "intro_speech_subs", [
       [0, 5, "Thou darest ravage my hallowed slumber!"],
-      [5, 9.5, "Such divine display rabidly spurn'd..."],
-      [9.5, 13.5, "Oblivion awaits thy gaze!"]
+      [5, 11, "Such divine display rabidly spurn'd..."],
+      [11, 15, "Oblivion awaits thy gaze!"]
     ]);
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     this.skip_btn_el = get_element(skip_btn_selector, this.enemy_root_el);
@@ -2108,16 +2110,17 @@ class Enemy extends Character {
     if (this.game.state === "battle") {
       if (this.phase === "fight-start") {
         this.invicible = true;
-        this.base_max_vel = 1;
+        this.base_acceleration = 0.033;
         if (this.game.changed_state) {
+          this.game.pick_and_play_sound_effect(this.sounds.intro);
           this.game.play_animation(this.animations.grow_vines(this), 3e3);
           this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
           this.game.play_animation({ end: () => this.weapon.weapon_el.classList.remove("hidden") }, 5e3);
         }
-        if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 1e4) {
+        if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 11e3) {
           this.phase = "fight";
           this.invicible = false;
-          this.base_max_vel = Enemy.prototype.base_max_vel;
+          this.base_acceleration = 10;
         }
       } else if (this.phase === "fight") {
         const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y);
@@ -2334,12 +2337,17 @@ class Game extends Component {
     if (this.changed_state) {
       if (this.state === "battle") {
         send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.75)" });
-        send_shell_request({ type: "setVolume", value: 0.5 });
-        this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro);
+        send_shell_request({ type: "setVolume", value: 0.3 });
+        this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro, {
+          volume: 0.125
+        });
         if (this.battle_music_audio) {
+          fade_audio(this.battle_music_audio, { duration: 15e3, volume: 1 });
           this.battle_music_audio.addEventListener("ended", () => {
             if (this.state === "battle")
-              this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music);
+              this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music, {
+                loop: true
+              });
           });
         }
       } else if (this.state === "defeat") {
@@ -2390,7 +2398,7 @@ class Game extends Component {
       this.load_sound_effect(src);
     }
   }
-  play_sound_effect(src, { volume = 1 } = {}) {
+  play_sound_effect(src, { volume = 1, loop = false } = {}) {
     let audio;
     if (src in this.sound_effects) {
       audio = this.sound_effects[src];
@@ -2399,13 +2407,14 @@ class Game extends Component {
     }
     audio.currentTime = 0;
     audio.volume = volume;
+    audio.loop = loop;
     audio.play();
     return audio;
   }
-  pick_and_play_sound_effect(sounds, { volume = 1 } = {}) {
+  pick_and_play_sound_effect(sounds, { volume = 1, loop = false } = {}) {
     if (sounds == null || !sounds.length) return null;
     const sound = random_pick(sounds);
-    return this.play_sound_effect(sound, { volume });
+    return this.play_sound_effect(sound, { volume, loop });
   }
   preload_images(...srcs) {
     for (const src of srcs) {

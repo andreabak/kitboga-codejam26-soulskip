@@ -48,6 +48,7 @@ import EnemyDamageSound7 from "@/assets/sounds/enemy-damage/770124_5.opus"
 import EnemyDamageSound8 from "@/assets/sounds/enemy-damage/770124_6.opus"
 import EnemyDamageSound9 from "@/assets/sounds/enemy-damage/770124_7.opus"
 import EnemyDeathSound from "@/assets/sounds/enemy-death/369005.opus"
+import EnemyIntroSound from "@/assets/sounds/enemy-intro/intro-abk.opus"
 
 const enemy_weapon_selector = ".weapon"
 
@@ -379,6 +380,7 @@ export class Enemy extends Character<Enemy> {
         }),
     }
     sounds = {
+        intro: [EnemyIntroSound],
         damage: [
             EnemyDamageSound1,
             EnemyDamageSound2,
@@ -396,8 +398,8 @@ export class Enemy extends Character<Enemy> {
 
     intro_speech_subs: SubsType = [
         [0.0, 5.0, "Thou darest ravage my hallowed slumber!"],
-        [5.0, 9.5, "Such divine display rabidly spurn'd..."],
-        [9.5, 13.5, "Oblivion awaits thy gaze!"],
+        [5.0, 11.0, "Such divine display rabidly spurn'd..."],
+        [11.0, 15.0, "Oblivion awaits thy gaze!"],
     ]
 
     constructor(game: Game) {
@@ -458,16 +460,17 @@ export class Enemy extends Character<Enemy> {
         if (this.game.state === "battle") {
             if (this.phase === "fight-start") {
                 this.invicible = true
-                this.base_max_vel = 1
+                this.base_acceleration = 0.033
                 if (this.game.changed_state) {
+                    this.game.pick_and_play_sound_effect(this.sounds.intro)
                     this.game.play_animation(this.animations.grow_vines(this), 3000)
                     this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
                     this.game.play_animation({end: () => this.weapon.weapon_el.classList.remove("hidden")}, 5000)
                 }
-                if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 10000) {
+                if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 11000) {
                     this.phase = "fight"
                     this.invicible = false
-                    this.base_max_vel = Enemy.prototype.base_max_vel
+                    this.base_acceleration = 10
                 }
             } else if (this.phase === "fight") {
                 const player_dist = dist(this.pos.x - this.game.player.pos.x, this.pos.y - this.game.player.pos.y)
