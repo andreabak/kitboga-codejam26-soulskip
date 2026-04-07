@@ -676,62 +676,62 @@ function send_shell_request(request) {
   window.top.postMessage(request, "*");
 }
 const _00000$3 = "" + new URL("assets/00000-DVIn6pJe.png", import.meta.url).href;
-const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00001$3 = "" + new URL("assets/00001-B2sqO7TY.png", import.meta.url).href;
-const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00001$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00002$3 = "" + new URL("assets/00002-r5-hxNHx.png", import.meta.url).href;
-const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00002$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00003$3 = "" + new URL("assets/00003-DF1jXa8_.png", import.meta.url).href;
-const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00003$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00004$3 = "" + new URL("assets/00004-D38e-WWq.png", import.meta.url).href;
-const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00004$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00005$3 = "" + new URL("assets/00005-DNAvbWOk.png", import.meta.url).href;
-const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00005$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00006$3 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
-const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00006$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00007$3 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
-const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00007$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00008$3 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
-const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_8$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00008$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00009$2 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
-const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_9$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00009$2
 }, Symbol.toStringTag, { value: "Module" }));
 const _00010$2 = "" + new URL("assets/00010-B22DGBYY.png", import.meta.url).href;
-const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_10$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00010$2
 }, Symbol.toStringTag, { value: "Module" }));
 const _00011$1 = "" + new URL("assets/00011-CZNL5YpN.png", import.meta.url).href;
-const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_11$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00011$1
 }, Symbol.toStringTag, { value: "Module" }));
@@ -897,18 +897,18 @@ const __vite_glob_3_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.de
 }, Symbol.toStringTag, { value: "Module" }));
 const BloodEffect1Seq = ImageSequence.from_frames_dir(
   /* @__PURE__ */ Object.assign({
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00000.png": __vite_glob_0_0,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00001.png": __vite_glob_0_1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00002.png": __vite_glob_0_2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00003.png": __vite_glob_0_3,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00004.png": __vite_glob_0_4,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00005.png": __vite_glob_0_5,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00006.png": __vite_glob_0_6,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00007.png": __vite_glob_0_7,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00008.png": __vite_glob_0_8,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00009.png": __vite_glob_0_9,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00010.png": __vite_glob_0_10,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00011.png": __vite_glob_0_11
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00000.png": __vite_glob_0_0$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00001.png": __vite_glob_0_1$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00002.png": __vite_glob_0_2$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00003.png": __vite_glob_0_3$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00004.png": __vite_glob_0_4$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00005.png": __vite_glob_0_5$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00006.png": __vite_glob_0_6$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00007.png": __vite_glob_0_7$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00008.png": __vite_glob_0_8$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00009.png": __vite_glob_0_9$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00010.png": __vite_glob_0_10$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00011.png": __vite_glob_0_11$1
   }),
   15
 );
@@ -1462,6 +1462,66 @@ class Character extends Actor {
     this.consume_health(health_damage, { context });
   }
 }
+const Priest_skill3_frame1 = "" + new URL("assets/Priest_skill3_frame1-CKZBdEXY.png", import.meta.url).href;
+const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame1
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame10 = "" + new URL("assets/Priest_skill3_frame10-D-ml8_BN.png", import.meta.url).href;
+const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame10
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame11 = "" + new URL("assets/Priest_skill3_frame11-BtjaiNes.png", import.meta.url).href;
+const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame11
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame12 = "" + new URL("assets/Priest_skill3_frame12-BTxxtnly.png", import.meta.url).href;
+const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame12
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame2 = "" + new URL("assets/Priest_skill3_frame2-CJ-MPro4.png", import.meta.url).href;
+const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame2
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame3 = "" + new URL("assets/Priest_skill3_frame3-CB6wZIG8.png", import.meta.url).href;
+const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame3
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame4 = "" + new URL("assets/Priest_skill3_frame4-Bjw_NCp-.png", import.meta.url).href;
+const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame4
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame5 = "" + new URL("assets/Priest_skill3_frame5-5mbwMl--.png", import.meta.url).href;
+const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame5
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame6 = "" + new URL("assets/Priest_skill3_frame6-Csa4lrJA.png", import.meta.url).href;
+const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame6
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame7 = "" + new URL("assets/Priest_skill3_frame7-Ctjou_-B.png", import.meta.url).href;
+const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame7
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame8 = "" + new URL("assets/Priest_skill3_frame8-CMsU2JjN.png", import.meta.url).href;
+const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame8
+}, Symbol.toStringTag, { value: "Module" }));
+const Priest_skill3_frame9 = "" + new URL("assets/Priest_skill3_frame9-BwCsAGBG.png", import.meta.url).href;
+const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Priest_skill3_frame9
+}, Symbol.toStringTag, { value: "Module" }));
 const gestures_cfg = config.gestures;
 class GestureManager {
   constructor(element) {
@@ -1655,6 +1715,23 @@ const PlayerDefendSound3 = "" + new URL("assets/574043-4LNviDK-.opus", import.me
 const PlayerParrySound1 = "" + new URL("assets/448009-BeBOc5Yw.opus", import.meta.url).href;
 const PlayerParrySound2 = "" + new URL("assets/591155-CmvEOVys.opus", import.meta.url).href;
 const SwordIcon = "" + new URL("assets/sword-B4u20JoA.svg", import.meta.url).href;
+const FlaskUseSeq = ImageSequence.from_frames_dir(
+  /* @__PURE__ */ Object.assign({
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame1.png": __vite_glob_0_0,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame10.png": __vite_glob_0_1,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame11.png": __vite_glob_0_2,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame12.png": __vite_glob_0_3,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame2.png": __vite_glob_0_4,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame3.png": __vite_glob_0_5,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame4.png": __vite_glob_0_6,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame5.png": __vite_glob_0_7,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame6.png": __vite_glob_0_8,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame7.png": __vite_glob_0_9,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame8.png": __vite_glob_0_10,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame9.png": __vite_glob_0_11
+  }),
+  15
+);
 const player_shield_selector = ".shield";
 class PlayerShield extends GameComponent {
   constructor(game2, player) {
@@ -1774,6 +1851,16 @@ const _Player = class _Player extends Character {
       ),
       damage: blood_splat_animation_def({
         style: { width: "32px", height: "32px", filter: "brightness(0.7) contrast(1.2)" }
+      }),
+      cure: image_animation_def(FlaskUseSeq, (player) => player.player_root_el, {
+        style: {
+          top: "65%",
+          left: "50%",
+          width: "64px",
+          height: "64px",
+          transform: "translate(-50%, -50%)",
+          filter: "hue-rotate(-60deg)"
+        }
       })
     });
     __publicField(this, "sounds", {
@@ -1919,6 +2006,7 @@ const _Player = class _Player extends Character {
           this.recover_health(this.max_health * this.flask_health_recover_pct);
           this.last_cure_ts = this.game.timeref;
           this.game.pick_and_play_sound_effect(this.sounds.cure);
+          this.game.play_animation(this.animations.cure(this));
           used = true;
         }
       } else if (item.name === "sword") {

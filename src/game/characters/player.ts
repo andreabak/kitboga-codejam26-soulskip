@@ -1,7 +1,7 @@
 import {config} from "@/config"
 import {deg2rad, get_element, Point, rad2deg} from "@/utils"
 
-import {image_animation_def, ImageAnimationParams, multi_animation_def} from "../animations"
+import {image_animation_def, ImageAnimationParams, ImageSequence, multi_animation_def, ViteGlob} from "../animations"
 import {GameComponent, GameUpdateContext} from "../core"
 import type {Game} from "../game"
 import {GestureManager} from "../gestures"
@@ -40,6 +40,13 @@ import PlayerDefendSound3 from "@/assets/sounds/player-defend/574043.opus"
 import PlayerParrySound1 from "@/assets/sounds/player-parry/448009.opus"
 import PlayerParrySound2 from "@/assets/sounds/player-parry/591155.opus"
 import SwordIcon from "@/assets/sword.svg"
+
+const FlaskUseSeq = ImageSequence.from_frames_dir(
+    import.meta.glob("@/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/*", {
+        eager: true,
+    }) as ViteGlob,
+    15,
+)
 
 export type PlayerItemName = "flask" | "shield" | "sword"
 export type PlayerItemBase = {
@@ -217,6 +224,16 @@ class Player extends Character<Player> {
         damage: blood_splat_animation_def({
             style: {width: "32px", height: "32px", filter: "brightness(0.7) contrast(1.2)"},
         }),
+        cure: image_animation_def(FlaskUseSeq, (player: Player) => player.player_root_el, {
+            style: {
+                top: "65%",
+                left: "50%",
+                width: "64px",
+                height: "64px",
+                transform: "translate(-50%, -50%)",
+                filter: "hue-rotate(-60deg)",
+            },
+        }),
     }
     sounds = {
         defend: [PlayerDefendSound1, PlayerDefendSound2, PlayerDefendSound3],
@@ -392,6 +409,7 @@ class Player extends Character<Player> {
                     this.recover_health(this.max_health * this.flask_health_recover_pct)
                     this.last_cure_ts = this.game.timeref
                     this.game.pick_and_play_sound_effect(this.sounds.cure)
+                    this.game.play_animation(this.animations.cure(this))
                     used = true
                 }
             } else if (item.name === "sword") {
