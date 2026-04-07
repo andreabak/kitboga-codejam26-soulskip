@@ -16,7 +16,7 @@ import {
 } from "./core"
 
 import FlaskIcon from "@/assets/flask.webp"
-import AttackSwing from "@/assets/player/attack-swing.png"
+import PlayerAttackSwing from "@/assets/player/attack-swing.png"
 import PlayerParryStar1 from "@/assets/player/parry-star_1.svg"
 import PlayerParryStar2 from "@/assets/player/parry-star_2.svg"
 import PlayerParryStar3 from "@/assets/player/parry-star_3.svg"
@@ -134,7 +134,7 @@ class Player extends Character<Player> {
                 hit: {
                     duration: 150,
                     acceleration: 1,
-                    animation: attack_swing_animation_def(AttackSwing, {
+                    animation: attack_swing_animation_def(PlayerAttackSwing, {
                         base_color: [255, 255, 255],
                         ref_angle_deg: -30,
                         swing_angle_deg: 45,

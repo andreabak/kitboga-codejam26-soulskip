@@ -22,7 +22,7 @@ import {
     HitBox,
 } from "./core"
 
-import AttackSwing from "@/assets/enemy/attack-swing.png"
+import EnemyAttackSwing from "@/assets/enemy/attack-swing.png"
 import VineLongImage1 from "@/assets/enemy/vine_long1.png"
 import VineLongImage2 from "@/assets/enemy/vine_long2.png"
 import VineShortImage1 from "@/assets/enemy/vine_short1.png"
@@ -192,7 +192,7 @@ export class Enemy extends Character<Enemy> {
                     animation: multi_animation_def([
                         EnemyWeapon.animations.swing_slow_hit,
                         attack_swing_animation_def(
-                            AttackSwing,
+                            EnemyAttackSwing,
                             {base_color: [255, 227, 85], ref_angle_deg: -210, swing_angle_deg: 50},
                             {
                                 style: {backgroundRepeat: "no-repeat", backgroundPosition: "center"},
@@ -250,7 +250,7 @@ export class Enemy extends Character<Enemy> {
                     animation: multi_animation_def([
                         EnemyWeapon.animations.swing_fast_hit,
                         attack_swing_animation_def(
-                            AttackSwing,
+                            EnemyAttackSwing,
                             {base_color: [255, 227, 85], ref_angle_deg: -210, swing_angle_deg: 60},
                             {
                                 style: {backgroundRepeat: "no-repeat", backgroundPosition: "center"},

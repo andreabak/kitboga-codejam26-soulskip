@@ -22,7 +22,12 @@ export default defineConfig(({mode}) => {
                 output: {
                     entryFileNames: "[name].js",
                     chunkFileNames: "[name].js",
-                    assetFileNames: "assets/[name][extname]",
+                    assetFileNames: (assetInfo) => {
+                        if (assetInfo.names.includes("submission.css")) {
+                            return "submission.css";
+                        }
+                        return "assets/[name]-[hash][extname]";
+                    },
                     manualChunks: {
                         "config": ["@/config"]
                     }

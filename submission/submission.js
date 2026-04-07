@@ -631,222 +631,222 @@ function add_shell_events_listener(listener) {
 function send_shell_request(request) {
   window.top.postMessage(request, "*");
 }
-const _00000$3 = "" + new URL("assets/00000.png", import.meta.url).href;
+const _00000$3 = "" + new URL("assets/00000-DVIn6pJe.png", import.meta.url).href;
 const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00001$3 = "" + new URL("assets/00001.png", import.meta.url).href;
+const _00001$3 = "" + new URL("assets/00001-B2sqO7TY.png", import.meta.url).href;
 const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00001$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00002$3 = "" + new URL("assets/00002.png", import.meta.url).href;
+const _00002$3 = "" + new URL("assets/00002-r5-hxNHx.png", import.meta.url).href;
 const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00002$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00003$3 = "" + new URL("assets/00003.png", import.meta.url).href;
+const _00003$3 = "" + new URL("assets/00003-DF1jXa8_.png", import.meta.url).href;
 const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00003$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00004$3 = "" + new URL("assets/00004.png", import.meta.url).href;
+const _00004$3 = "" + new URL("assets/00004-D38e-WWq.png", import.meta.url).href;
 const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00004$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00005$3 = "" + new URL("assets/00005.png", import.meta.url).href;
+const _00005$3 = "" + new URL("assets/00005-DNAvbWOk.png", import.meta.url).href;
 const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00005$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00006$3 = "" + new URL("assets/00006.png", import.meta.url).href;
+const _00006$3 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
 const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00006$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00007$3 = "" + new URL("assets/00006.png", import.meta.url).href;
+const _00007$3 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
 const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00007$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00008$3 = "" + new URL("assets/00008.png", import.meta.url).href;
+const _00008$3 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
 const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00008$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00009$2 = "" + new URL("assets/00008.png", import.meta.url).href;
+const _00009$2 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
 const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00009$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00010$2 = "" + new URL("assets/00010.png", import.meta.url).href;
+const _00010$2 = "" + new URL("assets/00010-B22DGBYY.png", import.meta.url).href;
 const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00010$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00011$1 = "" + new URL("assets/00011.png", import.meta.url).href;
+const _00011$1 = "" + new URL("assets/00011-CZNL5YpN.png", import.meta.url).href;
 const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00011$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00000$2 = "" + new URL("assets/000002.png", import.meta.url).href;
+const _00000$2 = "" + new URL("assets/00000-C6sK4okU.png", import.meta.url).href;
 const __vite_glob_1_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00001$2 = "" + new URL("assets/000012.png", import.meta.url).href;
+const _00001$2 = "" + new URL("assets/00001-hEuYavQz.png", import.meta.url).href;
 const __vite_glob_1_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00001$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00002$2 = "" + new URL("assets/000022.png", import.meta.url).href;
+const _00002$2 = "" + new URL("assets/00002-SAyEZ-7F.png", import.meta.url).href;
 const __vite_glob_1_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00002$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00003$2 = "" + new URL("assets/000032.png", import.meta.url).href;
+const _00003$2 = "" + new URL("assets/00003-hTnEsyx5.png", import.meta.url).href;
 const __vite_glob_1_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00003$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00004$2 = "" + new URL("assets/000042.png", import.meta.url).href;
+const _00004$2 = "" + new URL("assets/00004-DjYrpe7S.png", import.meta.url).href;
 const __vite_glob_1_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00004$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00005$2 = "" + new URL("assets/000052.png", import.meta.url).href;
+const _00005$2 = "" + new URL("assets/00005-rC81hARk.png", import.meta.url).href;
 const __vite_glob_1_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00005$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00006$2 = "" + new URL("assets/000062.png", import.meta.url).href;
+const _00006$2 = "" + new URL("assets/00006-hyIaIVM-.png", import.meta.url).href;
 const __vite_glob_1_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00006$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00007$2 = "" + new URL("assets/00007.png", import.meta.url).href;
+const _00007$2 = "" + new URL("assets/00007-OcmvWCeY.png", import.meta.url).href;
 const __vite_glob_1_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00007$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00008$2 = "" + new URL("assets/000082.png", import.meta.url).href;
+const _00008$2 = "" + new URL("assets/00008-CO2AqBPY.png", import.meta.url).href;
 const __vite_glob_1_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00008$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00009$1 = "" + new URL("assets/00009.png", import.meta.url).href;
+const _00009$1 = "" + new URL("assets/00009-CI5KcvTw.png", import.meta.url).href;
 const __vite_glob_1_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00009$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00010$1 = "" + new URL("assets/000102.png", import.meta.url).href;
+const _00010$1 = "" + new URL("assets/00010-CR9BTB3z.png", import.meta.url).href;
 const __vite_glob_1_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00010$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00000$1 = "" + new URL("assets/000003.png", import.meta.url).href;
+const _00000$1 = "" + new URL("assets/00000-C_Air7S2.png", import.meta.url).href;
 const __vite_glob_2_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00001$1 = "" + new URL("assets/000013.png", import.meta.url).href;
+const _00001$1 = "" + new URL("assets/00001-BPvKz2Fw.png", import.meta.url).href;
 const __vite_glob_2_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00001$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00002$1 = "" + new URL("assets/000023.png", import.meta.url).href;
+const _00002$1 = "" + new URL("assets/00002-DEittHlw.png", import.meta.url).href;
 const __vite_glob_2_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00002$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00003$1 = "" + new URL("assets/000033.png", import.meta.url).href;
+const _00003$1 = "" + new URL("assets/00003-DfCXBao8.png", import.meta.url).href;
 const __vite_glob_2_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00003$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00004$1 = "" + new URL("assets/000043.png", import.meta.url).href;
+const _00004$1 = "" + new URL("assets/00004-CSPXiBSG.png", import.meta.url).href;
 const __vite_glob_2_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00004$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00005$1 = "" + new URL("assets/000053.png", import.meta.url).href;
+const _00005$1 = "" + new URL("assets/00005-Du55AuEC.png", import.meta.url).href;
 const __vite_glob_2_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00005$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00006$1 = "" + new URL("assets/000063.png", import.meta.url).href;
+const _00006$1 = "" + new URL("assets/00006-_pA0hi7H.png", import.meta.url).href;
 const __vite_glob_2_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00006$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00007$1 = "" + new URL("assets/000072.png", import.meta.url).href;
+const _00007$1 = "" + new URL("assets/00007-BhSZvq0y.png", import.meta.url).href;
 const __vite_glob_2_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00007$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00008$1 = "" + new URL("assets/000083.png", import.meta.url).href;
+const _00008$1 = "" + new URL("assets/00008-vETwGEjf.png", import.meta.url).href;
 const __vite_glob_2_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00008$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00000 = "" + new URL("assets/000004.png", import.meta.url).href;
+const _00000 = "" + new URL("assets/00000-DdBvVkDm.png", import.meta.url).href;
 const __vite_glob_3_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000
 }, Symbol.toStringTag, { value: "Module" }));
-const _00001 = "" + new URL("assets/000014.png", import.meta.url).href;
+const _00001 = "" + new URL("assets/00001-D3H-pS9T.png", import.meta.url).href;
 const __vite_glob_3_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00001
 }, Symbol.toStringTag, { value: "Module" }));
-const _00002 = "" + new URL("assets/000024.png", import.meta.url).href;
+const _00002 = "" + new URL("assets/00002-DK-WjgSW.png", import.meta.url).href;
 const __vite_glob_3_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00002
 }, Symbol.toStringTag, { value: "Module" }));
-const _00003 = "" + new URL("assets/000034.png", import.meta.url).href;
+const _00003 = "" + new URL("assets/00003-CN1thLM5.png", import.meta.url).href;
 const __vite_glob_3_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00003
 }, Symbol.toStringTag, { value: "Module" }));
-const _00004 = "" + new URL("assets/000044.png", import.meta.url).href;
+const _00004 = "" + new URL("assets/00004-XeNPVGXA.png", import.meta.url).href;
 const __vite_glob_3_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00004
 }, Symbol.toStringTag, { value: "Module" }));
-const _00005 = "" + new URL("assets/000054.png", import.meta.url).href;
+const _00005 = "" + new URL("assets/00005-CxsMJnpC.png", import.meta.url).href;
 const __vite_glob_3_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00005
 }, Symbol.toStringTag, { value: "Module" }));
-const _00006 = "" + new URL("assets/000064.png", import.meta.url).href;
+const _00006 = "" + new URL("assets/00006-CtyiahLX.png", import.meta.url).href;
 const __vite_glob_3_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00006
 }, Symbol.toStringTag, { value: "Module" }));
-const _00007 = "" + new URL("assets/000064.png", import.meta.url).href;
+const _00007 = "" + new URL("assets/00006-CtyiahLX.png", import.meta.url).href;
 const __vite_glob_3_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00007
 }, Symbol.toStringTag, { value: "Module" }));
-const _00008 = "" + new URL("assets/000084.png", import.meta.url).href;
+const _00008 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
 const __vite_glob_3_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00008
 }, Symbol.toStringTag, { value: "Module" }));
-const _00009 = "" + new URL("assets/000084.png", import.meta.url).href;
+const _00009 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
 const __vite_glob_3_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00009
 }, Symbol.toStringTag, { value: "Module" }));
-const _00010 = "" + new URL("assets/000084.png", import.meta.url).href;
+const _00010 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
 const __vite_glob_3_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00010
 }, Symbol.toStringTag, { value: "Module" }));
-const _00011 = "" + new URL("assets/000112.png", import.meta.url).href;
+const _00011 = "" + new URL("assets/00011-T6ymNxoq.png", import.meta.url).href;
 const __vite_glob_3_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00011
@@ -1418,30 +1418,30 @@ class Character extends Actor {
     this.consume_health(health_damage, { context });
   }
 }
-const FlaskIcon = "" + new URL("assets/flask.webp", import.meta.url).href;
-const AttackSwing$1 = "" + new URL("assets/attack-swing.png", import.meta.url).href;
-const PlayerParryStar1 = "" + new URL("assets/parry-star_1.svg", import.meta.url).href;
-const PlayerParryStar2 = "" + new URL("assets/parry-star_2.svg", import.meta.url).href;
-const PlayerParryStar3 = "" + new URL("assets/parry-star_3.svg", import.meta.url).href;
-const PlayerParryStar4 = "" + new URL("assets/parry-star_4.svg", import.meta.url).href;
-const ShieldIcon = "" + new URL("assets/shield.webp", import.meta.url).href;
-const PlayerAttackHitSound1 = "" + new URL("assets/442903.opus", import.meta.url).href;
-const PlayerAttackHitSound2 = "" + new URL("assets/547042.opus", import.meta.url).href;
-const PlayerAttackHitSound3 = "" + new URL("assets/574820.opus", import.meta.url).href;
-const PlayerAttackHitSound4 = "" + new URL("assets/574821.opus", import.meta.url).href;
-const PlayerAttackSound1 = "" + new URL("assets/268227.opus", import.meta.url).href;
-const PlayerAttackSound2 = "" + new URL("assets/724716.opus", import.meta.url).href;
-const PlayerCureSound1 = "" + new URL("assets/797763_1.opus", import.meta.url).href;
-const PlayerCureSound2 = "" + new URL("assets/797763_2.opus", import.meta.url).href;
-const PlayerDamageSound1 = "" + new URL("assets/488225.opus", import.meta.url).href;
-const PlayerDamageSound2 = "" + new URL("assets/629664.opus", import.meta.url).href;
-const PlayerDeathSound = "" + new URL("assets/398068.opus", import.meta.url).href;
-const PlayerDefendSound1 = "" + new URL("assets/364530.opus", import.meta.url).href;
-const PlayerDefendSound2 = "" + new URL("assets/442769.opus", import.meta.url).href;
-const PlayerDefendSound3 = "" + new URL("assets/574043.opus", import.meta.url).href;
-const PlayerParrySound1 = "" + new URL("assets/448009.opus", import.meta.url).href;
-const PlayerParrySound2 = "" + new URL("assets/591155.opus", import.meta.url).href;
-const SwordIcon = "" + new URL("assets/sword.svg", import.meta.url).href;
+const FlaskIcon = "" + new URL("assets/flask-BvVRJMc3.webp", import.meta.url).href;
+const PlayerAttackSwing = "" + new URL("assets/attack-swing-CdgiMrLK.png", import.meta.url).href;
+const PlayerParryStar1 = "" + new URL("assets/parry-star_1-Cc74ESjR.svg", import.meta.url).href;
+const PlayerParryStar2 = "" + new URL("assets/parry-star_2-RmFvRpRf.svg", import.meta.url).href;
+const PlayerParryStar3 = "" + new URL("assets/parry-star_3-boNRjX5D.svg", import.meta.url).href;
+const PlayerParryStar4 = "" + new URL("assets/parry-star_4-CGZkWrQb.svg", import.meta.url).href;
+const ShieldIcon = "" + new URL("assets/shield-BpNqX378.webp", import.meta.url).href;
+const PlayerAttackHitSound1 = "" + new URL("assets/442903-Dv51i7jf.opus", import.meta.url).href;
+const PlayerAttackHitSound2 = "" + new URL("assets/547042-BjpTrKE3.opus", import.meta.url).href;
+const PlayerAttackHitSound3 = "" + new URL("assets/574820-DAGUUWmX.opus", import.meta.url).href;
+const PlayerAttackHitSound4 = "" + new URL("assets/574821-eDlymr2Z.opus", import.meta.url).href;
+const PlayerAttackSound1 = "" + new URL("assets/268227-BCdO1uLj.opus", import.meta.url).href;
+const PlayerAttackSound2 = "" + new URL("assets/724716-2gcpUYQm.opus", import.meta.url).href;
+const PlayerCureSound1 = "" + new URL("assets/797763_1-Dj4oFCPI.opus", import.meta.url).href;
+const PlayerCureSound2 = "" + new URL("assets/797763_2-BfVOpkmy.opus", import.meta.url).href;
+const PlayerDamageSound1 = "" + new URL("assets/488225-CvBkjmQH.opus", import.meta.url).href;
+const PlayerDamageSound2 = "" + new URL("assets/629664-72gG8Qlg.opus", import.meta.url).href;
+const PlayerDeathSound = "" + new URL("assets/398068-BHzVeI56.opus", import.meta.url).href;
+const PlayerDefendSound1 = "" + new URL("assets/364530-uOf5Btw8.opus", import.meta.url).href;
+const PlayerDefendSound2 = "" + new URL("assets/442769-BEaPIlrE.opus", import.meta.url).href;
+const PlayerDefendSound3 = "" + new URL("assets/574043-4LNviDK-.opus", import.meta.url).href;
+const PlayerParrySound1 = "" + new URL("assets/448009-BeBOc5Yw.opus", import.meta.url).href;
+const PlayerParrySound2 = "" + new URL("assets/591155-CmvEOVys.opus", import.meta.url).href;
+const SwordIcon = "" + new URL("assets/sword-B4u20JoA.svg", import.meta.url).href;
 const player_shield_selector = ".shield";
 class PlayerShield extends GameComponent {
   constructor(game2, player) {
@@ -1508,7 +1508,7 @@ const _Player = class _Player extends Character {
           hit: {
             duration: 150,
             acceleration: 1,
-            animation: attack_swing_animation_def(AttackSwing$1, {
+            animation: attack_swing_animation_def(PlayerAttackSwing, {
               base_color: [255, 255, 255],
               ref_angle_deg: -30,
               swing_angle_deg: 45
@@ -1716,34 +1716,34 @@ __publicField(_Player, "stars_animation_def", (stars_imgs, params) => multi_anim
   }
 ));
 let Player = _Player;
-const AttackSwing = "" + new URL("assets/attack-swing2.png", import.meta.url).href;
-const VineLongImage1 = "" + new URL("assets/vine_long1.png", import.meta.url).href;
-const VineLongImage2 = "" + new URL("assets/vine_long2.png", import.meta.url).href;
-const VineShortImage1 = "" + new URL("assets/vine_short1.png", import.meta.url).href;
-const VineShortImage2 = "" + new URL("assets/vine_short2.png", import.meta.url).href;
-const EnemyAttackHitSound1 = "" + new URL("assets/420674.opus", import.meta.url).href;
-const EnemyAttackHitSound2 = "" + new URL("assets/474575.opus", import.meta.url).href;
-const EnemyAttackHitSound3 = "" + new URL("assets/536258.opus", import.meta.url).href;
-const EnemyAttackFastSound1 = "" + new URL("assets/380488_fast1.opus", import.meta.url).href;
-const EnemyAttackFastSound2 = "" + new URL("assets/380488_fast2.opus", import.meta.url).href;
-const EnemyAttackFastSound3 = "" + new URL("assets/380488_fast3.opus", import.meta.url).href;
-const EnemyAttackFastSound4 = "" + new URL("assets/380488_fast4.opus", import.meta.url).href;
-const EnemyAttackFastSound5 = "" + new URL("assets/380488_fast5.opus", import.meta.url).href;
-const EnemyAttackSlowSound1 = "" + new URL("assets/380488_slow1.opus", import.meta.url).href;
-const EnemyAttackSlowSound2 = "" + new URL("assets/380488_slow2.opus", import.meta.url).href;
-const EnemyAttackSlowSound3 = "" + new URL("assets/542017_slow3.opus", import.meta.url).href;
-const EnemyBreakSound = "" + new URL("assets/er-break.opus", import.meta.url).href;
-const EnemyDamageSound1 = "" + new URL("assets/404109.opus", import.meta.url).href;
-const EnemyDamageSound2 = "" + new URL("assets/515624.opus", import.meta.url).href;
-const EnemyDamageSound3 = "" + new URL("assets/770124_1.opus", import.meta.url).href;
-const EnemyDamageSound4 = "" + new URL("assets/770124_2.opus", import.meta.url).href;
-const EnemyDamageSound5 = "" + new URL("assets/770124_3.opus", import.meta.url).href;
-const EnemyDamageSound6 = "" + new URL("assets/770124_4.opus", import.meta.url).href;
-const EnemyDamageSound7 = "" + new URL("assets/770124_5.opus", import.meta.url).href;
-const EnemyDamageSound8 = "" + new URL("assets/770124_6.opus", import.meta.url).href;
-const EnemyDamageSound9 = "" + new URL("assets/770124_7.opus", import.meta.url).href;
-const EnemyDeathSound = "" + new URL("assets/369005.opus", import.meta.url).href;
-const EnemyIntroSound = "" + new URL("assets/intro-abk.opus", import.meta.url).href;
+const EnemyAttackSwing = "" + new URL("assets/attack-swing-CSc3417C.png", import.meta.url).href;
+const VineLongImage1 = "" + new URL("assets/vine_long1-lHN96wLs.png", import.meta.url).href;
+const VineLongImage2 = "" + new URL("assets/vine_long2-D4fMA12J.png", import.meta.url).href;
+const VineShortImage1 = "" + new URL("assets/vine_short1-C57OZssg.png", import.meta.url).href;
+const VineShortImage2 = "" + new URL("assets/vine_short2-qkRUMlG1.png", import.meta.url).href;
+const EnemyAttackHitSound1 = "" + new URL("assets/420674-CvrOz9Gq.opus", import.meta.url).href;
+const EnemyAttackHitSound2 = "" + new URL("assets/474575-DaTcJKBj.opus", import.meta.url).href;
+const EnemyAttackHitSound3 = "" + new URL("assets/536258-BmsGTbZG.opus", import.meta.url).href;
+const EnemyAttackFastSound1 = "" + new URL("assets/380488_fast1-DjvR_2M4.opus", import.meta.url).href;
+const EnemyAttackFastSound2 = "" + new URL("assets/380488_fast2-BVCD30gT.opus", import.meta.url).href;
+const EnemyAttackFastSound3 = "" + new URL("assets/380488_fast3-B1jKQ74T.opus", import.meta.url).href;
+const EnemyAttackFastSound4 = "" + new URL("assets/380488_fast4-DX2XLCqX.opus", import.meta.url).href;
+const EnemyAttackFastSound5 = "" + new URL("assets/380488_fast5-Bf7zbJLO.opus", import.meta.url).href;
+const EnemyAttackSlowSound1 = "" + new URL("assets/380488_slow1-BY7r2A4G.opus", import.meta.url).href;
+const EnemyAttackSlowSound2 = "" + new URL("assets/380488_slow2-B7YquzzN.opus", import.meta.url).href;
+const EnemyAttackSlowSound3 = "" + new URL("assets/542017_slow3-BwgP5Wqo.opus", import.meta.url).href;
+const EnemyBreakSound = "" + new URL("assets/er-break-B4c9SQBD.opus", import.meta.url).href;
+const EnemyDamageSound1 = "" + new URL("assets/404109-Co7-ideq.opus", import.meta.url).href;
+const EnemyDamageSound2 = "" + new URL("assets/515624-9RyJXt-S.opus", import.meta.url).href;
+const EnemyDamageSound3 = "" + new URL("assets/770124_1-3szdpD9T.opus", import.meta.url).href;
+const EnemyDamageSound4 = "" + new URL("assets/770124_2-Brv01UR3.opus", import.meta.url).href;
+const EnemyDamageSound5 = "" + new URL("assets/770124_3-CQMT2oIs.opus", import.meta.url).href;
+const EnemyDamageSound6 = "" + new URL("assets/770124_4-D7usA0vu.opus", import.meta.url).href;
+const EnemyDamageSound7 = "" + new URL("assets/770124_5-c5qvJGbq.opus", import.meta.url).href;
+const EnemyDamageSound8 = "" + new URL("assets/770124_6-DLz-fyHo.opus", import.meta.url).href;
+const EnemyDamageSound9 = "" + new URL("assets/770124_7-Dp4st_mJ.opus", import.meta.url).href;
+const EnemyDeathSound = "" + new URL("assets/369005-DTznyUNM.opus", import.meta.url).href;
+const EnemyIntroSound = "" + new URL("assets/intro-abk-CU5JZ-mG.opus", import.meta.url).href;
 const enemy_weapon_selector = ".weapon";
 const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
   constructor(game2, enemy) {
@@ -1871,7 +1871,7 @@ class Enemy extends Character {
             animation: multi_animation_def([
               EnemyWeapon.animations.swing_slow_hit,
               attack_swing_animation_def(
-                AttackSwing,
+                EnemyAttackSwing,
                 { base_color: [255, 227, 85], ref_angle_deg: -210, swing_angle_deg: 50 },
                 {
                   style: { backgroundRepeat: "no-repeat", backgroundPosition: "center" }
@@ -1929,7 +1929,7 @@ class Enemy extends Character {
             animation: multi_animation_def([
               EnemyWeapon.animations.swing_fast_hit,
               attack_swing_animation_def(
-                AttackSwing,
+                EnemyAttackSwing,
                 { base_color: [255, 227, 85], ref_angle_deg: -210, swing_angle_deg: 60 },
                 {
                   style: { backgroundRepeat: "no-repeat", backgroundPosition: "center" }
@@ -2196,10 +2196,10 @@ class Enemy extends Character {
     }
   }
 }
-const BattleDefeatSound = "" + new URL("assets/er-death.opus", import.meta.url).href;
-const BattleMusicIntroSound = "" + new URL("assets/cinema-blockbuster-trailer-21-by-ende-intro.opus", import.meta.url).href;
-const BattleMusicSound = "" + new URL("assets/cinema-blockbuster-trailer-21-by-ende-loop1.opus", import.meta.url).href;
-const BattleVictorySound = "" + new URL("assets/er-victory.opus", import.meta.url).href;
+const BattleDefeatSound = "" + new URL("assets/er-death-B48iVfnW.opus", import.meta.url).href;
+const BattleMusicIntroSound = "" + new URL("assets/cinema-blockbuster-trailer-21-by-ende-intro-CfLWT77A.opus", import.meta.url).href;
+const BattleMusicSound = "" + new URL("assets/cinema-blockbuster-trailer-21-by-ende-loop1-mUQc17UH.opus", import.meta.url).href;
+const BattleVictorySound = "" + new URL("assets/er-victory-CfjTLm0T.opus", import.meta.url).href;
 const defeat_screen_selector = ".defeat-screen";
 class DefeatScreen extends GameComponent {
   constructor(game2) {
