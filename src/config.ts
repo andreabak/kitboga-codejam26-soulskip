@@ -1,5 +1,6 @@
 import type {Game} from "@/game"
 import type {AttackDef, AttackPhaseDef, Character, Enemy, Player} from "@/game/characters"
+import type {GestureManager} from "@/game/gestures"
 
 export type CharacterBaseConfig = Pick<
     Character,
@@ -49,6 +50,8 @@ export type GameConfig = Pick<
     "debug_mode" | "debug_enemy_stamina" | "debug_hitboxes" | "debug_attacks" | "debug_noreload"
 >
 
+export type GesturesConfig = Pick<GestureManager, "tap_threshold_ms" | "drag_threshold_px" | "tap_pre_delay_ms">
+
 export type Config = {
     characters: {
         defaults: CharacterBaseConfig
@@ -56,6 +59,7 @@ export type Config = {
         enemy: EnemyConfig
     }
     game: GameConfig
+    gestures: GesturesConfig
 }
 
 export const config: Config = {
@@ -196,5 +200,10 @@ export const config: Config = {
         debug_hitboxes: true,
         debug_attacks: true,
         debug_noreload: true,
+    },
+    gestures: {
+        tap_threshold_ms: 250,
+        drag_threshold_px: 10,
+        tap_pre_delay_ms: 90,
     },
 }

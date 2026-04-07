@@ -4,6 +4,7 @@ import {get_element, Point} from "@/utils"
 import {image_animation_def, ImageAnimationParams, multi_animation_def} from "../animations"
 import {GameComponent, GameUpdateContext} from "../core"
 import type {Game} from "../game"
+import {GestureManager} from "../gestures"
 import {
     Attack,
     ATTACK_PHASES_SEQUENCE,
@@ -44,6 +45,7 @@ export type PlayerItemName = "flask" | "shield" | "sword"
 export type PlayerItemBase = {
     name: PlayerItemName
     icon_src: string
+    holdable?: boolean
 }
 export type PlayerItemConsumable = PlayerItemBase & {
     consumable: true
@@ -118,6 +120,8 @@ class Player extends Character<Player> {
 
     shield: PlayerShield
 
+    gesture_manager: GestureManager
+
     width: number = 48
     height: number = 48
 
@@ -167,7 +171,7 @@ class Player extends Character<Player> {
 
     items: Record<PlayerItemName, PlayerItem> = {
         flask: {name: "flask", icon_src: FlaskIcon, owned: 3, consumable: true},
-        shield: {name: "shield", icon_src: ShieldIcon, consumable: false},
+        shield: {name: "shield", icon_src: ShieldIcon, consumable: false, holdable: true},
         sword: {name: "sword", icon_src: SwordIcon, consumable: false},
     }
     flask_health_recover_pct: number = player_cfg.flask_health_recover_pct
@@ -231,40 +235,63 @@ class Player extends Character<Player> {
 
         this.shield = this.add_component(new PlayerShield(this.game, this))
 
-        this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this))
-        this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this))
-        this.game.game_root_el.addEventListener("mouseup", this._on_mouseup.bind(this))
+        this.game.game_root_el.addEventListener("mousemove", (e) => {
+            const rect = this.game.game_root_el.getBoundingClientRect()
+            this._input_move({x: e.clientX - rect.left, y: e.clientY - rect.top})
+        })
+        this.game.game_root_el.addEventListener("mousedown", (e) => {
+            if (e.button === 0) this._input_attack(true)
+            if (e.button === 2) this._input_defend(true)
+        })
+        this.game.game_root_el.addEventListener("mouseup", (e) => {
+            if (e.button === 2) this._input_defend(false)
+        })
         this.game.game_root_el.addEventListener("contextmenu", (e: PointerEvent) => {
             e.preventDefault()
             return false
         })
+
+        this.gesture_manager = new GestureManager(this.game.game_root_el)
+        this.gesture_manager.register_handler("drag", (_pos, delta) => this._input_move(delta, {relative: true}))
+        this.gesture_manager.register_handler("tap", (_pos) => this._input_attack(true))
+        this.gesture_manager.register_handler("defend_start", () => this._input_defend(true))
+        this.gesture_manager.register_handler("defend_end", () => this._input_defend(false))
+        this.gesture_manager.register_handler("two_finger_drag", (_pos, delta) =>
+            this._input_move(delta, {relative: true}),
+        )
+    }
+
+    _input_move(pos: Point, {relative = false}: {relative?: boolean} = {}) {
+        if (relative) {
+            const _pos_target_before = {...this.pos_target}
+            this.pos_target = {
+                x: _pos_target_before.x + pos.x,
+                y: _pos_target_before.y + pos.y,
+            }
+        } else {
+            this.pos_target = pos
+        }
+    }
+
+    _input_attack(state: boolean) {
+        if (this.game.state !== "battle") return
+        if (state) {
+            this.attack_requested = true
+        }
+    }
+
+    _input_defend(state: boolean) {
+        if (this.game.state !== "battle") return
+        if (state) {
+            this.defend_request_ts = this.game.timeref
+            this.defend_requested = true
+        } else {
+            this.defend_requested = false
+        }
     }
 
     get root_el(): HTMLElement {
         return this.player_root_el
-    }
-
-    _on_mousemove(event: MouseEvent): void {
-        const rect = this.game.game_root_el.getBoundingClientRect()
-        this.pos_target = {x: event.clientX - rect.left, y: event.clientY - rect.top}
-    }
-    _on_mousedown(event: MouseEvent): void {
-        if (this.game.state === "battle") {
-            if (event.button === 0) {
-                this.attack_requested = true
-            } else if (event.button === 2) {
-                this.defend_request_ts = this.game.timeref
-                this.defend_requested = true
-            }
-        }
-    }
-    _on_mouseup(event: MouseEvent): void {
-        if (this.game.state === "battle") {
-            if (event.button === 2) {
-                this.defend_request_ts = this.game.timeref
-                this.defend_requested = false
-            }
-        }
     }
 
     _update(context: GameUpdateContext) {
@@ -366,9 +393,22 @@ class Player extends Character<Player> {
                     this.game.pick_and_play_sound_effect(this.sounds.cure)
                     used = true
                 }
+            } else if (item.name === "sword") {
+                this._input_attack(true)
+            } else if (item.name === "shield") {
+                this._input_defend(true)
             }
             if (item.consumable && used) {
                 item.owned -= 1
+            }
+        }
+    }
+    release_item(item_name: PlayerItemName): void {
+        const item = this.items[item_name]
+        if (!item) return
+        if (!item.consumable && item.holdable) {
+            if (item.name === "shield") {
+                this._input_defend(false)
             }
         }
     }

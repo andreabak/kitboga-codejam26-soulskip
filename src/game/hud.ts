@@ -176,11 +176,46 @@ class EquippedItemsHud extends GameComponent {
 
         const slots_elements = this.equip_root_el.querySelectorAll(".slot") as NodeListOf<HTMLDivElement>
         const slots_elements_map: Record<string, HTMLDivElement> = {}
+        const mouse_pressed_slots = new Set<HTMLDivElement>()
         for (const slot of slots_elements) {
             const slot_name = slot.dataset.slot
             if (!slot_name) continue
             slots_elements_map[slot_name] = slot
-            slot.addEventListener("mousedown", () => this._use_slot_item(slot))
+            slot.addEventListener("mousedown", (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                mouse_pressed_slots.add(slot)
+                this._use_slot_item(slot)
+            })
+            slot.addEventListener("mouseup", (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (mouse_pressed_slots.delete(slot)) {
+                    this._release_slot_item(slot)
+                }
+            })
+            slot.addEventListener("mouseleave", (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (mouse_pressed_slots.delete(slot)) {
+                    this._release_slot_item(slot)
+                }
+            })
+            slot.addEventListener("touchstart", (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                this._use_slot_item(slot)
+            })
+            slot.addEventListener("touchend", (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                this._release_slot_item(slot)
+            })
+            slot.addEventListener("touchcancel", (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                this._release_slot_item(slot)
+            })
         }
         this.slots_elements = slots_elements_map as Record<EquipmentSlot, HTMLDivElement>
     }
@@ -189,6 +224,12 @@ class EquippedItemsHud extends GameComponent {
         const item_name = slot.dataset.item
         if (!item_name) return
         this.game.player.use_item(item_name as PlayerItemName)
+    }
+
+    _release_slot_item(slot: HTMLDivElement) {
+        const item_name = slot.dataset.item
+        if (!item_name) return
+        this.game.player.release_item(item_name as PlayerItemName)
     }
 
     _update(context: GameUpdateContext) {
@@ -238,6 +279,9 @@ export class Hud extends GameComponent {
         super(game)
 
         this.hud_root_el = get_element(hud_root_selector, this.game.game_root_el) as HTMLDivElement
+
+        this.hud_root_el.addEventListener("mousedown", (e) => e.stopPropagation())
+        this.hud_root_el.addEventListener("touchstart", (e) => e.stopPropagation())
 
         this.player_health_bar = this.add_component(new PlayerHealthBar(game, this))
         this.player_stamina_bar = this.add_component(new PlayerStaminaBar(game, this))

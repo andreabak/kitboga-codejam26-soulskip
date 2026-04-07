@@ -136,6 +136,11 @@ const config = {
     debug_hitboxes: true,
     debug_attacks: true,
     debug_noreload: true
+  },
+  gestures: {
+    tap_threshold_ms: 250,
+    drag_threshold_px: 10,
+    tap_pre_delay_ms: 90
   }
 };
 export {

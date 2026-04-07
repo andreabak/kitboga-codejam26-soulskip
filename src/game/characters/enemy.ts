@@ -410,7 +410,14 @@ export class Enemy extends Character<Enemy> {
         this.width = rel_rect.width
         this.height = rel_rect.height
 
-        this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this))
+        this.enemy_root_el.addEventListener("click", (e) => {
+            e.preventDefault()
+            this._aggro_trigger()
+        })
+        this.enemy_root_el.addEventListener("touchstart", (e) => {
+            e.preventDefault()
+            this._aggro_trigger()
+        })
     }
 
     get root_el(): HTMLElement {

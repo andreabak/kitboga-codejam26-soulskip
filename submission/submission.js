@@ -550,11 +550,46 @@ class EquippedItemsHud extends GameComponent {
     this.equip_root_el = get_element(hud_equipped_selector, this.hud.hud_root_el);
     const slots_elements = this.equip_root_el.querySelectorAll(".slot");
     const slots_elements_map = {};
+    const mouse_pressed_slots = /* @__PURE__ */ new Set();
     for (const slot of slots_elements) {
       const slot_name = slot.dataset.slot;
       if (!slot_name) continue;
       slots_elements_map[slot_name] = slot;
-      slot.addEventListener("mousedown", () => this._use_slot_item(slot));
+      slot.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        mouse_pressed_slots.add(slot);
+        this._use_slot_item(slot);
+      });
+      slot.addEventListener("mouseup", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (mouse_pressed_slots.delete(slot)) {
+          this._release_slot_item(slot);
+        }
+      });
+      slot.addEventListener("mouseleave", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (mouse_pressed_slots.delete(slot)) {
+          this._release_slot_item(slot);
+        }
+      });
+      slot.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._use_slot_item(slot);
+      });
+      slot.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._release_slot_item(slot);
+      });
+      slot.addEventListener("touchcancel", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._release_slot_item(slot);
+      });
     }
     this.slots_elements = slots_elements_map;
   }
@@ -562,6 +597,11 @@ class EquippedItemsHud extends GameComponent {
     const item_name = slot.dataset.item;
     if (!item_name) return;
     this.game.player.use_item(item_name);
+  }
+  _release_slot_item(slot) {
+    const item_name = slot.dataset.item;
+    if (!item_name) return;
+    this.game.player.release_item(item_name);
   }
   _update(context) {
     for (const [slot_name, slot] of Object.entries(this.slots_elements)) {
@@ -604,6 +644,8 @@ class Hud extends GameComponent {
     __publicField(this, "enemy_stamina_bar");
     __publicField(this, "equipped_items");
     this.hud_root_el = get_element(hud_root_selector, this.game.game_root_el);
+    this.hud_root_el.addEventListener("mousedown", (e) => e.stopPropagation());
+    this.hud_root_el.addEventListener("touchstart", (e) => e.stopPropagation());
     this.player_health_bar = this.add_component(new PlayerHealthBar(game2, this));
     this.player_stamina_bar = this.add_component(new PlayerStaminaBar(game2, this));
     this.enemy_health_bar = this.add_component(new EnemyHealthBar(game2, this));
@@ -1418,6 +1460,175 @@ class Character extends Actor {
     this.consume_health(health_damage, { context });
   }
 }
+const gestures_cfg = config.gestures;
+class GestureManager {
+  constructor(element) {
+    __publicField(this, "element");
+    __publicField(this, "handlers", /* @__PURE__ */ new Map());
+    __publicField(this, "tap_threshold_ms", gestures_cfg.tap_threshold_ms);
+    __publicField(this, "drag_threshold_px", gestures_cfg.drag_threshold_px);
+    __publicField(this, "tap_pre_delay_ms", gestures_cfg.tap_pre_delay_ms);
+    __publicField(this, "start_touches", /* @__PURE__ */ new Map());
+    __publicField(this, "current_touches", /* @__PURE__ */ new Map());
+    __publicField(this, "is_moving", false);
+    __publicField(this, "is_defending", false);
+    __publicField(this, "drag_last_pos", null);
+    __publicField(this, "two_finger_drag_last_pos", null);
+    this.element = element;
+    Object.assign(this, gestures_cfg);
+    this.element.addEventListener("touchstart", this.handle_touchstart.bind(this), { passive: false });
+    this.element.addEventListener("touchmove", this.handle_touchmove.bind(this), { passive: false });
+    this.element.addEventListener("touchend", this.handle_touchend.bind(this), { passive: false });
+    this.element.addEventListener("touchcancel", this.handle_touchend.bind(this), { passive: false });
+    this.element.style.touchAction = "none";
+  }
+  register_handler(event, callback) {
+    if (!this.handlers.has(event)) {
+      this.handlers.set(event, []);
+    }
+    this.handlers.get(event).push(callback);
+  }
+  dispatch(event, ...args) {
+    const event_handlers = this.handlers.get(event);
+    if (event_handlers) {
+      for (const handler of event_handlers) {
+        handler(...args);
+      }
+    }
+  }
+  get_relative_pos(touch) {
+    const rect = this.element.getBoundingClientRect();
+    return {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    };
+  }
+  handle_touchstart(event) {
+    event.preventDefault();
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      const touch = event.changedTouches[i];
+      const pos = this.get_relative_pos(touch);
+      this.start_touches.set(touch.identifier, { ...pos, time: Date.now() });
+      this.current_touches.set(touch.identifier, pos);
+    }
+    if (this.current_touches.size === 2) {
+      if (!this.is_defending) {
+        this.is_defending = true;
+        this.dispatch("defend_start");
+      }
+    }
+  }
+  handle_touchmove(event) {
+    event.preventDefault();
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      const touch = event.changedTouches[i];
+      const pos = this.get_relative_pos(touch);
+      if (this.current_touches.has(touch.identifier)) {
+        this.current_touches.set(touch.identifier, pos);
+      }
+    }
+    if (this.current_touches.size === 1) {
+      const id = this.current_touches.keys().next().value;
+      const start = this.start_touches.get(id);
+      if (start) {
+        const pos = this.current_touches.get(id);
+        const dx = pos.x - start.x;
+        const dy = pos.y - start.y;
+        if (Math.sqrt(dx * dx + dy * dy) > this.drag_threshold_px) {
+          if (!this.is_moving) {
+            this.is_moving = true;
+            this.drag_last_pos = { ...pos };
+            this.dispatch("drag_start", pos);
+          }
+        }
+        if (this.is_moving && this.drag_last_pos) {
+          this.dispatch("drag", pos, {
+            x: pos.x - this.drag_last_pos.x,
+            y: pos.y - this.drag_last_pos.y
+          });
+          this.drag_last_pos = { ...pos };
+        }
+      }
+    } else if (this.current_touches.size === 2) {
+      const ids = Array.from(this.current_touches.keys());
+      const start1 = this.start_touches.get(ids[0]);
+      const start2 = this.start_touches.get(ids[1]);
+      if (start1 && start2) {
+        const pos1 = this.current_touches.get(ids[0]);
+        const pos2 = this.current_touches.get(ids[1]);
+        const avg_pos = {
+          x: (pos1.x + pos2.x) / 2,
+          y: (pos1.y + pos2.y) / 2
+        };
+        if (!this.is_defending) {
+          this.is_defending = true;
+          this.dispatch("defend_start");
+        }
+        const dx1 = pos1.x - start1.x;
+        const dy1 = pos1.y - start1.y;
+        const dx2 = pos2.x - start2.x;
+        const dy2 = pos2.y - start2.y;
+        if (Math.sqrt(dx1 * dx1 + dy1 * dy1) > this.drag_threshold_px || Math.sqrt(dx2 * dx2 + dy2 * dy2) > this.drag_threshold_px) {
+          if (!this.is_moving) {
+            this.is_moving = true;
+            this.two_finger_drag_last_pos = { ...avg_pos };
+            this.dispatch("two_finger_drag_start", avg_pos);
+          }
+        }
+        if (this.is_moving && this.two_finger_drag_last_pos) {
+          this.dispatch("two_finger_drag", avg_pos, {
+            x: avg_pos.x - this.two_finger_drag_last_pos.x,
+            y: avg_pos.y - this.two_finger_drag_last_pos.y
+          });
+          this.two_finger_drag_last_pos = { ...avg_pos };
+        }
+      }
+    }
+  }
+  handle_touchend(event) {
+    event.preventDefault();
+    const now = Date.now();
+    const removed_touches = Array.from(event.changedTouches);
+    if (this.start_touches.size === 1 && !this.is_moving && !this.is_defending) {
+      const touch = removed_touches[0];
+      const start = this.start_touches.get(touch.identifier);
+      if (start) {
+        const pos = this.get_relative_pos(touch);
+        const dx = pos.x - start.x;
+        const dy = pos.y - start.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= this.drag_threshold_px && now - start.time <= this.tap_threshold_ms) {
+          setTimeout(() => {
+            if (!this.is_defending) {
+              this.dispatch("tap", pos);
+            }
+          }, this.tap_pre_delay_ms);
+        }
+      }
+    }
+    for (const touch of removed_touches) {
+      this.start_touches.delete(touch.identifier);
+      this.current_touches.delete(touch.identifier);
+    }
+    if (this.current_touches.size === 0) {
+      if (this.is_defending) {
+        this.is_defending = false;
+        this.dispatch("defend_end");
+      }
+      if (this.is_moving) {
+        this.is_moving = false;
+        this.drag_last_pos = null;
+        this.two_finger_drag_last_pos = null;
+        this.dispatch("drag_end");
+        this.dispatch("two_finger_drag_end");
+      }
+    } else if (this.current_touches.size === 1) {
+      if (this.is_defending) {
+        this.is_defending = false;
+        this.dispatch("defend_end");
+      }
+    }
+  }
+}
 const FlaskIcon = "" + new URL("assets/flask-BvVRJMc3.webp", import.meta.url).href;
 const PlayerAttackSwing = "" + new URL("assets/attack-swing-CdgiMrLK.png", import.meta.url).href;
 const PlayerParryStar1 = "" + new URL("assets/parry-star_1-Cc74ESjR.svg", import.meta.url).href;
@@ -1494,6 +1705,7 @@ const _Player = class _Player extends Character {
     super(game2);
     __publicField(this, "player_root_el");
     __publicField(this, "shield");
+    __publicField(this, "gesture_manager");
     __publicField(this, "width", 48);
     __publicField(this, "height", 48);
     __publicField(this, "hurtbox_def", { shape: { x: 0, y: 0, width: 0.75, height: 1 }, rotation_ref: 0 });
@@ -1540,7 +1752,7 @@ const _Player = class _Player extends Character {
     });
     __publicField(this, "items", {
       flask: { name: "flask", icon_src: FlaskIcon, owned: 3, consumable: true },
-      shield: { name: "shield", icon_src: ShieldIcon, consumable: false },
+      shield: { name: "shield", icon_src: ShieldIcon, consumable: false, holdable: true },
       sword: { name: "sword", icon_src: SwordIcon, consumable: false }
     });
     __publicField(this, "flask_health_recover_pct", player_cfg.flask_health_recover_pct);
@@ -1572,38 +1784,59 @@ const _Player = class _Player extends Character {
     this.apply_config(player_cfg);
     this.player_root_el = get_element(player_root_selector, this.game.game_root_el);
     this.shield = this.add_component(new PlayerShield(this.game, this));
-    this.game.game_root_el.addEventListener("mousemove", this._on_mousemove.bind(this));
-    this.game.game_root_el.addEventListener("mousedown", this._on_mousedown.bind(this));
-    this.game.game_root_el.addEventListener("mouseup", this._on_mouseup.bind(this));
+    this.game.game_root_el.addEventListener("mousemove", (e) => {
+      const rect = this.game.game_root_el.getBoundingClientRect();
+      this._input_move({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    });
+    this.game.game_root_el.addEventListener("mousedown", (e) => {
+      if (e.button === 0) this._input_attack(true);
+      if (e.button === 2) this._input_defend(true);
+    });
+    this.game.game_root_el.addEventListener("mouseup", (e) => {
+      if (e.button === 2) this._input_defend(false);
+    });
     this.game.game_root_el.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       return false;
     });
+    this.gesture_manager = new GestureManager(this.game.game_root_el);
+    this.gesture_manager.register_handler("drag", (_pos, delta) => this._input_move(delta, { relative: true }));
+    this.gesture_manager.register_handler("tap", (_pos) => this._input_attack(true));
+    this.gesture_manager.register_handler("defend_start", () => this._input_defend(true));
+    this.gesture_manager.register_handler("defend_end", () => this._input_defend(false));
+    this.gesture_manager.register_handler(
+      "two_finger_drag",
+      (_pos, delta) => this._input_move(delta, { relative: true })
+    );
+  }
+  _input_move(pos, { relative = false } = {}) {
+    if (relative) {
+      const _pos_target_before = { ...this.pos_target };
+      this.pos_target = {
+        x: _pos_target_before.x + pos.x,
+        y: _pos_target_before.y + pos.y
+      };
+    } else {
+      this.pos_target = pos;
+    }
+  }
+  _input_attack(state) {
+    if (this.game.state !== "battle") return;
+    if (state) {
+      this.attack_requested = true;
+    }
+  }
+  _input_defend(state) {
+    if (this.game.state !== "battle") return;
+    if (state) {
+      this.defend_request_ts = this.game.timeref;
+      this.defend_requested = true;
+    } else {
+      this.defend_requested = false;
+    }
   }
   get root_el() {
     return this.player_root_el;
-  }
-  _on_mousemove(event) {
-    const rect = this.game.game_root_el.getBoundingClientRect();
-    this.pos_target = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-  }
-  _on_mousedown(event) {
-    if (this.game.state === "battle") {
-      if (event.button === 0) {
-        this.attack_requested = true;
-      } else if (event.button === 2) {
-        this.defend_request_ts = this.game.timeref;
-        this.defend_requested = true;
-      }
-    }
-  }
-  _on_mouseup(event) {
-    if (this.game.state === "battle") {
-      if (event.button === 2) {
-        this.defend_request_ts = this.game.timeref;
-        this.defend_requested = false;
-      }
-    }
   }
   _update(context) {
     var _a;
@@ -1685,9 +1918,22 @@ const _Player = class _Player extends Character {
           this.game.pick_and_play_sound_effect(this.sounds.cure);
           used = true;
         }
+      } else if (item.name === "sword") {
+        this._input_attack(true);
+      } else if (item.name === "shield") {
+        this._input_defend(true);
       }
       if (item.consumable && used) {
         item.owned -= 1;
+      }
+    }
+  }
+  release_item(item_name) {
+    const item = this.items[item_name];
+    if (!item) return;
+    if (!item.consumable && item.holdable) {
+      if (item.name === "shield") {
+        this._input_defend(false);
       }
     }
   }
@@ -2067,7 +2313,14 @@ class Enemy extends Character {
     this.pos_target = this.pos = this.display_pos;
     this.width = rel_rect.width;
     this.height = rel_rect.height;
-    this.enemy_root_el.addEventListener("click", this._aggro_trigger.bind(this));
+    this.enemy_root_el.addEventListener("click", (e) => {
+      e.preventDefault();
+      this._aggro_trigger();
+    });
+    this.enemy_root_el.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      this._aggro_trigger();
+    });
   }
   get root_el() {
     return this.enemy_root_el;
