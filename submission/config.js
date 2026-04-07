@@ -143,6 +143,16 @@ const config = {
     tap_threshold_ms: 250,
     drag_threshold_px: 10,
     tap_pre_delay_ms: 90
+  },
+  keybinds: {
+    attack_key_code: ["Space"],
+    defend_key_code: ["ControlLeft", "ShiftLeft"],
+    cure_key_code: ["KeyF"],
+    move_up_key_code: ["KeyW", "ArrowUp"],
+    move_left_key_code: ["KeyA", "ArrowLeft"],
+    move_down_key_code: ["KeyS", "ArrowDown"],
+    move_right_key_code: ["KeyD", "ArrowRight"],
+    move_target_dist: 10
   }
 };
 export {

@@ -118,6 +118,7 @@ class PlayerShield extends GameComponent {
     }
 }
 
+const keybinds_cfg = config.keybinds
 const player_cfg = {...config.characters.defaults, ...config.characters.player}
 
 const player_root_selector = ".player"
@@ -128,6 +129,7 @@ class Player extends Character<Player> {
     shield: PlayerShield
 
     gesture_manager: GestureManager
+    keys_pressed: Set<"up" | "left" | "down" | "right"> = new Set()
 
     width: number = 48
     height: number = 48
@@ -252,6 +254,8 @@ class Player extends Character<Player> {
 
         this.shield = this.add_component(new PlayerShield(this.game, this))
 
+        this.pos = {x: this.game.rect.width / 2, y: this.game.rect.height / 2}
+
         this.game.game_root_el.addEventListener("mousemove", (e) => {
             const rect = this.game.game_root_el.getBoundingClientRect()
             this._input_move({x: e.clientX - rect.left, y: e.clientY - rect.top})
@@ -276,17 +280,60 @@ class Player extends Character<Player> {
         this.gesture_manager.register_handler("two_finger_drag", (_pos, delta) =>
             this._input_move(delta, {relative: true}),
         )
+
+        const key_codes_pressed = new Set<string>()
+        window.addEventListener("keydown", (e: KeyboardEvent) => {
+            if (key_codes_pressed.has(e.code)) return
+            if ([keybinds_cfg.attack_key_code].flat().includes(e.code)) {
+                this._input_attack(true)
+            } else if ([keybinds_cfg.defend_key_code].flat().includes(e.code)) {
+                this._input_defend(true)
+            } else if ([keybinds_cfg.cure_key_code].flat().includes(e.code)) {
+                this.use_item("flask")
+            } else if ([keybinds_cfg.move_up_key_code].flat().includes(e.code)) {
+                this.keys_pressed.add("up")
+            } else if ([keybinds_cfg.move_left_key_code].flat().includes(e.code)) {
+                this.keys_pressed.add("left")
+            } else if ([keybinds_cfg.move_down_key_code].flat().includes(e.code)) {
+                this.keys_pressed.add("down")
+            } else if ([keybinds_cfg.move_right_key_code].flat().includes(e.code)) {
+                this.keys_pressed.add("right")
+            }
+            key_codes_pressed.add(e.code)
+        })
+        window.addEventListener("keyup", (e: KeyboardEvent) => {
+            if (key_codes_pressed.has(e.code)) {
+                if ([keybinds_cfg.defend_key_code].flat().includes(e.code)) {
+                    this._input_defend(false)
+                } else if ([keybinds_cfg.move_up_key_code].flat().includes(e.code)) {
+                    this.keys_pressed.delete("up")
+                } else if ([keybinds_cfg.move_left_key_code].flat().includes(e.code)) {
+                    this.keys_pressed.delete("left")
+                } else if ([keybinds_cfg.move_down_key_code].flat().includes(e.code)) {
+                    this.keys_pressed.delete("down")
+                } else if ([keybinds_cfg.move_right_key_code].flat().includes(e.code)) {
+                    this.keys_pressed.delete("right")
+                }
+            }
+            key_codes_pressed.delete(e.code)
+        })
     }
 
     _input_move(pos: Point, {relative = false}: {relative?: boolean} = {}) {
+        const game_rect = this.game.rect
+        let pos_target: Point
         if (relative) {
             const _pos_target_before = {...this.pos_target}
-            this.pos_target = {
+            pos_target = {
                 x: _pos_target_before.x + pos.x,
                 y: _pos_target_before.y + pos.y,
             }
         } else {
-            this.pos_target = pos
+            pos_target = pos
+        }
+        this.pos_target = {
+            x: Math.max(0, Math.min(pos_target.x, game_rect.width)),
+            y: Math.max(0, Math.min(pos_target.y, game_rect.height)),
         }
     }
 
@@ -312,6 +359,28 @@ class Player extends Character<Player> {
     }
 
     _update(context: GameUpdateContext) {
+        const move_dir: Point = {x: 0, y: 0}
+        const move_dir_keys_map = {
+            up: {x: 0, y: -1},
+            left: {x: -1, y: 0},
+            down: {x: 0, y: 1},
+            right: {x: 1, y: 0},
+        }
+        for (const key of this.keys_pressed.values()) {
+            const key_dir = move_dir_keys_map[key]
+            if (!key_dir) continue
+            move_dir.x += key_dir.x
+            move_dir.y += key_dir.y
+        }
+        if (move_dir.x || move_dir.y) {
+            const move_angle = Math.atan2(move_dir.y, move_dir.x)
+            const target_vec = {
+                x: Math.cos(move_angle) * keybinds_cfg.move_target_dist,
+                y: Math.sin(move_angle) * keybinds_cfg.move_target_dist,
+            }
+            this._input_move(target_vec, {relative: true})
+        }
+
         super._update(context)
 
         if (this.game.state === "battle" && !this.attacking) {

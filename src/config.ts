@@ -52,6 +52,17 @@ export type GameConfig = Pick<
 
 export type GesturesConfig = Pick<GestureManager, "tap_threshold_ms" | "drag_threshold_px" | "tap_pre_delay_ms">
 
+export type KeyBindsConfig = {
+    attack_key_code: Array<string>
+    defend_key_code: Array<string>
+    cure_key_code: Array<string>
+    move_up_key_code: Array<string>
+    move_left_key_code: Array<string>
+    move_down_key_code: Array<string>
+    move_right_key_code: Array<string>
+    move_target_dist: number
+}
+
 export type Config = {
     characters: {
         defaults: CharacterBaseConfig
@@ -60,6 +71,7 @@ export type Config = {
     }
     game: GameConfig
     gestures: GesturesConfig
+    keybinds: KeyBindsConfig
 }
 
 export const config: Config = {
@@ -207,5 +219,15 @@ export const config: Config = {
         tap_threshold_ms: 250,
         drag_threshold_px: 10,
         tap_pre_delay_ms: 90,
+    },
+    keybinds: {
+        attack_key_code: ["Space"],
+        defend_key_code: ["ControlLeft", "ShiftLeft"],
+        cure_key_code: ["KeyF"],
+        move_up_key_code: ["KeyW", "ArrowUp"],
+        move_left_key_code: ["KeyA", "ArrowLeft"],
+        move_down_key_code: ["KeyS", "ArrowDown"],
+        move_right_key_code: ["KeyD", "ArrowRight"],
+        move_target_dist: 10,
     },
 }
