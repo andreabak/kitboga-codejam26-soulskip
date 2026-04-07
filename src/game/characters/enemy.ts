@@ -137,7 +137,7 @@ export class EnemyWeapon extends GameComponent {
 
     _update(context: GameUpdateContext) {
         if (this.enemy.current_attack == null) {
-            if (this.enemy.low_stamina) this.base_rotation = (-190 / 180) * Math.PI
+            if (this.enemy.low_stamina || this.enemy.dead) this.base_rotation = (-190 / 180) * Math.PI
         }
         const offset = {
             x: this.base_offset.x - this.enemy.velocity.x * this.velocity_drift_factor,
@@ -162,6 +162,7 @@ const enemy_cfg = {...config.characters.defaults, ...config.characters.enemy}
 const enemy_root_selector = ".enemy"
 const skip_btn_selector = ".skip-btn"
 const vines_root_selector = ".vines"
+const eyes_selector = ".eye"
 
 export class Enemy extends Character<Enemy> {
     enemy_root_el: HTMLDivElement
@@ -455,17 +456,18 @@ export class Enemy extends Character<Enemy> {
 
         if (this.game.state === "battle") {
             if (this.phase === "fight-start") {
-                this.invicible = true
+                this.defending = true
                 this.base_acceleration = 0.033
                 if (this.game.changed_state) {
                     this.game.pick_and_play_sound_effect(this.sounds.intro)
                     this.game.play_animation(this.animations.grow_vines(this), 5000)
                     this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
                     this.game.play_animation({end: () => this.weapon.weapon_el.classList.remove("hidden")}, 5000)
+                    this.enemy_root_el.querySelectorAll(eyes_selector).forEach((e) => e.classList.remove("hidden"))
                 }
                 if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 11000) {
                     this.phase = "fight"
-                    this.invicible = false
+                    this.defending = false
                     this.base_acceleration = enemy_cfg.base_acceleration
                 }
             } else if (this.phase === "fight") {
@@ -490,6 +492,9 @@ export class Enemy extends Character<Enemy> {
         this.enemy_root_el.style.left = `${this.pos.x - this.enemy_root_el.clientWidth / 2}px`
 
         this.enemy_root_el.classList.toggle("attacking", this.attacking)
+        this.enemy_root_el.classList.toggle("defending", this.defending)
+        this.enemy_root_el.classList.toggle("low-stamina", this.low_stamina)
+        this.enemy_root_el.classList.toggle("dead", this.dead)
         for (const phase of ATTACK_PHASES_SEQUENCE) {
             this.enemy_root_el.classList.toggle(`attack-phase-${phase}`, this.current_attack?.current_phase == phase)
         }
@@ -560,8 +565,7 @@ export class Enemy extends Character<Enemy> {
             attacking_character,
             context,
         })
-        if (!this.defending)
-            this.game.play_animation(this.animations.damage(this, {}, undefined, {attacking_character}))
+        this.game.play_animation(this.animations.damage(this, {}, undefined, {attacking_character}))
     }
 
     calc_next_attack_ts(now_ts: number) {

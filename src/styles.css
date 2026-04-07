@@ -11,8 +11,10 @@
     0% {
         opacity: 0;
     }
+}
+@keyframes fade-out {
     100% {
-        opacity: 1;
+        opacity: 0;
     }
 }
 
@@ -43,11 +45,51 @@
     width: max-content;
     filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
 }
+.enemy .eye {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    top: calc(50% - 2px);
+    left: 50%;
+    background-image: url("./assets/enemy/eye.svg");
+    background-size: contain;
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 1));
+    animation: fade-in 0.5s 1s both;
+}
+.enemy.attacking .eye {
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 1)) hue-rotate(-55deg);
+}
+.enemy.low-stamina .eye {
+    background-image: url("./assets/enemy/eye-half.svg");
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 1)) hue-rotate(-120deg) saturate(0.5);
+}
+.enemy.dead .eye {
+    background-image: url("./assets/enemy/eye-half.svg");
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 1)) hue-rotate(180deg) saturate(0) brightness(0.4);
+}
+.enemy.dead {
+    animation: fade-out 5s 1s both;
+}
 .enemy .weapon {
     position: absolute;
     top: 50%;
     left: 50%;
     animation: fade-in 0.3s both;
+}
+.enemy:not(.defending) .shield {
+    display: none;
+}
+.enemy .shield {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    width: 150%;
+    height: 200%;
+    transform: translate(-50%, -50%);
+    filter: hue-rotate(90deg) blur(5px);
+    mix-blend-mode: overlay;
+    opacity: 0.5;
+    animation: fade-in 2.5s both;
 }
 
 .player {
@@ -58,8 +100,20 @@
 .player.low-stamina .pointer {
     filter: contrast(0.5) sepia(1) hue-rotate(-100deg) saturate(2);
 }
-.player.hurt .pointer {
-    filter: contrast(0.5) sepia(1) hue-rotate(-30deg) saturate(4);
+.player.hurt .pointer,
+.player.dead .pointer {
+    filter: contrast(0.5) sepia(1) hue-rotate(-50deg) saturate(4);
+}
+.player.dead .pointer {
+    animation:
+        flatten 1s both,
+        fade-out 5s 1s both;
+}
+@keyframes flatten {
+    100% {
+        transform: rotateX(-50deg) skewX(-20deg);
+        transform-origin: 75% 75%;
+    }
 }
 .player .shield {
     position: absolute;

@@ -318,6 +318,7 @@ class Player extends Character<Player> {
 
         this.player_root_el.classList.toggle("low-stamina", this.low_stamina)
         this.player_root_el.classList.toggle("hurt", context.timeref - this.last_damage_ts < 500)
+        this.player_root_el.classList.toggle("dead", this.dead)
     }
 
     new_attack(): AttackDef<Player> {

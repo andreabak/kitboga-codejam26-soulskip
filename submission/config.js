@@ -72,6 +72,8 @@ const config = {
       low_stamina_max_vel: 0,
       low_stamina_enter_threshold: 1,
       low_stamina_exit_threshold: 150,
+      defend_damage_reduction: 0.9,
+      defend_stamina_consume_factor: 0,
       attacks_defs: {
         slow: {
           phases: {

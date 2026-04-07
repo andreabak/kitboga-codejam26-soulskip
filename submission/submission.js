@@ -1857,6 +1857,7 @@ const _Player = class _Player extends Character {
     this.player_root_el.classList.toggle("defending", this.defending);
     this.player_root_el.classList.toggle("low-stamina", this.low_stamina);
     this.player_root_el.classList.toggle("hurt", context.timeref - this.last_damage_ts < 500);
+    this.player_root_el.classList.toggle("dead", this.dead);
   }
   new_attack() {
     return this.attacks_defs["fast"];
@@ -2015,7 +2016,7 @@ const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
   }
   _update(context) {
     if (this.enemy.current_attack == null) {
-      if (this.enemy.low_stamina) this.base_rotation = -190 / 180 * Math.PI;
+      if (this.enemy.low_stamina || this.enemy.dead) this.base_rotation = -190 / 180 * Math.PI;
     }
     const offset = {
       x: this.base_offset.x - this.enemy.velocity.x * this.velocity_drift_factor,
@@ -2090,6 +2091,7 @@ const enemy_cfg = { ...config.characters.defaults, ...config.characters.enemy };
 const enemy_root_selector = ".enemy";
 const skip_btn_selector = ".skip-btn";
 const vines_root_selector = ".vines";
+const eyes_selector = ".eye";
 class Enemy extends Character {
   constructor(game2) {
     super(game2);
@@ -2353,17 +2355,18 @@ class Enemy extends Character {
     super._update(context);
     if (this.game.state === "battle") {
       if (this.phase === "fight-start") {
-        this.invicible = true;
+        this.defending = true;
         this.base_acceleration = 0.033;
         if (this.game.changed_state) {
           this.game.pick_and_play_sound_effect(this.sounds.intro);
           this.game.play_animation(this.animations.grow_vines(this), 5e3);
           this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
           this.game.play_animation({ end: () => this.weapon.weapon_el.classList.remove("hidden") }, 5e3);
+          this.enemy_root_el.querySelectorAll(eyes_selector).forEach((e) => e.classList.remove("hidden"));
         }
         if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 11e3) {
           this.phase = "fight";
-          this.invicible = false;
+          this.defending = false;
           this.base_acceleration = enemy_cfg.base_acceleration;
         }
       } else if (this.phase === "fight") {
@@ -2381,6 +2384,9 @@ class Enemy extends Character {
     this.enemy_root_el.style.top = `${this.pos.y - this.enemy_root_el.clientHeight / 2}px`;
     this.enemy_root_el.style.left = `${this.pos.x - this.enemy_root_el.clientWidth / 2}px`;
     this.enemy_root_el.classList.toggle("attacking", this.attacking);
+    this.enemy_root_el.classList.toggle("defending", this.defending);
+    this.enemy_root_el.classList.toggle("low-stamina", this.low_stamina);
+    this.enemy_root_el.classList.toggle("dead", this.dead);
     for (const phase of ATTACK_PHASES_SEQUENCE) {
       this.enemy_root_el.classList.toggle(`attack-phase-${phase}`, ((_a = this.current_attack) == null ? void 0 : _a.current_phase) == phase);
     }
@@ -2433,8 +2439,7 @@ class Enemy extends Character {
       attacking_character,
       context
     });
-    if (!this.defending)
-      this.game.play_animation(this.animations.damage(this, {}, void 0, { attacking_character }));
+    this.game.play_animation(this.animations.damage(this, {}, void 0, { attacking_character }));
   }
   calc_next_attack_ts(now_ts) {
     return now_ts + this.auto_attack_interval[0] + Math.random() * (this.auto_attack_interval[1] - this.auto_attack_interval[0]);
