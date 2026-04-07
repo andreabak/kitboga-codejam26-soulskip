@@ -53,6 +53,9 @@ export function interpolate(a: number, b: number, alpha: number): number {
     return a * (1 - alpha) + b * alpha
 }
 
+export const rad2deg = (radians: number): number => (radians * 180) / Math.PI
+export const deg2rad = (degrees: number): number => (degrees * Math.PI) / 180
+
 export type Point = {
     x: number
     y: number
@@ -243,7 +246,7 @@ export class TargetFollower {
         {
             acceleration,
             velocity = {x: 0, y: 0},
-            direction = (-90 / 180) * Math.PI,
+            direction = deg2rad(-90),
             max_vel = null,
             slowing_distance = null,
             vel_max_rotation = Infinity,

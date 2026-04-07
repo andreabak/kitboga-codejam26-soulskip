@@ -1,8 +1,10 @@
 import {CharacterBaseConfig, config, MergedCharacterConfig} from "@/config"
 import {
     aabb_overlap,
+    deg2rad,
     dist_pt,
     Point,
+    rad2deg,
     Rect,
     rect_to_shape,
     sat_overlap,
@@ -114,7 +116,7 @@ export function attack_swing_animation_def<C extends Character>(
         image_src,
         {...{style: {mixBlendMode: "plus-lighter", ...(params?.style ?? {})}}, ...(params ?? {})},
         (character: C, attack, image_el) => {
-            const rotation_base_deg = ((character.direction - attack.hitbox.rotation_ref) * 180) / Math.PI
+            const rotation_base_deg = rad2deg(character.direction - attack.hitbox.rotation_ref)
             const update = (progress: number) => {
                 const _progress = typeof swing_ease_fn === "function" ? swing_ease_fn(progress) : progress ** 0.25
                 const rotation_offset_deg = -ref_angle_deg - swing_angle_deg * _progress
@@ -172,7 +174,7 @@ export function blood_splat_animation_def(params: ImageAnimationParams) {
             }
             image_el.style.top = `${pos.y}px`
             image_el.style.left = `${pos.x}px`
-            image_el.style.transform = `translate(-50%, -50%) rotate(${(character.direction * 180) / Math.PI}deg)`
+            image_el.style.transform = `translate(-50%, -50%) rotate(${rad2deg(character.direction)}deg)`
             return {}
         },
     )
@@ -285,8 +287,8 @@ export abstract class Character<C extends Character<C> = any> extends Actor {
                 acceleration: this.base_acceleration,
                 max_vel: this.base_max_vel,
                 slowing_distance: this.slowing_distance,
-                vel_max_rotation: ((20 * 360) / 180) * Math.PI,
-                dir_max_rotation: ((2 * 360) / 180) * Math.PI,
+                vel_max_rotation: deg2rad(20 * 360),
+                dir_max_rotation: deg2rad(2 * 360),
             },
         )
     }

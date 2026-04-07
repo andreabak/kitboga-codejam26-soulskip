@@ -1,5 +1,15 @@
 import {config} from "@/config"
-import {dist, get_element, Point, random_pick, rect_center_dist, shape_bbox, TargetFollower} from "@/utils"
+import {
+    deg2rad,
+    dist,
+    get_element,
+    Point,
+    rad2deg,
+    random_pick,
+    rect_center_dist,
+    shape_bbox,
+    TargetFollower,
+} from "@/utils"
 
 import {
     AnimationHandle,
@@ -61,9 +71,9 @@ export class EnemyWeapon extends GameComponent {
 
     static initial_offset: Point = {x: 0, y: 24}
     base_offset: Point = {x: 0, y: 24}
-    static initial_rotation = (-150 / 180) * Math.PI
-    base_rotation = (-150 / 180) * Math.PI
-    rotation_ref = (-135 / 180) * Math.PI
+    static initial_rotation = deg2rad(-150)
+    base_rotation = deg2rad(-150)
+    rotation_ref = deg2rad(-135)
 
     velocity_drift_factor = 3.0
 
@@ -92,24 +102,20 @@ export class EnemyWeapon extends GameComponent {
     static animations = {
         swing_fast_anticipation: EnemyWeapon.animation_base_def({
             position: {x: -24, y: -16},
-            rotation: (enemy) =>
-                (-90 / 180) * Math.PI + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
+            rotation: (enemy) => deg2rad(-90) + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
         }),
         swing_fast_hit: EnemyWeapon.animation_base_def({
             position: {x: 24, y: 0},
-            rotation: (enemy) =>
-                (-355 / 180) * Math.PI + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
+            rotation: (enemy) => deg2rad(-355) + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
             params: {shortest_angle: false, ease_fn: (progress) => progress ** 0.5},
         }),
         swing_slow_anticipation: EnemyWeapon.animation_base_def({
             position: {x: -32, y: -24},
-            rotation: (enemy) =>
-                (-60 / 180) * Math.PI + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
+            rotation: (enemy) => deg2rad(-60) + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
         }),
         swing_slow_hit: EnemyWeapon.animation_base_def({
             position: {x: 24, y: 0},
-            rotation: (enemy) =>
-                (-355 / 180) * Math.PI + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
+            rotation: (enemy) => deg2rad(-355) + enemy.direction - (enemy.current_attack?.hitbox?.rotation_ref ?? 0),
             params: {shortest_angle: false, ease_fn: (progress) => progress ** 0.5},
         }),
         swing_recover: EnemyWeapon.animation_base_def({
@@ -130,29 +136,27 @@ export class EnemyWeapon extends GameComponent {
             {
                 acceleration: 200,
                 slowing_distance: 10,
-                dir_max_rotation: ((20 * 360) / 180) * Math.PI,
+                dir_max_rotation: deg2rad(20 * 360),
             },
         )
     }
 
     _update(context: GameUpdateContext) {
         if (this.enemy.current_attack == null) {
-            if (this.enemy.low_stamina || this.enemy.dead) this.base_rotation = (-190 / 180) * Math.PI
+            if (this.enemy.low_stamina || this.enemy.dead) this.base_rotation = deg2rad(-190)
         }
         const offset = {
             x: this.base_offset.x - this.enemy.velocity.x * this.velocity_drift_factor,
             y: this.base_offset.y - this.enemy.velocity.y * this.velocity_drift_factor,
         }
         const rotation =
-            this.base_rotation -
-            this.rotation_ref +
-            (Math.max(-30, Math.min(-this.enemy.velocity.x * 1.5, 30)) / 180) * Math.PI
+            this.base_rotation - this.rotation_ref + deg2rad(Math.max(-30, Math.min(-this.enemy.velocity.x * 1.5, 30)))
         this.follower.pos_target = offset
         this.follower.dir_target = rotation
         if (context.timedelta) this.follower.update(context.timedelta)
         this.weapon_el.style.transform = `
             translate(calc(${this.follower.pos.x}px - 50%), calc(${this.follower.pos.y}px - 50%))
-            rotate(${(this.follower.direction * 180) / Math.PI}deg)
+            rotate(${rad2deg(this.follower.direction)}deg)
         `
     }
 }
@@ -225,7 +229,7 @@ export class Enemy extends Character<Enemy> {
                     ],
                 },
                 origin_ref: {x: 0, y: 24},
-                rotation_ref: (-90 / 180) * Math.PI,
+                rotation_ref: deg2rad(-90),
             },
             hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3],
         },
@@ -283,7 +287,7 @@ export class Enemy extends Character<Enemy> {
                     ],
                 },
                 origin_ref: {x: 0, y: 24},
-                rotation_ref: (-90 / 180) * Math.PI,
+                rotation_ref: deg2rad(-90),
             },
             hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3],
         },
@@ -341,13 +345,12 @@ export class Enemy extends Character<Enemy> {
                             return {
                                 update: (progress) => {
                                     const rotation_deg =
-                                        (Math.atan2(
-                                            image_el.offsetTop - btn_rect.height / 2,
-                                            image_el.offsetLeft - btn_rect.width / 2,
-                                        ) *
-                                            180) /
-                                            Math.PI +
-                                        rotation_offset_deg
+                                        rad2deg(
+                                            Math.atan2(
+                                                image_el.offsetTop - btn_rect.height / 2,
+                                                image_el.offsetLeft - btn_rect.width / 2,
+                                            ),
+                                        ) + rotation_offset_deg
                                     image_el.style.transform = `
                                         translate(-50%, -50%)
                                         rotate(${rotation_deg}deg)

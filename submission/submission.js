@@ -64,6 +64,8 @@ function random_pick(items) {
 function interpolate(a, b, alpha) {
   return a * (1 - alpha) + b * alpha;
 }
+const rad2deg = (radians) => radians * 180 / Math.PI;
+const deg2rad = (degrees) => degrees * Math.PI / 180;
 function interpolate_point(a, b, alpha) {
   return { x: interpolate(a.x, b.x, alpha), y: interpolate(a.y, b.y, alpha) };
 }
@@ -189,7 +191,7 @@ class TargetFollower {
   constructor(pos, target, {
     acceleration,
     velocity = { x: 0, y: 0 },
-    direction = -90 / 180 * Math.PI,
+    direction = deg2rad(-90),
     max_vel = null,
     slowing_distance = null,
     vel_max_rotation = Infinity,
@@ -986,7 +988,7 @@ function attack_swing_animation_def(image_src, {
     image_src,
     { ...{ style: { mixBlendMode: "plus-lighter", ...(params == null ? void 0 : params.style) ?? {} } }, ...params ?? {} },
     (character, attack, image_el) => {
-      const rotation_base_deg = (character.direction - attack.hitbox.rotation_ref) * 180 / Math.PI;
+      const rotation_base_deg = rad2deg(character.direction - attack.hitbox.rotation_ref);
       const update = (progress) => {
         const _progress = typeof swing_ease_fn === "function" ? swing_ease_fn(progress) : progress ** 0.25;
         const rotation_offset_deg = -ref_angle_deg - swing_angle_deg * _progress;
@@ -1039,7 +1041,7 @@ function blood_splat_animation_def(params) {
       };
       image_el.style.top = `${pos.y}px`;
       image_el.style.left = `${pos.x}px`;
-      image_el.style.transform = `translate(-50%, -50%) rotate(${character.direction * 180 / Math.PI}deg)`;
+      image_el.style.transform = `translate(-50%, -50%) rotate(${rad2deg(character.direction)}deg)`;
       return {};
     }
   );
@@ -1100,8 +1102,8 @@ class Character extends Actor {
         acceleration: this.base_acceleration,
         max_vel: this.base_max_vel,
         slowing_distance: this.slowing_distance,
-        vel_max_rotation: 20 * 360 / 180 * Math.PI,
-        dir_max_rotation: 2 * 360 / 180 * Math.PI
+        vel_max_rotation: deg2rad(20 * 360),
+        dir_max_rotation: deg2rad(2 * 360)
       }
     );
   }
@@ -1661,7 +1663,7 @@ class PlayerShield extends GameComponent {
     __publicField(this, "shield_el");
     __publicField(this, "player_distance", 20);
     __publicField(this, "offset", { x: 6, y: 12 });
-    __publicField(this, "rotation_ref", 90 / 180 * Math.PI);
+    __publicField(this, "rotation_ref", deg2rad(90));
     this.player = player;
     this.shield_el = get_element(player_shield_selector, player.player_root_el);
   }
@@ -1670,7 +1672,7 @@ class PlayerShield extends GameComponent {
     const _transf_rot = rotation - this.rotation_ref;
     const _transf_rot_sin = Math.sin(_transf_rot);
     const _transf_rot_cos = Math.cos(_transf_rot);
-    const rot_pinch_limit = 30 / 180 * Math.PI;
+    const rot_pinch_limit = deg2rad(30);
     const rotation_pinch_factor = Math.abs(_transf_rot_sin) ** 9 * Math.sign(_transf_rot_sin) * Math.sign(_transf_rot_cos);
     const rotation_pinch = rot_pinch_limit * rotation_pinch_factor;
     const pos = { x: Math.cos(rotation) * this.player_distance, y: Math.sin(rotation) * this.player_distance };
@@ -1685,7 +1687,7 @@ class PlayerShield extends GameComponent {
     this.shield_el.style.transform = `
             translate(-50%, -50%)
             rotateX(45deg)
-            rotateY(${(rotation - this.rotation_ref - rotation_pinch) * 180 / Math.PI}deg)
+            rotateY(${rad2deg(rotation - this.rotation_ref - rotation_pinch)}deg)
         `;
     this.shield_el.style.filter = `
             brightness(${1 - 0.3 * Math.abs(_transf_rot_sin) ** 0.5 - 0.5 * (-Math.sign(_transf_rot_cos) / 2 - 0.5)})
@@ -1745,7 +1747,7 @@ const _Player = class _Player extends Character {
               { x: -0.25, y: 0.25 }
             ]
           },
-          rotation_ref: -90 / 180 * Math.PI
+          rotation_ref: deg2rad(-90)
         },
         hit_sound: [PlayerAttackHitSound1, PlayerAttackHitSound2, PlayerAttackHitSound3, PlayerAttackHitSound4]
       }
@@ -1999,8 +2001,8 @@ const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
     __publicField(this, "weapon_el");
     __publicField(this, "follower");
     __publicField(this, "base_offset", { x: 0, y: 24 });
-    __publicField(this, "base_rotation", -150 / 180 * Math.PI);
-    __publicField(this, "rotation_ref", -135 / 180 * Math.PI);
+    __publicField(this, "base_rotation", deg2rad(-150));
+    __publicField(this, "rotation_ref", deg2rad(-135));
     __publicField(this, "velocity_drift_factor", 3);
     this.enemy = enemy;
     this.weapon_el = get_element(enemy_weapon_selector, enemy.enemy_root_el);
@@ -2010,30 +2012,30 @@ const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
       {
         acceleration: 200,
         slowing_distance: 10,
-        dir_max_rotation: 20 * 360 / 180 * Math.PI
+        dir_max_rotation: deg2rad(20 * 360)
       }
     );
   }
   _update(context) {
     if (this.enemy.current_attack == null) {
-      if (this.enemy.low_stamina || this.enemy.dead) this.base_rotation = -190 / 180 * Math.PI;
+      if (this.enemy.low_stamina || this.enemy.dead) this.base_rotation = deg2rad(-190);
     }
     const offset = {
       x: this.base_offset.x - this.enemy.velocity.x * this.velocity_drift_factor,
       y: this.base_offset.y - this.enemy.velocity.y * this.velocity_drift_factor
     };
-    const rotation = this.base_rotation - this.rotation_ref + Math.max(-30, Math.min(-this.enemy.velocity.x * 1.5, 30)) / 180 * Math.PI;
+    const rotation = this.base_rotation - this.rotation_ref + deg2rad(Math.max(-30, Math.min(-this.enemy.velocity.x * 1.5, 30)));
     this.follower.pos_target = offset;
     this.follower.dir_target = rotation;
     if (context.timedelta) this.follower.update(context.timedelta);
     this.weapon_el.style.transform = `
             translate(calc(${this.follower.pos.x}px - 50%), calc(${this.follower.pos.y}px - 50%))
-            rotate(${this.follower.direction * 180 / Math.PI}deg)
+            rotate(${rad2deg(this.follower.direction)}deg)
         `;
   }
 };
 __publicField(_EnemyWeapon, "initial_offset", { x: 0, y: 24 });
-__publicField(_EnemyWeapon, "initial_rotation", -150 / 180 * Math.PI);
+__publicField(_EnemyWeapon, "initial_rotation", deg2rad(-150));
 __publicField(_EnemyWeapon, "animation_base_def", ({
   position,
   rotation,
@@ -2055,14 +2057,14 @@ __publicField(_EnemyWeapon, "animations", {
     position: { x: -24, y: -16 },
     rotation: (enemy) => {
       var _a, _b;
-      return -90 / 180 * Math.PI + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
+      return deg2rad(-90) + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
     }
   }),
   swing_fast_hit: _EnemyWeapon.animation_base_def({
     position: { x: 24, y: 0 },
     rotation: (enemy) => {
       var _a, _b;
-      return -355 / 180 * Math.PI + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
+      return deg2rad(-355) + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
     },
     params: { shortest_angle: false, ease_fn: (progress) => progress ** 0.5 }
   }),
@@ -2070,14 +2072,14 @@ __publicField(_EnemyWeapon, "animations", {
     position: { x: -32, y: -24 },
     rotation: (enemy) => {
       var _a, _b;
-      return -60 / 180 * Math.PI + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
+      return deg2rad(-60) + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
     }
   }),
   swing_slow_hit: _EnemyWeapon.animation_base_def({
     position: { x: 24, y: 0 },
     rotation: (enemy) => {
       var _a, _b;
-      return -355 / 180 * Math.PI + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
+      return deg2rad(-355) + enemy.direction - (((_b = (_a = enemy.current_attack) == null ? void 0 : _a.hitbox) == null ? void 0 : _b.rotation_ref) ?? 0);
     },
     params: { shortest_angle: false, ease_fn: (progress) => progress ** 0.5 }
   }),
@@ -2151,7 +2153,7 @@ class Enemy extends Character {
             ]
           },
           origin_ref: { x: 0, y: 24 },
-          rotation_ref: -90 / 180 * Math.PI
+          rotation_ref: deg2rad(-90)
         },
         hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3]
       },
@@ -2209,7 +2211,7 @@ class Enemy extends Character {
             ]
           },
           origin_ref: { x: 0, y: 24 },
-          rotation_ref: -90 / 180 * Math.PI
+          rotation_ref: deg2rad(-90)
         },
         hit_sound: [EnemyAttackHitSound1, EnemyAttackHitSound2, EnemyAttackHitSound3]
       }
@@ -2258,10 +2260,12 @@ class Enemy extends Character {
                 image_el.style.filter = "drop-shadow(0 0 2px black)";
                 return {
                   update: (progress) => {
-                    const rotation_deg = Math.atan2(
-                      image_el.offsetTop - btn_rect.height / 2,
-                      image_el.offsetLeft - btn_rect.width / 2
-                    ) * 180 / Math.PI + rotation_offset_deg;
+                    const rotation_deg = rad2deg(
+                      Math.atan2(
+                        image_el.offsetTop - btn_rect.height / 2,
+                        image_el.offsetLeft - btn_rect.width / 2
+                      )
+                    ) + rotation_offset_deg;
                     image_el.style.transform = `
                                         translate(-50%, -50%)
                                         rotate(${rotation_deg}deg)

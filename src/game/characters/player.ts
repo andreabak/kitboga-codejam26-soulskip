@@ -1,5 +1,5 @@
 import {config} from "@/config"
-import {get_element, Point} from "@/utils"
+import {deg2rad, get_element, Point, rad2deg} from "@/utils"
 
 import {image_animation_def, ImageAnimationParams, multi_animation_def} from "../animations"
 import {GameComponent, GameUpdateContext} from "../core"
@@ -64,7 +64,7 @@ class PlayerShield extends GameComponent {
 
     player_distance = 20
     offset: Point = {x: 6, y: 12}
-    rotation_ref = (90 / 180) * Math.PI
+    rotation_ref = deg2rad(90)
 
     constructor(game: Game, player: Player) {
         super(game)
@@ -78,7 +78,7 @@ class PlayerShield extends GameComponent {
         const _transf_rot = rotation - this.rotation_ref
         const _transf_rot_sin = Math.sin(_transf_rot)
         const _transf_rot_cos = Math.cos(_transf_rot)
-        const rot_pinch_limit = (30 / 180) * Math.PI
+        const rot_pinch_limit = deg2rad(30)
         const rotation_pinch_factor =
             Math.abs(_transf_rot_sin) ** 9 * Math.sign(_transf_rot_sin) * Math.sign(_transf_rot_cos)
         const rotation_pinch = rot_pinch_limit * rotation_pinch_factor
@@ -96,7 +96,7 @@ class PlayerShield extends GameComponent {
         this.shield_el.style.transform = `
             translate(-50%, -50%)
             rotateX(45deg)
-            rotateY(${((rotation - this.rotation_ref - rotation_pinch) * 180) / Math.PI}deg)
+            rotateY(${rad2deg(rotation - this.rotation_ref - rotation_pinch)}deg)
         `
         this.shield_el.style.filter = `
             brightness(${1 - 0.3 * Math.abs(_transf_rot_sin) ** 0.5 - 0.5 * (-Math.sign(_transf_rot_cos) / 2 - 0.5)})
@@ -163,7 +163,7 @@ class Player extends Character<Player> {
                         {x: -0.25, y: 0.25},
                     ],
                 },
-                rotation_ref: (-90 / 180) * Math.PI,
+                rotation_ref: deg2rad(-90),
             },
             hit_sound: [PlayerAttackHitSound1, PlayerAttackHitSound2, PlayerAttackHitSound3, PlayerAttackHitSound4],
         },
