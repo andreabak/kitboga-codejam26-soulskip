@@ -2241,6 +2241,7 @@ class Enemy extends Character {
     }
     this.enemy_root_el.style.top = `${this.pos.y - this.enemy_root_el.clientHeight / 2}px`;
     this.enemy_root_el.style.left = `${this.pos.x - this.enemy_root_el.clientWidth / 2}px`;
+    this.enemy_root_el.classList.toggle("hidden", !this.game.loaded);
     this.enemy_root_el.classList.toggle("attacking", this.attacking);
     this.enemy_root_el.classList.toggle("defending", this.defending);
     this.enemy_root_el.classList.toggle("low-stamina", this.low_stamina);
@@ -2303,7 +2304,7 @@ class Enemy extends Character {
     return now_ts + this.auto_attack_interval[0] + Math.random() * (this.auto_attack_interval[1] - this.auto_attack_interval[0]);
   }
   _aggro_trigger() {
-    if (this.game.state === "chill") {
+    if (this.game.state === "chill" && this.game.loaded) {
       this.game.change_state_soon("battle");
       this.phase = "fight-start";
       const game_rect = this.game.rect;
@@ -2354,6 +2355,7 @@ class Game extends Component {
     __publicField(this, "game_root_el");
     __publicField(this, "animations_root_el");
     __publicField(this, "animations", {});
+    __publicField(this, "pending_assets", /* @__PURE__ */ new Set());
     __publicField(this, "sound_effects", {});
     __publicField(this, "player");
     __publicField(this, "enemy");
@@ -2394,6 +2396,9 @@ class Game extends Component {
         component.preload();
       }
     }
+  }
+  get loaded() {
+    return !this.pending_assets.size;
   }
   add_character(character) {
     this.characters.push(character);
@@ -2497,6 +2502,9 @@ class Game extends Component {
   load_sound_effect(src) {
     const audio = new Audio(src);
     this.sound_effects[src] = audio;
+    this.pending_assets.add(src);
+    audio.addEventListener("canplaythrough", () => this.pending_assets.delete(src));
+    audio.addEventListener("error", () => this.pending_assets.delete(src));
     return audio;
   }
   preload_sounds(...srcs) {

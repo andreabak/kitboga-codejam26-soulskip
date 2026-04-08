@@ -561,6 +561,7 @@ export class Enemy extends Character<Enemy> {
         this.enemy_root_el.style.top = `${this.pos.y - this.enemy_root_el.clientHeight / 2}px`
         this.enemy_root_el.style.left = `${this.pos.x - this.enemy_root_el.clientWidth / 2}px`
 
+        this.enemy_root_el.classList.toggle("hidden", !this.game.loaded)
         this.enemy_root_el.classList.toggle("attacking", this.attacking)
         this.enemy_root_el.classList.toggle("defending", this.defending)
         this.enemy_root_el.classList.toggle("low-stamina", this.low_stamina)
@@ -647,7 +648,7 @@ export class Enemy extends Character<Enemy> {
     }
 
     _aggro_trigger() {
-        if (this.game.state === "chill") {
+        if (this.game.state === "chill" && this.game.loaded) {
             this.game.change_state_soon("battle")
             this.phase = "fight-start"
 

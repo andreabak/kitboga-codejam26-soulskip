@@ -66,6 +66,8 @@ export class Game extends Component<GameUpdateContext> {
     animations_root_el: HTMLDivElement
     animations: Record<string, {start_ts: number; duration: number; handle: AnimationHandle}> = {}
 
+    private pending_assets: Set<string> = new Set()
+
     sound_effects: Record<string, HTMLAudioElement> = {}
 
     player: Player
@@ -123,6 +125,9 @@ export class Game extends Component<GameUpdateContext> {
                 component.preload()
             }
         }
+    }
+    get loaded(): boolean {
+        return !this.pending_assets.size
     }
 
     add_character<C extends Character>(character: C): C {
@@ -238,6 +243,9 @@ export class Game extends Component<GameUpdateContext> {
     load_sound_effect(src: string): HTMLAudioElement {
         const audio = new Audio(src)
         this.sound_effects[src] = audio
+        this.pending_assets.add(src)
+        audio.addEventListener("canplaythrough", () => this.pending_assets.delete(src))
+        audio.addEventListener("error", () => this.pending_assets.delete(src))
         return audio
     }
     preload_sounds(...srcs: Array<string>) {

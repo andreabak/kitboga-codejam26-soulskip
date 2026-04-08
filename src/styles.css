@@ -7,6 +7,9 @@
 .hidden {
     display: none !important;
 }
+.transparent {
+    opacity: 0;
+}
 @keyframes fade-in {
     0% {
         opacity: 0;
@@ -46,6 +49,7 @@
     bottom: 60px;
     right: -4px;
     cursor: pointer;
+    animation: fade-in 1s both;
 }
 .skip-btn {
     position: relative;
