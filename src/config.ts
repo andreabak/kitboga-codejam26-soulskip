@@ -43,7 +43,14 @@ export type PlayerConfig = CharacterConfig<Player, keyof typeof Player.prototype
     Pick<Player, "flask_health_recover_pct">
 
 export type EnemyConfig = CharacterConfig<Enemy, keyof typeof Enemy.prototype.attacks_defs> &
-    Pick<Enemy, "attacks_chains_defs" | "follow_dist_offset" | "auto_attack_dist" | "auto_attack_interval">
+    Pick<
+        Enemy,
+        | "attacks_chains_defs"
+        | "follow_dist_offset"
+        | "auto_attack_dist"
+        | "auto_attack_interval"
+        | "intro_thunder_enabled"
+    >
 
 export type GameConfig = Pick<
     Game,
@@ -206,6 +213,7 @@ export const config: Config = {
             follow_dist_offset: 30,
             auto_attack_dist: 400,
             auto_attack_interval: [1500, 3000],
+            intro_thunder_enabled: true,
         },
     },
     game: {

@@ -33,6 +33,14 @@
     user-select: none;
 }
 
+.animations {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    touch-action: none;
+}
+
 .enemy {
     position: absolute;
     bottom: 60px;
@@ -204,7 +212,7 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    animation: fade-in 2.5s both;
+    animation: fade-in 2.5s 2.5s both;
 }
 .bar {
     --bar-fill: 0;

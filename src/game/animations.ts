@@ -48,6 +48,13 @@ export type TimedAnimationHandle = {
 }
 export type TimedAnimationDef<C extends Component<object>> = (component: C) => TimedAnimationHandle
 
+export function delay_anim(callback: () => unknown, delay: number): TimedAnimationHandle {
+    return {
+        end: () => callback(),
+        duration: delay,
+    }
+}
+
 export type ImagesAnimationDefMixin = {image_src: string | Array<string>}
 type ImagesAnimationFactory<C extends Component<object>, H extends AnimationHandle> = (
     component: C,

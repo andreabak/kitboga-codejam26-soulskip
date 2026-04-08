@@ -297,6 +297,12 @@ class ImageSequence {
     return new ImageSequence(frames, fps);
   }
 }
+function delay_anim(callback, delay2) {
+  return {
+    end: () => callback(),
+    duration: delay2
+  };
+}
 function image_animation_def(image_src, element, { duration, remove, position, size, image_size = "contain", style } = {}, init) {
   function factory(component, params_override, init_override, ...rest) {
     const params = { ...{ duration, remove, position, size, image_size, style }, ...params_override ?? {} };
@@ -676,49 +682,49 @@ function send_shell_request(request) {
   window.top.postMessage(request, "*");
 }
 const _00000$3 = "" + new URL("assets/00000-DVIn6pJe.png", import.meta.url).href;
-const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_0$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00001$3 = "" + new URL("assets/00001-B2sqO7TY.png", import.meta.url).href;
-const __vite_glob_0_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00001$6 = "" + new URL("assets/00001-B2sqO7TY.png", import.meta.url).href;
+const __vite_glob_0_1$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00001$3
+  default: _00001$6
 }, Symbol.toStringTag, { value: "Module" }));
-const _00002$3 = "" + new URL("assets/00002-r5-hxNHx.png", import.meta.url).href;
-const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00002$6 = "" + new URL("assets/00002-r5-hxNHx.png", import.meta.url).href;
+const __vite_glob_0_2$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00002$3
+  default: _00002$6
 }, Symbol.toStringTag, { value: "Module" }));
-const _00003$3 = "" + new URL("assets/00003-DF1jXa8_.png", import.meta.url).href;
-const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00003$6 = "" + new URL("assets/00003-DF1jXa8_.png", import.meta.url).href;
+const __vite_glob_0_3$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00003$3
+  default: _00003$6
 }, Symbol.toStringTag, { value: "Module" }));
-const _00004$3 = "" + new URL("assets/00004-D38e-WWq.png", import.meta.url).href;
-const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00004$6 = "" + new URL("assets/00004-D38e-WWq.png", import.meta.url).href;
+const __vite_glob_0_4$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00004$3
+  default: _00004$6
 }, Symbol.toStringTag, { value: "Module" }));
-const _00005$3 = "" + new URL("assets/00005-DNAvbWOk.png", import.meta.url).href;
-const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00005$6 = "" + new URL("assets/00005-DNAvbWOk.png", import.meta.url).href;
+const __vite_glob_0_5$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00005$3
+  default: _00005$6
 }, Symbol.toStringTag, { value: "Module" }));
-const _00006$3 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
-const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00006$6 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
+const __vite_glob_0_6$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00006$3
+  default: _00006$6
 }, Symbol.toStringTag, { value: "Module" }));
-const _00007$3 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
-const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00007$6 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
+const __vite_glob_0_7$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00007$3
+  default: _00007$6
 }, Symbol.toStringTag, { value: "Module" }));
-const _00008$3 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
+const _00008$6 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
 const __vite_glob_0_8$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00008$3
+  default: _00008$6
 }, Symbol.toStringTag, { value: "Module" }));
 const _00009$2 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
 const __vite_glob_0_9$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -736,49 +742,49 @@ const __vite_glob_0_11$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.
   default: _00011$1
 }, Symbol.toStringTag, { value: "Module" }));
 const _00000$2 = "" + new URL("assets/00000-C6sK4okU.png", import.meta.url).href;
-const __vite_glob_1_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_1_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000$2
 }, Symbol.toStringTag, { value: "Module" }));
-const _00001$2 = "" + new URL("assets/00001-hEuYavQz.png", import.meta.url).href;
-const __vite_glob_1_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00001$5 = "" + new URL("assets/00001-hEuYavQz.png", import.meta.url).href;
+const __vite_glob_1_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00001$2
+  default: _00001$5
 }, Symbol.toStringTag, { value: "Module" }));
-const _00002$2 = "" + new URL("assets/00002-SAyEZ-7F.png", import.meta.url).href;
-const __vite_glob_1_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00002$5 = "" + new URL("assets/00002-SAyEZ-7F.png", import.meta.url).href;
+const __vite_glob_1_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00002$2
+  default: _00002$5
 }, Symbol.toStringTag, { value: "Module" }));
-const _00003$2 = "" + new URL("assets/00003-hTnEsyx5.png", import.meta.url).href;
-const __vite_glob_1_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00003$5 = "" + new URL("assets/00003-hTnEsyx5.png", import.meta.url).href;
+const __vite_glob_1_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00003$2
+  default: _00003$5
 }, Symbol.toStringTag, { value: "Module" }));
-const _00004$2 = "" + new URL("assets/00004-DjYrpe7S.png", import.meta.url).href;
-const __vite_glob_1_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00004$5 = "" + new URL("assets/00004-DjYrpe7S.png", import.meta.url).href;
+const __vite_glob_1_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00004$2
+  default: _00004$5
 }, Symbol.toStringTag, { value: "Module" }));
-const _00005$2 = "" + new URL("assets/00005-rC81hARk.png", import.meta.url).href;
-const __vite_glob_1_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00005$5 = "" + new URL("assets/00005-rC81hARk.png", import.meta.url).href;
+const __vite_glob_1_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00005$2
+  default: _00005$5
 }, Symbol.toStringTag, { value: "Module" }));
-const _00006$2 = "" + new URL("assets/00006-hyIaIVM-.png", import.meta.url).href;
-const __vite_glob_1_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00006$5 = "" + new URL("assets/00006-hyIaIVM-.png", import.meta.url).href;
+const __vite_glob_1_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00006$2
+  default: _00006$5
 }, Symbol.toStringTag, { value: "Module" }));
-const _00007$2 = "" + new URL("assets/00007-OcmvWCeY.png", import.meta.url).href;
-const __vite_glob_1_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00007$5 = "" + new URL("assets/00007-OcmvWCeY.png", import.meta.url).href;
+const __vite_glob_1_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00007$2
+  default: _00007$5
 }, Symbol.toStringTag, { value: "Module" }));
-const _00008$2 = "" + new URL("assets/00008-CO2AqBPY.png", import.meta.url).href;
+const _00008$5 = "" + new URL("assets/00008-CO2AqBPY.png", import.meta.url).href;
 const __vite_glob_1_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00008$2
+  default: _00008$5
 }, Symbol.toStringTag, { value: "Module" }));
 const _00009$1 = "" + new URL("assets/00009-CI5KcvTw.png", import.meta.url).href;
 const __vite_glob_1_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -791,94 +797,94 @@ const __vite_glob_1_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.de
   default: _00010$1
 }, Symbol.toStringTag, { value: "Module" }));
 const _00000$1 = "" + new URL("assets/00000-C_Air7S2.png", import.meta.url).href;
-const __vite_glob_2_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_2_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000$1
 }, Symbol.toStringTag, { value: "Module" }));
-const _00001$1 = "" + new URL("assets/00001-BPvKz2Fw.png", import.meta.url).href;
-const __vite_glob_2_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00001$4 = "" + new URL("assets/00001-BPvKz2Fw.png", import.meta.url).href;
+const __vite_glob_2_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00001$1
+  default: _00001$4
 }, Symbol.toStringTag, { value: "Module" }));
-const _00002$1 = "" + new URL("assets/00002-DEittHlw.png", import.meta.url).href;
-const __vite_glob_2_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00002$4 = "" + new URL("assets/00002-DEittHlw.png", import.meta.url).href;
+const __vite_glob_2_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00002$1
+  default: _00002$4
 }, Symbol.toStringTag, { value: "Module" }));
-const _00003$1 = "" + new URL("assets/00003-DfCXBao8.png", import.meta.url).href;
-const __vite_glob_2_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00003$4 = "" + new URL("assets/00003-DfCXBao8.png", import.meta.url).href;
+const __vite_glob_2_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00003$1
+  default: _00003$4
 }, Symbol.toStringTag, { value: "Module" }));
-const _00004$1 = "" + new URL("assets/00004-CSPXiBSG.png", import.meta.url).href;
-const __vite_glob_2_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00004$4 = "" + new URL("assets/00004-CSPXiBSG.png", import.meta.url).href;
+const __vite_glob_2_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00004$1
+  default: _00004$4
 }, Symbol.toStringTag, { value: "Module" }));
-const _00005$1 = "" + new URL("assets/00005-Du55AuEC.png", import.meta.url).href;
-const __vite_glob_2_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00005$4 = "" + new URL("assets/00005-Du55AuEC.png", import.meta.url).href;
+const __vite_glob_2_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00005$1
+  default: _00005$4
 }, Symbol.toStringTag, { value: "Module" }));
-const _00006$1 = "" + new URL("assets/00006-_pA0hi7H.png", import.meta.url).href;
-const __vite_glob_2_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00006$4 = "" + new URL("assets/00006-_pA0hi7H.png", import.meta.url).href;
+const __vite_glob_2_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00006$1
+  default: _00006$4
 }, Symbol.toStringTag, { value: "Module" }));
-const _00007$1 = "" + new URL("assets/00007-BhSZvq0y.png", import.meta.url).href;
-const __vite_glob_2_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _00007$4 = "" + new URL("assets/00007-BhSZvq0y.png", import.meta.url).href;
+const __vite_glob_2_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00007$1
+  default: _00007$4
 }, Symbol.toStringTag, { value: "Module" }));
-const _00008$1 = "" + new URL("assets/00008-vETwGEjf.png", import.meta.url).href;
+const _00008$4 = "" + new URL("assets/00008-vETwGEjf.png", import.meta.url).href;
 const __vite_glob_2_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00008$1
+  default: _00008$4
 }, Symbol.toStringTag, { value: "Module" }));
 const _00000 = "" + new URL("assets/00000-DdBvVkDm.png", import.meta.url).href;
 const __vite_glob_3_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: _00000
 }, Symbol.toStringTag, { value: "Module" }));
-const _00001 = "" + new URL("assets/00001-D3H-pS9T.png", import.meta.url).href;
+const _00001$3 = "" + new URL("assets/00001-D3H-pS9T.png", import.meta.url).href;
 const __vite_glob_3_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00001
+  default: _00001$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00002 = "" + new URL("assets/00002-DK-WjgSW.png", import.meta.url).href;
+const _00002$3 = "" + new URL("assets/00002-DK-WjgSW.png", import.meta.url).href;
 const __vite_glob_3_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00002
+  default: _00002$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00003 = "" + new URL("assets/00003-CN1thLM5.png", import.meta.url).href;
+const _00003$3 = "" + new URL("assets/00003-CN1thLM5.png", import.meta.url).href;
 const __vite_glob_3_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00003
+  default: _00003$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00004 = "" + new URL("assets/00004-XeNPVGXA.png", import.meta.url).href;
+const _00004$3 = "" + new URL("assets/00004-XeNPVGXA.png", import.meta.url).href;
 const __vite_glob_3_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00004
+  default: _00004$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00005 = "" + new URL("assets/00005-CxsMJnpC.png", import.meta.url).href;
+const _00005$3 = "" + new URL("assets/00005-CxsMJnpC.png", import.meta.url).href;
 const __vite_glob_3_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00005
+  default: _00005$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00006 = "" + new URL("assets/00006-CtyiahLX.png", import.meta.url).href;
+const _00006$3 = "" + new URL("assets/00006-CtyiahLX.png", import.meta.url).href;
 const __vite_glob_3_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00006
+  default: _00006$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00007 = "" + new URL("assets/00006-CtyiahLX.png", import.meta.url).href;
+const _00007$3 = "" + new URL("assets/00006-CtyiahLX.png", import.meta.url).href;
 const __vite_glob_3_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00007
+  default: _00007$3
 }, Symbol.toStringTag, { value: "Module" }));
-const _00008 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
+const _00008$3 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
 const __vite_glob_3_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: _00008
+  default: _00008$3
 }, Symbol.toStringTag, { value: "Module" }));
 const _00009 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
 const __vite_glob_3_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -897,14 +903,14 @@ const __vite_glob_3_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.de
 }, Symbol.toStringTag, { value: "Module" }));
 const BloodEffect1Seq = ImageSequence.from_frames_dir(
   /* @__PURE__ */ Object.assign({
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00000.png": __vite_glob_0_0$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00001.png": __vite_glob_0_1$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00002.png": __vite_glob_0_2$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00003.png": __vite_glob_0_3$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00004.png": __vite_glob_0_4$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00005.png": __vite_glob_0_5$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00006.png": __vite_glob_0_6$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00007.png": __vite_glob_0_7$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00000.png": __vite_glob_0_0$2,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00001.png": __vite_glob_0_1$2,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00002.png": __vite_glob_0_2$2,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00003.png": __vite_glob_0_3$2,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00004.png": __vite_glob_0_4$2,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00005.png": __vite_glob_0_5$2,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00006.png": __vite_glob_0_6$2,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00007.png": __vite_glob_0_7$2,
     "/assets/vfx/blood/jasontomlee_vfx_blood_2/00008.png": __vite_glob_0_8$1,
     "/assets/vfx/blood/jasontomlee_vfx_blood_2/00009.png": __vite_glob_0_9$1,
     "/assets/vfx/blood/jasontomlee_vfx_blood_2/00010.png": __vite_glob_0_10$1,
@@ -914,14 +920,14 @@ const BloodEffect1Seq = ImageSequence.from_frames_dir(
 );
 const BloodEffect2Seq = ImageSequence.from_frames_dir(
   /* @__PURE__ */ Object.assign({
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00000.png": __vite_glob_1_0,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00001.png": __vite_glob_1_1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00002.png": __vite_glob_1_2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00003.png": __vite_glob_1_3,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00004.png": __vite_glob_1_4,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00005.png": __vite_glob_1_5,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00006.png": __vite_glob_1_6,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00007.png": __vite_glob_1_7,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00000.png": __vite_glob_1_0$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00001.png": __vite_glob_1_1$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00002.png": __vite_glob_1_2$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00003.png": __vite_glob_1_3$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00004.png": __vite_glob_1_4$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00005.png": __vite_glob_1_5$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00006.png": __vite_glob_1_6$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00007.png": __vite_glob_1_7$1,
     "/assets/vfx/blood/jasontomlee_vfx_blood_4/00008.png": __vite_glob_1_8,
     "/assets/vfx/blood/jasontomlee_vfx_blood_4/00009.png": __vite_glob_1_9,
     "/assets/vfx/blood/jasontomlee_vfx_blood_4/00010.png": __vite_glob_1_10
@@ -930,14 +936,14 @@ const BloodEffect2Seq = ImageSequence.from_frames_dir(
 );
 const BloodEffect3Seq = ImageSequence.from_frames_dir(
   /* @__PURE__ */ Object.assign({
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00000.png": __vite_glob_2_0,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00001.png": __vite_glob_2_1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00002.png": __vite_glob_2_2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00003.png": __vite_glob_2_3,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00004.png": __vite_glob_2_4,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00005.png": __vite_glob_2_5,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00006.png": __vite_glob_2_6,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00007.png": __vite_glob_2_7,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00000.png": __vite_glob_2_0$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00001.png": __vite_glob_2_1$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00002.png": __vite_glob_2_2$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00003.png": __vite_glob_2_3$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00004.png": __vite_glob_2_4$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00005.png": __vite_glob_2_5$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00006.png": __vite_glob_2_6$1,
+    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00007.png": __vite_glob_2_7$1,
     "/assets/vfx/blood/jasontomlee_vfx_blood_5/00008.png": __vite_glob_2_8
   }),
   15
@@ -1463,42 +1469,42 @@ class Character extends Actor {
   }
 }
 const Priest_skill3_frame1 = "" + new URL("assets/Priest_skill3_frame1-CKZBdEXY.png", import.meta.url).href;
-const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Priest_skill3_frame1
 }, Symbol.toStringTag, { value: "Module" }));
 const Priest_skill3_frame10 = "" + new URL("assets/Priest_skill3_frame10-D-ml8_BN.png", import.meta.url).href;
-const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Priest_skill3_frame10
 }, Symbol.toStringTag, { value: "Module" }));
 const Priest_skill3_frame11 = "" + new URL("assets/Priest_skill3_frame11-BtjaiNes.png", import.meta.url).href;
-const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Priest_skill3_frame11
 }, Symbol.toStringTag, { value: "Module" }));
 const Priest_skill3_frame12 = "" + new URL("assets/Priest_skill3_frame12-BTxxtnly.png", import.meta.url).href;
-const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Priest_skill3_frame12
 }, Symbol.toStringTag, { value: "Module" }));
 const Priest_skill3_frame2 = "" + new URL("assets/Priest_skill3_frame2-CJ-MPro4.png", import.meta.url).href;
-const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Priest_skill3_frame2
 }, Symbol.toStringTag, { value: "Module" }));
 const Priest_skill3_frame3 = "" + new URL("assets/Priest_skill3_frame3-CB6wZIG8.png", import.meta.url).href;
-const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Priest_skill3_frame3
 }, Symbol.toStringTag, { value: "Module" }));
 const Priest_skill3_frame4 = "" + new URL("assets/Priest_skill3_frame4-Bjw_NCp-.png", import.meta.url).href;
-const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Priest_skill3_frame4
 }, Symbol.toStringTag, { value: "Module" }));
 const Priest_skill3_frame5 = "" + new URL("assets/Priest_skill3_frame5-5mbwMl--.png", import.meta.url).href;
-const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Priest_skill3_frame5
 }, Symbol.toStringTag, { value: "Module" }));
@@ -1717,14 +1723,14 @@ const PlayerParrySound2 = "" + new URL("assets/591155-CmvEOVys.opus", import.met
 const SwordIcon = "" + new URL("assets/sword-B4u20JoA.svg", import.meta.url).href;
 const FlaskUseSeq = ImageSequence.from_frames_dir(
   /* @__PURE__ */ Object.assign({
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame1.png": __vite_glob_0_0,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame10.png": __vite_glob_0_1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame11.png": __vite_glob_0_2,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame12.png": __vite_glob_0_3,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame2.png": __vite_glob_0_4,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame3.png": __vite_glob_0_5,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame4.png": __vite_glob_0_6,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame5.png": __vite_glob_0_7,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame1.png": __vite_glob_0_0$1,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame10.png": __vite_glob_0_1$1,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame11.png": __vite_glob_0_2$1,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame12.png": __vite_glob_0_3$1,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame2.png": __vite_glob_0_4$1,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame3.png": __vite_glob_0_5$1,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame4.png": __vite_glob_0_6$1,
+    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame5.png": __vite_glob_0_7$1,
     "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame6.png": __vite_glob_0_8,
     "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame7.png": __vite_glob_0_9,
     "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame8.png": __vite_glob_0_10,
@@ -2119,11 +2125,134 @@ __publicField(_Player, "stars_animation_def", (stars_imgs, params) => multi_anim
   }
 ));
 let Player = _Player;
+const _00001$2 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
+const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00001$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00002$2 = "" + new URL("assets/00002-mmjNPP5z.png", import.meta.url).href;
+const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00002$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00003$2 = "" + new URL("assets/00003-r0vHGIOF.png", import.meta.url).href;
+const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00003$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00004$2 = "" + new URL("assets/00004-CfcPlTdR.png", import.meta.url).href;
+const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00004$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00005$2 = "" + new URL("assets/00005-nACbHHm7.png", import.meta.url).href;
+const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00005$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00006$2 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
+const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00006$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00007$2 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
+const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00007$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00008$2 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
+const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00008$2
+}, Symbol.toStringTag, { value: "Module" }));
+const _00001$1 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
+const __vite_glob_1_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00001$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00002$1 = "" + new URL("assets/00002-CNnuEjfw.png", import.meta.url).href;
+const __vite_glob_1_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00002$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00003$1 = "" + new URL("assets/00003-jN21BVS6.png", import.meta.url).href;
+const __vite_glob_1_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00003$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00004$1 = "" + new URL("assets/00004-DGZ92_j8.png", import.meta.url).href;
+const __vite_glob_1_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00004$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00005$1 = "" + new URL("assets/00005-CqEDkofg.png", import.meta.url).href;
+const __vite_glob_1_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00005$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00006$1 = "" + new URL("assets/00006-CORsZqeP.png", import.meta.url).href;
+const __vite_glob_1_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00006$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00007$1 = "" + new URL("assets/00007-zlAp7xcC.png", import.meta.url).href;
+const __vite_glob_1_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00007$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00008$1 = "" + new URL("assets/00008-CLdVAuVq.png", import.meta.url).href;
+const __vite_glob_1_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00008$1
+}, Symbol.toStringTag, { value: "Module" }));
+const _00001 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
+const __vite_glob_2_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00001
+}, Symbol.toStringTag, { value: "Module" }));
+const _00002 = "" + new URL("assets/00002-BI6fBOQv.png", import.meta.url).href;
+const __vite_glob_2_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00002
+}, Symbol.toStringTag, { value: "Module" }));
+const _00003 = "" + new URL("assets/00003-Cqdgw0fG.png", import.meta.url).href;
+const __vite_glob_2_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00003
+}, Symbol.toStringTag, { value: "Module" }));
+const _00004 = "" + new URL("assets/00004-C9cBOR9m.png", import.meta.url).href;
+const __vite_glob_2_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00004
+}, Symbol.toStringTag, { value: "Module" }));
+const _00005 = "" + new URL("assets/00005-Dh-0x6TK.png", import.meta.url).href;
+const __vite_glob_2_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00005
+}, Symbol.toStringTag, { value: "Module" }));
+const _00006 = "" + new URL("assets/00006-CYC9HDnM.png", import.meta.url).href;
+const __vite_glob_2_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00006
+}, Symbol.toStringTag, { value: "Module" }));
+const _00007 = "" + new URL("assets/00007-xz5YAmv5.png", import.meta.url).href;
+const __vite_glob_2_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00007
+}, Symbol.toStringTag, { value: "Module" }));
+const _00008 = "" + new URL("assets/00008-OCy3ADuG.png", import.meta.url).href;
+const __vite_glob_2_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: _00008
+}, Symbol.toStringTag, { value: "Module" }));
 const EnemyAttackSwing = "" + new URL("assets/attack-swing-CSc3417C.png", import.meta.url).href;
 const VineLongImage1 = "" + new URL("assets/vine_long1-lHN96wLs.png", import.meta.url).href;
 const VineLongImage2 = "" + new URL("assets/vine_long2-D4fMA12J.png", import.meta.url).href;
 const VineShortImage1 = "" + new URL("assets/vine_short1-C57OZssg.png", import.meta.url).href;
 const VineShortImage2 = "" + new URL("assets/vine_short2-qkRUMlG1.png", import.meta.url).href;
+const ThunderSound1 = "" + new URL("assets/128307-BZ6L3VX-.opus", import.meta.url).href;
+const ThunderSound2 = "" + new URL("assets/243614-BP6ep1mG.opus", import.meta.url).href;
+const ThunderSound3 = "" + new URL("assets/501745-BMPTk6zF.opus", import.meta.url).href;
 const EnemyAttackHitSound1 = "" + new URL("assets/420674-CvrOz9Gq.opus", import.meta.url).href;
 const EnemyAttackHitSound2 = "" + new URL("assets/474575-DaTcJKBj.opus", import.meta.url).href;
 const EnemyAttackHitSound3 = "" + new URL("assets/536258-BmsGTbZG.opus", import.meta.url).href;
@@ -2146,7 +2275,46 @@ const EnemyDamageSound7 = "" + new URL("assets/770124_5-c5qvJGbq.opus", import.m
 const EnemyDamageSound8 = "" + new URL("assets/770124_6-DLz-fyHo.opus", import.meta.url).href;
 const EnemyDamageSound9 = "" + new URL("assets/770124_7-Dp4st_mJ.opus", import.meta.url).href;
 const EnemyDeathSound = "" + new URL("assets/369005-DTznyUNM.opus", import.meta.url).href;
-const EnemyIntroSound = "" + new URL("assets/intro-abk-CU5JZ-mG.opus", import.meta.url).href;
+const EnemyIntroSpeechSound = "" + new URL("assets/intro-abk-CU5JZ-mG.opus", import.meta.url).href;
+const LightningEffect1Seq = ImageSequence.from_frames_dir(
+  /* @__PURE__ */ Object.assign({
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00001.png": __vite_glob_0_0,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00002.png": __vite_glob_0_1,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00003.png": __vite_glob_0_2,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00004.png": __vite_glob_0_3,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00005.png": __vite_glob_0_4,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00006.png": __vite_glob_0_5,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00007.png": __vite_glob_0_6,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00008.png": __vite_glob_0_7
+  }),
+  15
+);
+const LightningEffect2Seq = ImageSequence.from_frames_dir(
+  /* @__PURE__ */ Object.assign({
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00001.png": __vite_glob_1_0,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00002.png": __vite_glob_1_1,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00003.png": __vite_glob_1_2,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00004.png": __vite_glob_1_3,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00005.png": __vite_glob_1_4,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00006.png": __vite_glob_1_5,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00007.png": __vite_glob_1_6,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00008.png": __vite_glob_1_7
+  }),
+  15
+);
+const LightningEffect3Seq = ImageSequence.from_frames_dir(
+  /* @__PURE__ */ Object.assign({
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00001.png": __vite_glob_2_0,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00002.png": __vite_glob_2_1,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00003.png": __vite_glob_2_2,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00004.png": __vite_glob_2_3,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00005.png": __vite_glob_2_4,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00006.png": __vite_glob_2_5,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00007.png": __vite_glob_2_6,
+    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00008.png": __vite_glob_2_7
+  }),
+  15
+);
 const enemy_weapon_selector = ".weapon";
 const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
   constructor(game2, enemy) {
@@ -2381,6 +2549,43 @@ class Enemy extends Character {
     __publicField(this, "auto_attack_dist", enemy_cfg.auto_attack_dist);
     __publicField(this, "auto_attack_interval", enemy_cfg.auto_attack_interval);
     __publicField(this, "animations", {
+      lightning_strike: image_animation_def(
+        [LightningEffect1Seq, LightningEffect2Seq, LightningEffect3Seq],
+        (enemy) => enemy.game.animations_root_el,
+        {
+          style: {
+            width: "100%",
+            height: "90%",
+            top: "0",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundSize: "contain",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            mixBlendMode: "plus-lighter"
+          }
+        }
+      ),
+      lightning_backdrop: (enemy) => {
+        const el = document.createElement("div");
+        el.style = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: white;
+                mix-blend-mode: plus-lighter;
+            `;
+        enemy.game.animations_root_el.appendChild(el);
+        return {
+          update: (progress) => {
+            const opacity = Math.sin(Math.max(0, progress - 0.025) ** 0.2 * Math.PI) ** 4;
+            el.style.opacity = opacity.toString();
+          },
+          end: () => el.remove()
+        };
+      },
       grow_vines: multi_animation_def(
         {
           long1: image_animation_def(VineLongImage1, (enemy) => enemy.vines_root_el, { remove: false }),
@@ -2440,7 +2645,8 @@ class Enemy extends Character {
       })
     });
     __publicField(this, "sounds", {
-      intro: [EnemyIntroSound],
+      intro_thunder: [ThunderSound1, ThunderSound2, ThunderSound3],
+      intro_speech: [EnemyIntroSpeechSound],
       damage: [
         EnemyDamageSound1,
         EnemyDamageSound2,
@@ -2460,6 +2666,7 @@ class Enemy extends Character {
       [5, 11, "Such divine display rabidly spurn'd..."],
       [11, 15, "Oblivion awaits thy gaze!"]
     ]);
+    __publicField(this, "intro_thunder_enabled", enemy_cfg.intro_thunder_enabled);
     this.apply_config(enemy_cfg);
     this.enemy_root_el = get_element(enemy_root_selector, this.game.game_root_el);
     this.skip_btn_el = get_element(skip_btn_selector, this.enemy_root_el);
@@ -2516,13 +2723,24 @@ class Enemy extends Character {
         this.defending = true;
         this.base_acceleration = 0.033;
         if (this.game.changed_state) {
-          this.game.pick_and_play_sound_effect(this.sounds.intro);
-          this.game.play_animation(this.animations.grow_vines(this), 5e3);
-          this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
-          this.game.play_animation({ end: () => this.weapon.weapon_el.classList.remove("hidden") }, 5e3);
+          if (this.intro_thunder_enabled) {
+            this.game.pick_and_play_sound_effect(this.sounds.intro_thunder);
+            this.game.play_animation(this.animations.lightning_strike(this));
+            this.game.play_animation(this.animations.lightning_backdrop(this), 8e3);
+          }
           this.enemy_root_el.querySelectorAll(eyes_selector).forEach((e) => e.classList.remove("hidden"));
+          this.game.play_animation(
+            delay_anim(() => {
+              this.game.pick_and_play_sound_effect(this.sounds.intro_speech);
+              this.game.play_animation(subs_anim(this.game, this.intro_speech_subs));
+              this.game.play_animation(this.animations.grow_vines(this), 5e3);
+              this.game.play_animation(
+                delay_anim(() => this.weapon.weapon_el.classList.remove("hidden"), 5e3)
+              );
+            }, 2e3)
+          );
         }
-        if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 11e3) {
+        if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 12e3) {
           this.phase = "fight";
           this.defending = false;
           this.base_acceleration = enemy_cfg.base_acceleration;

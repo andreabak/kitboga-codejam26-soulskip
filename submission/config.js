@@ -129,7 +129,8 @@ const config = {
       },
       follow_dist_offset: 30,
       auto_attack_dist: 400,
-      auto_attack_interval: [1500, 3e3]
+      auto_attack_interval: [1500, 3e3],
+      intro_thunder_enabled: true
     }
   },
   game: {

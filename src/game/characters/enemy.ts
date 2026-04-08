@@ -13,12 +13,15 @@ import {
 
 import {
     AnimationHandle,
+    delay_anim,
     image_animation_def,
     ImagesAnimationDef,
+    ImageSequence,
     interpolate_anim_def,
     InterpolateAnimationParams,
     multi_animation_def,
     subs_anim,
+    ViteGlob,
 } from "../animations"
 import {GameComponent, GameUpdateContext, SubsType} from "../core"
 import type {Game} from "../game"
@@ -37,6 +40,9 @@ import VineLongImage1 from "@/assets/enemy/vine_long1.png"
 import VineLongImage2 from "@/assets/enemy/vine_long2.png"
 import VineShortImage1 from "@/assets/enemy/vine_short1.png"
 import VineShortImage2 from "@/assets/enemy/vine_short2.png"
+import ThunderSound1 from "@/assets/sounds/battle-thunder/128307.opus"
+import ThunderSound2 from "@/assets/sounds/battle-thunder/243614.opus"
+import ThunderSound3 from "@/assets/sounds/battle-thunder/501745.opus"
 import EnemyAttackHitSound1 from "@/assets/sounds/enemy-attack-hit/420674.opus"
 import EnemyAttackHitSound2 from "@/assets/sounds/enemy-attack-hit/474575.opus"
 import EnemyAttackHitSound3 from "@/assets/sounds/enemy-attack-hit/536258.opus"
@@ -59,7 +65,26 @@ import EnemyDamageSound7 from "@/assets/sounds/enemy-damage/770124_5.opus"
 import EnemyDamageSound8 from "@/assets/sounds/enemy-damage/770124_6.opus"
 import EnemyDamageSound9 from "@/assets/sounds/enemy-damage/770124_7.opus"
 import EnemyDeathSound from "@/assets/sounds/enemy-death/369005.opus"
-import EnemyIntroSound from "@/assets/sounds/enemy-intro/intro-abk.opus"
+import EnemyIntroSpeechSound from "@/assets/sounds/enemy-intro/intro-abk.opus"
+
+const LightningEffect1Seq = ImageSequence.from_frames_dir(
+    import.meta.glob("@/assets/vfx/lightning/totallynotpixels_lightning_fx_2/*", {
+        eager: true,
+    }) as ViteGlob,
+    15,
+)
+const LightningEffect2Seq = ImageSequence.from_frames_dir(
+    import.meta.glob("@/assets/vfx/lightning/totallynotpixels_lightning_fx_3/*", {
+        eager: true,
+    }) as ViteGlob,
+    15,
+)
+const LightningEffect3Seq = ImageSequence.from_frames_dir(
+    import.meta.glob("@/assets/vfx/lightning/totallynotpixels_lightning_fx_4/*", {
+        eager: true,
+    }) as ViteGlob,
+    15,
+)
 
 const enemy_weapon_selector = ".weapon"
 
@@ -309,6 +334,43 @@ export class Enemy extends Character<Enemy> {
     auto_attack_interval: [number, number] = enemy_cfg.auto_attack_interval
 
     animations = {
+        lightning_strike: image_animation_def(
+            [LightningEffect1Seq, LightningEffect2Seq, LightningEffect3Seq],
+            (enemy: Enemy) => enemy.game.animations_root_el,
+            {
+                style: {
+                    width: "100%",
+                    height: "90%",
+                    top: "0",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    backgroundSize: "contain",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    mixBlendMode: "plus-lighter",
+                },
+            },
+        ),
+        lightning_backdrop: (enemy: Enemy) => {
+            const el = document.createElement("div")
+            el.style = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: white;
+                mix-blend-mode: plus-lighter;
+            `
+            enemy.game.animations_root_el.appendChild(el)
+            return {
+                update: (progress: number) => {
+                    const opacity = Math.sin(Math.max(0, progress - 0.025) ** 0.2 * Math.PI) ** 4
+                    el.style.opacity = opacity.toString()
+                },
+                end: () => el.remove(),
+            }
+        },
         grow_vines: multi_animation_def(
             {
                 long1: image_animation_def(VineLongImage1, (enemy: Enemy) => enemy.vines_root_el, {remove: false}),
@@ -371,7 +433,8 @@ export class Enemy extends Character<Enemy> {
         }),
     }
     sounds = {
-        intro: [EnemyIntroSound],
+        intro_thunder: [ThunderSound1, ThunderSound2, ThunderSound3],
+        intro_speech: [EnemyIntroSpeechSound],
         damage: [
             EnemyDamageSound1,
             EnemyDamageSound2,
@@ -392,6 +455,7 @@ export class Enemy extends Character<Enemy> {
         [5.0, 11.0, "Such divine display rabidly spurn'd..."],
         [11.0, 15.0, "Oblivion awaits thy gaze!"],
     ]
+    intro_thunder_enabled: boolean = enemy_cfg.intro_thunder_enabled
 
     constructor(game: Game) {
         super(game)
@@ -462,13 +526,24 @@ export class Enemy extends Character<Enemy> {
                 this.defending = true
                 this.base_acceleration = 0.033
                 if (this.game.changed_state) {
-                    this.game.pick_and_play_sound_effect(this.sounds.intro)
-                    this.game.play_animation(this.animations.grow_vines(this), 5000)
-                    this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
-                    this.game.play_animation({end: () => this.weapon.weapon_el.classList.remove("hidden")}, 5000)
+                    if (this.intro_thunder_enabled) {
+                        this.game.pick_and_play_sound_effect(this.sounds.intro_thunder)
+                        this.game.play_animation(this.animations.lightning_strike(this))
+                        this.game.play_animation(this.animations.lightning_backdrop(this), 8000)
+                    }
                     this.enemy_root_el.querySelectorAll(eyes_selector).forEach((e) => e.classList.remove("hidden"))
+                    this.game.play_animation(
+                        delay_anim(() => {
+                            this.game.pick_and_play_sound_effect(this.sounds.intro_speech)
+                            this.game.play_animation(subs_anim(this.game, this.intro_speech_subs))
+                            this.game.play_animation(this.animations.grow_vines(this), 5000)
+                            this.game.play_animation(
+                                delay_anim(() => this.weapon.weapon_el.classList.remove("hidden"), 5000),
+                            )
+                        }, 2000),
+                    )
                 }
-                if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 11000) {
+                if (context.timeref - (this.phases_ts[this.phase] ?? context.timeref) > 12000) {
                     this.phase = "fight"
                     this.defending = false
                     this.base_acceleration = enemy_cfg.base_acceleration
