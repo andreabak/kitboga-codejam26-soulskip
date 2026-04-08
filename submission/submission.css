@@ -214,6 +214,15 @@
     height: 100%;
     animation: fade-in 2.5s 2.5s both;
 }
+
+.rune {
+    position: absolute;
+    left: 24px;
+    top: 20px;
+    width: 48px;
+    height: 48px;
+}
+
 .bar {
     --bar-fill: 0;
     --bar-color: white;
@@ -261,13 +270,13 @@
 }
 
 .player-bar.health {
-    left: 24px;
-    top: 30px;
+    left: 76px;
+    top: 32px;
     width: 256px;
 }
 .player-bar.stamina {
-    left: 24px;
-    top: 42px;
+    left: 76px;
+    top: 46px;
     width: 128px;
 }
 

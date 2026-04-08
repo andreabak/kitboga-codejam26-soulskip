@@ -2963,7 +2963,7 @@ class Game extends Component {
     this.game_root_el.classList.toggle("hide-mouse", this.state !== "chill");
     if (this.changed_state) {
       if (this.state === "battle") {
-        send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.75)" });
+        send_shell_request({ type: "setVideoFilter", value: "blur(3px) brightness(0.65)" });
         send_shell_request({ type: "setVolume", value: 0.3 });
         this.battle_music_audio = this.pick_and_play_sound_effect(this.sounds.battle_music_intro, {
           volume: 0.125
