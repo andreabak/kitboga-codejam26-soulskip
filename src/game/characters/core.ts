@@ -163,11 +163,12 @@ export function blood_splat_animation_def(params: ImageAnimationParams) {
             } else {
                 dir_vector = {...character.direction_vector}
             }
-            const relpos = {x: (hurtbox_bbox.width / 2) * dir_vector.x, y: (hurtbox_bbox.height / 2) * dir_vector.y}
+            const offset_size = {x: hurtbox_bbox.width / 2, y: hurtbox_bbox.height / 2}
             if (dist_vector != null) {
-                relpos.x = Math.min(relpos.x, dist_vector.x / 2)
-                relpos.y = Math.min(relpos.y, dist_vector.y / 2)
+                offset_size.x = Math.min(Math.abs(dist_vector.x), offset_size.x)
+                offset_size.y = Math.min(Math.abs(dist_vector.y), offset_size.y)
             }
+            const relpos = {x: offset_size.x * dir_vector.x, y: offset_size.y * dir_vector.y}
             const pos = {
                 x: hurtbox_center.x + relpos.x,
                 y: hurtbox_center.y + relpos.y,
