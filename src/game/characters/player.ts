@@ -43,7 +43,7 @@ import {
     PlayerParryStar4,
     ShieldIcon,
     SwordIcon,
-} from "@/assets/inlined"
+} from "@/assets/assets"
 
 const FlaskUseAtlas = new ImageAtlas(FlaskUseAtlasImg, FlaskUseAtlasMeta, 15)
 

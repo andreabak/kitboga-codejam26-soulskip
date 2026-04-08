@@ -7,7 +7,7 @@ import {Character, Enemy, Player} from "./characters"
 import {Component, GameComponent, GameState, GameUpdateContext} from "./core"
 import {Hud} from "./hud"
 
-import {BattleDefeatSound, BattleVictorySound} from "@/assets/inlined"
+import {BattleDefeatSound, BattleVictorySound} from "@/assets/assets"
 import BattleMusicIntroSound from "@/assets/sounds/battle-music/cinema-blockbuster-trailer-21-by-ende-intro.opus"
 import BattleMusicSound from "@/assets/sounds/battle-music/cinema-blockbuster-trailer-21-by-ende-loop1.opus"
 

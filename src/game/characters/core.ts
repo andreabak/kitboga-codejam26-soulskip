@@ -35,7 +35,7 @@ import {
     BloodEffect3AtlasMeta,
     BloodEffect4AtlasImg,
     BloodEffect4AtlasMeta,
-} from "@/assets/inlined"
+} from "@/assets/assets"
 
 const BloodEffect1Atlas = new ImageAtlas(BloodEffect1AtlasImg, BloodEffect1AtlasMeta, 15)
 const BloodEffect2Atlas = new ImageAtlas(BloodEffect2AtlasImg, BloodEffect2AtlasMeta, 15)

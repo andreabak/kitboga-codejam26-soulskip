@@ -72,7 +72,7 @@ import {
     VineLongImage2,
     VineShortImage1,
     VineShortImage2,
-} from "@/assets/inlined"
+} from "@/assets/assets"
 
 const LightningEffect1Atlas = new ImageAtlas(LightningEffect1AtlasImg, LightningEffect1AtlasMeta, 15)
 const LightningEffect2Atlas = new ImageAtlas(LightningEffect2AtlasImg, LightningEffect2AtlasMeta, 15)

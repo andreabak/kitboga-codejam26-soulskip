@@ -30,7 +30,7 @@ export default defineConfig(({mode}) => {
                     },
                     manualChunks: {
                         "config": ["@/config"],
-                        "inlined_assets": ["@/assets/inlined"]
+                        "assets": ["@/assets/assets"]
                     }
                 },
             },
