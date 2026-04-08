@@ -2,6 +2,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import { c as config } from "./config.js";
+import { B as BloodEffect1AtlasImg, a as BloodEffect1AtlasMeta, b as BloodEffect2AtlasImg, c as BloodEffect2AtlasMeta, d as BloodEffect3AtlasImg, e as BloodEffect3AtlasMeta, f as BloodEffect4AtlasImg, g as BloodEffect4AtlasMeta, F as FlaskUseAtlasImg, h as FlaskUseAtlasMeta, P as PlayerAttackHitSound1, i as PlayerAttackHitSound2, j as PlayerAttackHitSound3, k as PlayerAttackHitSound4, l as PlayerAttackSound1, m as PlayerAttackSound2, S as SwordIcon, n as ShieldIcon, o as FlaskIcon, p as PlayerParryStar1, q as PlayerParryStar2, r as PlayerParryStar3, s as PlayerParryStar4, t as PlayerCureSound1, u as PlayerCureSound2, v as PlayerDeathSound, w as PlayerDamageSound1, x as PlayerDamageSound2, y as PlayerParrySound1, z as PlayerParrySound2, A as PlayerDefendSound1, C as PlayerDefendSound2, D as PlayerDefendSound3, E as PlayerAttackSwing, L as LightningEffect1AtlasImg, G as LightningEffect1AtlasMeta, H as LightningEffect2AtlasImg, I as LightningEffect2AtlasMeta, J as LightningEffect3AtlasImg, K as LightningEffect3AtlasMeta, M as EnemyAttackHitSound1, N as EnemyAttackHitSound2, O as EnemyAttackHitSound3, Q as EnemyAttackFastSound1, R as EnemyAttackFastSound2, T as EnemyAttackFastSound3, U as EnemyAttackFastSound4, V as EnemyAttackFastSound5, W as EnemyAttackSlowSound1, X as EnemyAttackSlowSound2, Y as EnemyAttackSlowSound3, Z as EnemyDeathSound, _ as EnemyBreakSound, $ as EnemyDamageSound1, a0 as EnemyDamageSound2, a1 as EnemyDamageSound3, a2 as EnemyDamageSound4, a3 as EnemyDamageSound5, a4 as EnemyDamageSound6, a5 as EnemyDamageSound7, a6 as EnemyDamageSound8, a7 as EnemyDamageSound9, a8 as EnemyIntroSpeechSound, a9 as ThunderSound1, aa as ThunderSound2, ab as ThunderSound3, ac as EnemyAttackSwing, ad as VineShortImage2, ae as VineShortImage1, af as VineLongImage2, ag as VineLongImage1, ah as BattleVictorySound, ai as BattleDefeatSound } from "./inlined_assets.js";
 class Component {
   constructor() {
     __publicField(this, "_children", []);
@@ -293,8 +294,8 @@ class ImageSequence {
   static from_frames_dir(frames_glob, fps) {
     const files = Object.entries(frames_glob);
     files.sort(([a], [b]) => a.localeCompare(b));
-    const frames2 = files.map(([, mod]) => mod.default);
-    return new ImageSequence(frames2, fps);
+    const frames = files.map(([, mod]) => mod.default);
+    return new ImageSequence(frames, fps);
   }
 }
 class ImageAtlas {
@@ -728,34 +729,6 @@ function add_shell_events_listener(listener) {
 function send_shell_request(request) {
   window.top.postMessage(request, "*");
 }
-const frames$7 = [{ "index": 0, "x": 0, "y": 0, "w": 110, "h": 93 }, { "index": 1, "x": 110, "y": 0, "w": 110, "h": 93 }, { "index": 2, "x": 220, "y": 0, "w": 110, "h": 93 }, { "index": 3, "x": 0, "y": 93, "w": 110, "h": 93 }, { "index": 4, "x": 110, "y": 93, "w": 110, "h": 93 }, { "index": 5, "x": 220, "y": 93, "w": 110, "h": 93 }, { "index": 6, "x": 0, "y": 186, "w": 110, "h": 93 }, { "index": 7, "x": 110, "y": 186, "w": 110, "h": 93 }, { "index": 8, "x": 220, "y": 186, "w": 110, "h": 93 }, { "index": 9, "x": 0, "y": 279, "w": 110, "h": 93 }, { "index": 10, "x": 110, "y": 279, "w": 110, "h": 93 }, { "index": 11, "x": 220, "y": 279, "w": 110, "h": 93 }];
-const atlas$7 = { "image_src": "jasontomlee_vfx_blood_2_atlas.png", "size": { "width": 330, "height": 372 } };
-const BloodEffect1AtlasMeta = {
-  frames: frames$7,
-  atlas: atlas$7
-};
-const BloodEffect1AtlasImg = "" + new URL("assets/jasontomlee_vfx_blood_2_atlas-CZLlR8_a.png", import.meta.url).href;
-const frames$6 = [{ "index": 0, "x": 0, "y": 0, "w": 110, "h": 93 }, { "index": 1, "x": 110, "y": 0, "w": 110, "h": 93 }, { "index": 2, "x": 220, "y": 0, "w": 110, "h": 93 }, { "index": 3, "x": 0, "y": 93, "w": 110, "h": 93 }, { "index": 4, "x": 110, "y": 93, "w": 110, "h": 93 }, { "index": 5, "x": 220, "y": 93, "w": 110, "h": 93 }, { "index": 6, "x": 0, "y": 186, "w": 110, "h": 93 }, { "index": 7, "x": 110, "y": 186, "w": 110, "h": 93 }, { "index": 8, "x": 220, "y": 186, "w": 110, "h": 93 }, { "index": 9, "x": 0, "y": 279, "w": 110, "h": 93 }, { "index": 10, "x": 110, "y": 279, "w": 110, "h": 93 }];
-const atlas$6 = { "image_src": "jasontomlee_vfx_blood_4_atlas.png", "size": { "width": 330, "height": 372 } };
-const BloodEffect2AtlasMeta = {
-  frames: frames$6,
-  atlas: atlas$6
-};
-const BloodEffect2AtlasImg = "" + new URL("assets/jasontomlee_vfx_blood_4_atlas-BCyzHAMh.png", import.meta.url).href;
-const frames$5 = [{ "index": 0, "x": 0, "y": 0, "w": 110, "h": 93 }, { "index": 1, "x": 110, "y": 0, "w": 110, "h": 93 }, { "index": 2, "x": 220, "y": 0, "w": 110, "h": 93 }, { "index": 3, "x": 0, "y": 93, "w": 110, "h": 93 }, { "index": 4, "x": 110, "y": 93, "w": 110, "h": 93 }, { "index": 5, "x": 220, "y": 93, "w": 110, "h": 93 }, { "index": 6, "x": 0, "y": 186, "w": 110, "h": 93 }, { "index": 7, "x": 110, "y": 186, "w": 110, "h": 93 }, { "index": 8, "x": 220, "y": 186, "w": 110, "h": 93 }];
-const atlas$5 = { "image_src": "jasontomlee_vfx_blood_5_atlas.png", "size": { "width": 330, "height": 279 } };
-const BloodEffect3AtlasMeta = {
-  frames: frames$5,
-  atlas: atlas$5
-};
-const BloodEffect3AtlasImg = "" + new URL("assets/jasontomlee_vfx_blood_5_atlas-DYIqhrxV.png", import.meta.url).href;
-const frames$4 = [{ "index": 0, "x": 0, "y": 0, "w": 110, "h": 93 }, { "index": 1, "x": 110, "y": 0, "w": 110, "h": 93 }, { "index": 2, "x": 220, "y": 0, "w": 110, "h": 93 }, { "index": 3, "x": 0, "y": 93, "w": 110, "h": 93 }, { "index": 4, "x": 110, "y": 93, "w": 110, "h": 93 }, { "index": 5, "x": 220, "y": 93, "w": 110, "h": 93 }, { "index": 6, "x": 0, "y": 186, "w": 110, "h": 93 }, { "index": 7, "x": 110, "y": 186, "w": 110, "h": 93 }, { "index": 8, "x": 220, "y": 186, "w": 110, "h": 93 }, { "index": 9, "x": 0, "y": 279, "w": 110, "h": 93 }, { "index": 10, "x": 110, "y": 279, "w": 110, "h": 93 }, { "index": 11, "x": 220, "y": 279, "w": 110, "h": 93 }];
-const atlas$4 = { "image_src": "jasontomlee_vfx_blood_6_atlas.png", "size": { "width": 330, "height": 372 } };
-const BloodEffect4AtlasMeta = {
-  frames: frames$4,
-  atlas: atlas$4
-};
-const BloodEffect4AtlasImg = "" + new URL("assets/jasontomlee_vfx_blood_6_atlas-pX1w9_sG.png", import.meta.url).href;
 const BloodEffect1Atlas = new ImageAtlas(BloodEffect1AtlasImg, BloodEffect1AtlasMeta, 15);
 const BloodEffect2Atlas = new ImageAtlas(BloodEffect2AtlasImg, BloodEffect2AtlasMeta, 15);
 const BloodEffect3Atlas = new ImageAtlas(BloodEffect3AtlasImg, BloodEffect3AtlasMeta, 15);
@@ -1433,37 +1406,6 @@ class GestureManager {
     }
   }
 }
-const FlaskIcon = "" + new URL("assets/flask-BvVRJMc3.webp", import.meta.url).href;
-const PlayerAttackSwing = "" + new URL("assets/attack-swing-CdgiMrLK.png", import.meta.url).href;
-const frames$3 = [{ "index": 0, "x": 0, "y": 0, "w": 128, "h": 128 }, { "index": 1, "x": 128, "y": 0, "w": 128, "h": 128 }, { "index": 2, "x": 256, "y": 0, "w": 128, "h": 128 }, { "index": 3, "x": 0, "y": 128, "w": 128, "h": 128 }, { "index": 4, "x": 128, "y": 128, "w": 128, "h": 128 }, { "index": 5, "x": 256, "y": 128, "w": 128, "h": 128 }, { "index": 6, "x": 0, "y": 256, "w": 128, "h": 128 }, { "index": 7, "x": 128, "y": 256, "w": 128, "h": 128 }, { "index": 8, "x": 256, "y": 256, "w": 128, "h": 128 }, { "index": 9, "x": 0, "y": 384, "w": 128, "h": 128 }, { "index": 10, "x": 128, "y": 384, "w": 128, "h": 128 }, { "index": 11, "x": 256, "y": 384, "w": 128, "h": 128 }];
-const atlas$3 = { "image_src": "frostwindz-pixel-art-vfx-priest_skill3_atlas.png", "size": { "width": 384, "height": 512 } };
-const FlaskUseAtlasMeta = {
-  frames: frames$3,
-  atlas: atlas$3
-};
-const FlaskUseAtlasImg = "" + new URL("assets/frostwindz-pixel-art-vfx-priest_skill3_atlas-CXz6e8yG.png", import.meta.url).href;
-const PlayerParryStar1 = "" + new URL("assets/parry-star_1-Cc74ESjR.svg", import.meta.url).href;
-const PlayerParryStar2 = "" + new URL("assets/parry-star_2-RmFvRpRf.svg", import.meta.url).href;
-const PlayerParryStar3 = "" + new URL("assets/parry-star_3-boNRjX5D.svg", import.meta.url).href;
-const PlayerParryStar4 = "" + new URL("assets/parry-star_4-CGZkWrQb.svg", import.meta.url).href;
-const ShieldIcon = "" + new URL("assets/shield-BpNqX378.webp", import.meta.url).href;
-const PlayerAttackHitSound1 = "" + new URL("assets/442903-Dv51i7jf.opus", import.meta.url).href;
-const PlayerAttackHitSound2 = "" + new URL("assets/547042-BjpTrKE3.opus", import.meta.url).href;
-const PlayerAttackHitSound3 = "" + new URL("assets/574820-DAGUUWmX.opus", import.meta.url).href;
-const PlayerAttackHitSound4 = "" + new URL("assets/574821-eDlymr2Z.opus", import.meta.url).href;
-const PlayerAttackSound1 = "" + new URL("assets/268227-BCdO1uLj.opus", import.meta.url).href;
-const PlayerAttackSound2 = "" + new URL("assets/724716-2gcpUYQm.opus", import.meta.url).href;
-const PlayerCureSound1 = "" + new URL("assets/797763_1-Dj4oFCPI.opus", import.meta.url).href;
-const PlayerCureSound2 = "" + new URL("assets/797763_2-BfVOpkmy.opus", import.meta.url).href;
-const PlayerDamageSound1 = "" + new URL("assets/488225-CvBkjmQH.opus", import.meta.url).href;
-const PlayerDamageSound2 = "" + new URL("assets/629664-72gG8Qlg.opus", import.meta.url).href;
-const PlayerDeathSound = "" + new URL("assets/398068-BHzVeI56.opus", import.meta.url).href;
-const PlayerDefendSound1 = "" + new URL("assets/364530-uOf5Btw8.opus", import.meta.url).href;
-const PlayerDefendSound2 = "" + new URL("assets/442769-BEaPIlrE.opus", import.meta.url).href;
-const PlayerDefendSound3 = "" + new URL("assets/574043-4LNviDK-.opus", import.meta.url).href;
-const PlayerParrySound1 = "" + new URL("assets/448009-BeBOc5Yw.opus", import.meta.url).href;
-const PlayerParrySound2 = "" + new URL("assets/591155-CmvEOVys.opus", import.meta.url).href;
-const SwordIcon = "" + new URL("assets/sword-B4u20JoA.svg", import.meta.url).href;
 const FlaskUseAtlas = new ImageAtlas(FlaskUseAtlasImg, FlaskUseAtlasMeta, 15);
 const player_shield_selector = ".shield";
 class PlayerShield extends GameComponent {
@@ -1852,58 +1794,6 @@ __publicField(_Player, "stars_animation_def", (stars_imgs, params) => multi_anim
   }
 ));
 let Player = _Player;
-const EnemyAttackSwing = "" + new URL("assets/attack-swing-CSc3417C.png", import.meta.url).href;
-const VineLongImage1 = "" + new URL("assets/vine_long1-lHN96wLs.png", import.meta.url).href;
-const VineLongImage2 = "" + new URL("assets/vine_long2-D4fMA12J.png", import.meta.url).href;
-const VineShortImage1 = "" + new URL("assets/vine_short1-C57OZssg.png", import.meta.url).href;
-const VineShortImage2 = "" + new URL("assets/vine_short2-qkRUMlG1.png", import.meta.url).href;
-const ThunderSound1 = "" + new URL("assets/128307-BZ6L3VX-.opus", import.meta.url).href;
-const ThunderSound2 = "" + new URL("assets/243614-BP6ep1mG.opus", import.meta.url).href;
-const ThunderSound3 = "" + new URL("assets/501745-BMPTk6zF.opus", import.meta.url).href;
-const EnemyAttackHitSound1 = "" + new URL("assets/420674-CvrOz9Gq.opus", import.meta.url).href;
-const EnemyAttackHitSound2 = "" + new URL("assets/474575-DaTcJKBj.opus", import.meta.url).href;
-const EnemyAttackHitSound3 = "" + new URL("assets/536258-BmsGTbZG.opus", import.meta.url).href;
-const EnemyAttackFastSound1 = "" + new URL("assets/380488_fast1-DjvR_2M4.opus", import.meta.url).href;
-const EnemyAttackFastSound2 = "" + new URL("assets/380488_fast2-BVCD30gT.opus", import.meta.url).href;
-const EnemyAttackFastSound3 = "" + new URL("assets/380488_fast3-B1jKQ74T.opus", import.meta.url).href;
-const EnemyAttackFastSound4 = "" + new URL("assets/380488_fast4-DX2XLCqX.opus", import.meta.url).href;
-const EnemyAttackFastSound5 = "" + new URL("assets/380488_fast5-Bf7zbJLO.opus", import.meta.url).href;
-const EnemyAttackSlowSound1 = "" + new URL("assets/380488_slow1-BY7r2A4G.opus", import.meta.url).href;
-const EnemyAttackSlowSound2 = "" + new URL("assets/380488_slow2-B7YquzzN.opus", import.meta.url).href;
-const EnemyAttackSlowSound3 = "" + new URL("assets/542017_slow3-BwgP5Wqo.opus", import.meta.url).href;
-const EnemyBreakSound = "" + new URL("assets/er-break-B4c9SQBD.opus", import.meta.url).href;
-const EnemyDamageSound1 = "" + new URL("assets/404109-Co7-ideq.opus", import.meta.url).href;
-const EnemyDamageSound2 = "" + new URL("assets/515624-9RyJXt-S.opus", import.meta.url).href;
-const EnemyDamageSound3 = "" + new URL("assets/770124_1-3szdpD9T.opus", import.meta.url).href;
-const EnemyDamageSound4 = "" + new URL("assets/770124_2-Brv01UR3.opus", import.meta.url).href;
-const EnemyDamageSound5 = "" + new URL("assets/770124_3-CQMT2oIs.opus", import.meta.url).href;
-const EnemyDamageSound6 = "" + new URL("assets/770124_4-D7usA0vu.opus", import.meta.url).href;
-const EnemyDamageSound7 = "" + new URL("assets/770124_5-c5qvJGbq.opus", import.meta.url).href;
-const EnemyDamageSound8 = "" + new URL("assets/770124_6-DLz-fyHo.opus", import.meta.url).href;
-const EnemyDamageSound9 = "" + new URL("assets/770124_7-Dp4st_mJ.opus", import.meta.url).href;
-const EnemyDeathSound = "" + new URL("assets/369005-DTznyUNM.opus", import.meta.url).href;
-const EnemyIntroSpeechSound = "" + new URL("assets/intro-abk-CU5JZ-mG.opus", import.meta.url).href;
-const frames$2 = [{ "index": 0, "x": 0, "y": 0, "w": 120, "h": 120 }, { "index": 1, "x": 120, "y": 0, "w": 120, "h": 120 }, { "index": 2, "x": 240, "y": 0, "w": 120, "h": 120 }, { "index": 3, "x": 0, "y": 120, "w": 120, "h": 120 }, { "index": 4, "x": 120, "y": 120, "w": 120, "h": 120 }, { "index": 5, "x": 240, "y": 120, "w": 120, "h": 120 }, { "index": 6, "x": 0, "y": 240, "w": 120, "h": 120 }, { "index": 7, "x": 120, "y": 240, "w": 120, "h": 120 }];
-const atlas$2 = { "image_src": "totallynotpixels_lightning_fx_2_atlas.png", "size": { "width": 360, "height": 360 } };
-const LightningEffect1AtlasMeta = {
-  frames: frames$2,
-  atlas: atlas$2
-};
-const LightningEffect1AtlasImg = "" + new URL("assets/totallynotpixels_lightning_fx_2_atlas-CycCfbGU.png", import.meta.url).href;
-const frames$1 = [{ "index": 0, "x": 0, "y": 0, "w": 120, "h": 120 }, { "index": 1, "x": 120, "y": 0, "w": 120, "h": 120 }, { "index": 2, "x": 240, "y": 0, "w": 120, "h": 120 }, { "index": 3, "x": 0, "y": 120, "w": 120, "h": 120 }, { "index": 4, "x": 120, "y": 120, "w": 120, "h": 120 }, { "index": 5, "x": 240, "y": 120, "w": 120, "h": 120 }, { "index": 6, "x": 0, "y": 240, "w": 120, "h": 120 }, { "index": 7, "x": 120, "y": 240, "w": 120, "h": 120 }];
-const atlas$1 = { "image_src": "totallynotpixels_lightning_fx_3_atlas.png", "size": { "width": 360, "height": 360 } };
-const LightningEffect2AtlasMeta = {
-  frames: frames$1,
-  atlas: atlas$1
-};
-const LightningEffect2AtlasImg = "" + new URL("assets/totallynotpixels_lightning_fx_3_atlas-DiO8BA7C.png", import.meta.url).href;
-const frames = [{ "index": 0, "x": 0, "y": 0, "w": 120, "h": 120 }, { "index": 1, "x": 120, "y": 0, "w": 120, "h": 120 }, { "index": 2, "x": 240, "y": 0, "w": 120, "h": 120 }, { "index": 3, "x": 0, "y": 120, "w": 120, "h": 120 }, { "index": 4, "x": 120, "y": 120, "w": 120, "h": 120 }, { "index": 5, "x": 240, "y": 120, "w": 120, "h": 120 }, { "index": 6, "x": 0, "y": 240, "w": 120, "h": 120 }, { "index": 7, "x": 120, "y": 240, "w": 120, "h": 120 }];
-const atlas = { "image_src": "totallynotpixels_lightning_fx_4_atlas.png", "size": { "width": 360, "height": 360 } };
-const LightningEffect3AtlasMeta = {
-  frames,
-  atlas
-};
-const LightningEffect3AtlasImg = "" + new URL("assets/totallynotpixels_lightning_fx_4_atlas-DD7YRd_Q.png", import.meta.url).href;
 const LightningEffect1Atlas = new ImageAtlas(LightningEffect1AtlasImg, LightningEffect1AtlasMeta, 15);
 const LightningEffect2Atlas = new ImageAtlas(LightningEffect2AtlasImg, LightningEffect2AtlasMeta, 15);
 const LightningEffect3Atlas = new ImageAtlas(LightningEffect3AtlasImg, LightningEffect3AtlasMeta, 15);
@@ -2422,10 +2312,8 @@ class Enemy extends Character {
     }
   }
 }
-const BattleDefeatSound = "" + new URL("assets/er-death-B48iVfnW.opus", import.meta.url).href;
 const BattleMusicIntroSound = "" + new URL("assets/cinema-blockbuster-trailer-21-by-ende-intro-CfLWT77A.opus", import.meta.url).href;
 const BattleMusicSound = "" + new URL("assets/cinema-blockbuster-trailer-21-by-ende-loop1-mUQc17UH.opus", import.meta.url).href;
-const BattleVictorySound = "" + new URL("assets/er-victory-CfjTLm0T.opus", import.meta.url).href;
 const defeat_screen_selector = ".defeat-screen";
 class DefeatScreen extends GameComponent {
   constructor(game2) {
@@ -2613,6 +2501,7 @@ class Game extends Component {
   }
   preload_sounds(...srcs) {
     for (const src of srcs) {
+      if (src.startsWith("data:")) continue;
       this.load_sound_effect(src);
     }
   }
@@ -2636,6 +2525,7 @@ class Game extends Component {
   }
   preload_images(...srcs) {
     for (const src of srcs) {
+      if (src.startsWith("data:")) continue;
       const existing_link = document.querySelector(`link[href="${src}"]`);
       if (existing_link != null) continue;
       const preload_link = document.createElement("link");

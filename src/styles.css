@@ -59,7 +59,7 @@
     height: 36px;
     top: calc(50% - 2px);
     left: 50%;
-    background-image: url("./assets/enemy/eye.svg");
+    background-image: url("./assets/enemy/eye.svg?inline");
     background-size: contain;
     filter: drop-shadow(0 0 3px rgba(0, 0, 0, 1));
     animation: fade-in 0.5s 1s both;
@@ -68,11 +68,11 @@
     filter: drop-shadow(0 0 3px rgba(0, 0, 0, 1)) hue-rotate(-55deg);
 }
 .enemy.low-stamina .eye {
-    background-image: url("./assets/enemy/eye-half.svg");
+    background-image: url("./assets/enemy/eye-half.svg?inline");
     filter: drop-shadow(0 0 3px rgba(0, 0, 0, 1)) hue-rotate(-120deg) saturate(0.5);
 }
 .enemy.dead .eye {
-    background-image: url("./assets/enemy/eye-half.svg");
+    background-image: url("./assets/enemy/eye-half.svg?inline");
     filter: drop-shadow(0 0 3px rgba(0, 0, 0, 1)) hue-rotate(180deg) saturate(0) brightness(0.4);
 }
 .enemy.dead {

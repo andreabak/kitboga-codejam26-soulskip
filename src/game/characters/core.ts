@@ -26,14 +26,16 @@ import {
 import {Actor, GameUpdateContext} from "../core"
 import type {Game} from "../game"
 
-import BloodEffect1AtlasMeta from "@/assets/vfx/blood/jasontomlee_vfx_blood_2_atlas.json"
-import BloodEffect1AtlasImg from "@/assets/vfx/blood/jasontomlee_vfx_blood_2_atlas.png"
-import BloodEffect2AtlasMeta from "@/assets/vfx/blood/jasontomlee_vfx_blood_4_atlas.json"
-import BloodEffect2AtlasImg from "@/assets/vfx/blood/jasontomlee_vfx_blood_4_atlas.png"
-import BloodEffect3AtlasMeta from "@/assets/vfx/blood/jasontomlee_vfx_blood_5_atlas.json"
-import BloodEffect3AtlasImg from "@/assets/vfx/blood/jasontomlee_vfx_blood_5_atlas.png"
-import BloodEffect4AtlasMeta from "@/assets/vfx/blood/jasontomlee_vfx_blood_6_atlas.json"
-import BloodEffect4AtlasImg from "@/assets/vfx/blood/jasontomlee_vfx_blood_6_atlas.png"
+import {
+    BloodEffect1AtlasImg,
+    BloodEffect1AtlasMeta,
+    BloodEffect2AtlasImg,
+    BloodEffect2AtlasMeta,
+    BloodEffect3AtlasImg,
+    BloodEffect3AtlasMeta,
+    BloodEffect4AtlasImg,
+    BloodEffect4AtlasMeta,
+} from "@/assets/inlined"
 
 const BloodEffect1Atlas = new ImageAtlas(BloodEffect1AtlasImg, BloodEffect1AtlasMeta, 15)
 const BloodEffect2Atlas = new ImageAtlas(BloodEffect2AtlasImg, BloodEffect2AtlasMeta, 15)

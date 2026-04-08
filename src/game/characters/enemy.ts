@@ -34,43 +34,45 @@ import {
     HitBox,
 } from "./core"
 
-import EnemyAttackSwing from "@/assets/enemy/attack-swing.png"
-import VineLongImage1 from "@/assets/enemy/vine_long1.png"
-import VineLongImage2 from "@/assets/enemy/vine_long2.png"
-import VineShortImage1 from "@/assets/enemy/vine_short1.png"
-import VineShortImage2 from "@/assets/enemy/vine_short2.png"
-import ThunderSound1 from "@/assets/sounds/battle-thunder/128307.opus"
-import ThunderSound2 from "@/assets/sounds/battle-thunder/243614.opus"
-import ThunderSound3 from "@/assets/sounds/battle-thunder/501745.opus"
-import EnemyAttackHitSound1 from "@/assets/sounds/enemy-attack-hit/420674.opus"
-import EnemyAttackHitSound2 from "@/assets/sounds/enemy-attack-hit/474575.opus"
-import EnemyAttackHitSound3 from "@/assets/sounds/enemy-attack-hit/536258.opus"
-import EnemyAttackFastSound1 from "@/assets/sounds/enemy-attack/380488_fast1.opus"
-import EnemyAttackFastSound2 from "@/assets/sounds/enemy-attack/380488_fast2.opus"
-import EnemyAttackFastSound3 from "@/assets/sounds/enemy-attack/380488_fast3.opus"
-import EnemyAttackFastSound4 from "@/assets/sounds/enemy-attack/380488_fast4.opus"
-import EnemyAttackFastSound5 from "@/assets/sounds/enemy-attack/380488_fast5.opus"
-import EnemyAttackSlowSound1 from "@/assets/sounds/enemy-attack/380488_slow1.opus"
-import EnemyAttackSlowSound2 from "@/assets/sounds/enemy-attack/380488_slow2.opus"
-import EnemyAttackSlowSound3 from "@/assets/sounds/enemy-attack/542017_slow3.opus"
-import EnemyBreakSound from "@/assets/sounds/enemy-break/er-break.opus"
-import EnemyDamageSound1 from "@/assets/sounds/enemy-damage/404109.opus"
-import EnemyDamageSound2 from "@/assets/sounds/enemy-damage/515624.opus"
-import EnemyDamageSound3 from "@/assets/sounds/enemy-damage/770124_1.opus"
-import EnemyDamageSound4 from "@/assets/sounds/enemy-damage/770124_2.opus"
-import EnemyDamageSound5 from "@/assets/sounds/enemy-damage/770124_3.opus"
-import EnemyDamageSound6 from "@/assets/sounds/enemy-damage/770124_4.opus"
-import EnemyDamageSound7 from "@/assets/sounds/enemy-damage/770124_5.opus"
-import EnemyDamageSound8 from "@/assets/sounds/enemy-damage/770124_6.opus"
-import EnemyDamageSound9 from "@/assets/sounds/enemy-damage/770124_7.opus"
-import EnemyDeathSound from "@/assets/sounds/enemy-death/369005.opus"
-import EnemyIntroSpeechSound from "@/assets/sounds/enemy-intro/intro-abk.opus"
-import LightningEffect1AtlasMeta from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_2_atlas.json"
-import LightningEffect1AtlasImg from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_2_atlas.png"
-import LightningEffect2AtlasMeta from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_3_atlas.json"
-import LightningEffect2AtlasImg from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_3_atlas.png"
-import LightningEffect3AtlasMeta from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_4_atlas.json"
-import LightningEffect3AtlasImg from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_4_atlas.png"
+import {
+    EnemyAttackFastSound1,
+    EnemyAttackFastSound2,
+    EnemyAttackFastSound3,
+    EnemyAttackFastSound4,
+    EnemyAttackFastSound5,
+    EnemyAttackHitSound1,
+    EnemyAttackHitSound2,
+    EnemyAttackHitSound3,
+    EnemyAttackSlowSound1,
+    EnemyAttackSlowSound2,
+    EnemyAttackSlowSound3,
+    EnemyAttackSwing,
+    EnemyBreakSound,
+    EnemyDamageSound1,
+    EnemyDamageSound2,
+    EnemyDamageSound3,
+    EnemyDamageSound4,
+    EnemyDamageSound5,
+    EnemyDamageSound6,
+    EnemyDamageSound7,
+    EnemyDamageSound8,
+    EnemyDamageSound9,
+    EnemyDeathSound,
+    EnemyIntroSpeechSound,
+    LightningEffect1AtlasImg,
+    LightningEffect1AtlasMeta,
+    LightningEffect2AtlasImg,
+    LightningEffect2AtlasMeta,
+    LightningEffect3AtlasImg,
+    LightningEffect3AtlasMeta,
+    ThunderSound1,
+    ThunderSound2,
+    ThunderSound3,
+    VineLongImage1,
+    VineLongImage2,
+    VineShortImage1,
+    VineShortImage2,
+} from "@/assets/inlined"
 
 const LightningEffect1Atlas = new ImageAtlas(LightningEffect1AtlasImg, LightningEffect1AtlasMeta, 15)
 const LightningEffect2Atlas = new ImageAtlas(LightningEffect2AtlasImg, LightningEffect2AtlasMeta, 15)

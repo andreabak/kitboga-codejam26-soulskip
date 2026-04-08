@@ -37,6 +37,7 @@ The lightning/thunder flash effect at the beginning can be disabled in the enemy
 
 ### Source code
 The original source code is written in TypeScript and compiled+bundled into a single JavaScript file using Vite with minification disabled.  
+Given the large amount of assets (~75), in order to minimize browser requests all small-ish ones (<250kb) are inlined into a single module.  
 For the TS source files see the repo at https://github.com/andreabak/kitboga-codejam26-soulskip/tree/main/src
 
 ### AI

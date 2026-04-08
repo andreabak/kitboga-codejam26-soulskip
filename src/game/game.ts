@@ -7,10 +7,9 @@ import {Character, Enemy, Player} from "./characters"
 import {Component, GameComponent, GameState, GameUpdateContext} from "./core"
 import {Hud} from "./hud"
 
-import BattleDefeatSound from "@/assets/sounds/battle-defeat/er-death.opus"
+import {BattleDefeatSound, BattleVictorySound} from "@/assets/inlined"
 import BattleMusicIntroSound from "@/assets/sounds/battle-music/cinema-blockbuster-trailer-21-by-ende-intro.opus"
 import BattleMusicSound from "@/assets/sounds/battle-music/cinema-blockbuster-trailer-21-by-ende-loop1.opus"
-import BattleVictorySound from "@/assets/sounds/battle-victory/er-victory.opus"
 
 const defeat_screen_selector = ".defeat-screen"
 
@@ -243,6 +242,7 @@ export class Game extends Component<GameUpdateContext> {
     }
     preload_sounds(...srcs: Array<string>) {
         for (const src of srcs) {
+            if (src.startsWith("data:")) continue
             this.load_sound_effect(src)
         }
     }
@@ -272,6 +272,7 @@ export class Game extends Component<GameUpdateContext> {
     }
     preload_images(...srcs: Array<string>) {
         for (const src of srcs) {
+            if (src.startsWith("data:")) continue
             const existing_link = document.querySelector(`link[href="${src}"]`)
             if (existing_link != null) continue
             const preload_link = document.createElement("link")

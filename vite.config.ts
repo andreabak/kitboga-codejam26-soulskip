@@ -29,7 +29,8 @@ export default defineConfig(({mode}) => {
                         return "assets/[name]-[hash][extname]";
                     },
                     manualChunks: {
-                        "config": ["@/config"]
+                        "config": ["@/config"],
+                        "inlined_assets": ["@/assets/inlined"]
                     }
                 },
             },

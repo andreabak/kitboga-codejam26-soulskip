@@ -16,32 +16,34 @@ import {
     HitBox,
 } from "./core"
 
-import FlaskIcon from "@/assets/flask.webp"
-import PlayerAttackSwing from "@/assets/player/attack-swing.png"
-import FlaskUseAtlasMeta from "@/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3_atlas.json"
-import FlaskUseAtlasImg from "@/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3_atlas.png"
-import PlayerParryStar1 from "@/assets/player/parry-star_1.svg"
-import PlayerParryStar2 from "@/assets/player/parry-star_2.svg"
-import PlayerParryStar3 from "@/assets/player/parry-star_3.svg"
-import PlayerParryStar4 from "@/assets/player/parry-star_4.svg"
-import ShieldIcon from "@/assets/shield.webp"
-import PlayerAttackHitSound1 from "@/assets/sounds/player-attack-hit/442903.opus"
-import PlayerAttackHitSound2 from "@/assets/sounds/player-attack-hit/547042.opus"
-import PlayerAttackHitSound3 from "@/assets/sounds/player-attack-hit/574820.opus"
-import PlayerAttackHitSound4 from "@/assets/sounds/player-attack-hit/574821.opus"
-import PlayerAttackSound1 from "@/assets/sounds/player-attack/268227.opus"
-import PlayerAttackSound2 from "@/assets/sounds/player-attack/724716.opus"
-import PlayerCureSound1 from "@/assets/sounds/player-cure/797763_1.opus"
-import PlayerCureSound2 from "@/assets/sounds/player-cure/797763_2.opus"
-import PlayerDamageSound1 from "@/assets/sounds/player-damage/488225.opus"
-import PlayerDamageSound2 from "@/assets/sounds/player-damage/629664.opus"
-import PlayerDeathSound from "@/assets/sounds/player-death/398068.opus"
-import PlayerDefendSound1 from "@/assets/sounds/player-defend/364530.opus"
-import PlayerDefendSound2 from "@/assets/sounds/player-defend/442769.opus"
-import PlayerDefendSound3 from "@/assets/sounds/player-defend/574043.opus"
-import PlayerParrySound1 from "@/assets/sounds/player-parry/448009.opus"
-import PlayerParrySound2 from "@/assets/sounds/player-parry/591155.opus"
-import SwordIcon from "@/assets/sword.svg"
+import {
+    FlaskIcon,
+    FlaskUseAtlasImg,
+    FlaskUseAtlasMeta,
+    PlayerAttackHitSound1,
+    PlayerAttackHitSound2,
+    PlayerAttackHitSound3,
+    PlayerAttackHitSound4,
+    PlayerAttackSound1,
+    PlayerAttackSound2,
+    PlayerAttackSwing,
+    PlayerCureSound1,
+    PlayerCureSound2,
+    PlayerDamageSound1,
+    PlayerDamageSound2,
+    PlayerDeathSound,
+    PlayerDefendSound1,
+    PlayerDefendSound2,
+    PlayerDefendSound3,
+    PlayerParrySound1,
+    PlayerParrySound2,
+    PlayerParryStar1,
+    PlayerParryStar2,
+    PlayerParryStar3,
+    PlayerParryStar4,
+    ShieldIcon,
+    SwordIcon,
+} from "@/assets/inlined"
 
 const FlaskUseAtlas = new ImageAtlas(FlaskUseAtlasImg, FlaskUseAtlasMeta, 15)
 
