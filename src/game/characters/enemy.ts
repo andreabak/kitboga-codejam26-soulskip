@@ -15,13 +15,12 @@ import {
     AnimationHandle,
     delay_anim,
     image_animation_def,
+    ImageAtlas,
     ImagesAnimationDef,
-    ImageSequence,
     interpolate_anim_def,
     InterpolateAnimationParams,
     multi_animation_def,
     subs_anim,
-    ViteGlob,
 } from "../animations"
 import {GameComponent, GameUpdateContext, SubsType} from "../core"
 import type {Game} from "../game"
@@ -66,25 +65,16 @@ import EnemyDamageSound8 from "@/assets/sounds/enemy-damage/770124_6.opus"
 import EnemyDamageSound9 from "@/assets/sounds/enemy-damage/770124_7.opus"
 import EnemyDeathSound from "@/assets/sounds/enemy-death/369005.opus"
 import EnemyIntroSpeechSound from "@/assets/sounds/enemy-intro/intro-abk.opus"
+import LightningEffect1AtlasMeta from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_2_atlas.json"
+import LightningEffect1AtlasImg from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_2_atlas.png"
+import LightningEffect2AtlasMeta from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_3_atlas.json"
+import LightningEffect2AtlasImg from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_3_atlas.png"
+import LightningEffect3AtlasMeta from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_4_atlas.json"
+import LightningEffect3AtlasImg from "@/assets/vfx/lightning/totallynotpixels_lightning_fx_4_atlas.png"
 
-const LightningEffect1Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/vfx/lightning/totallynotpixels_lightning_fx_2/*", {
-        eager: true,
-    }) as ViteGlob,
-    15,
-)
-const LightningEffect2Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/vfx/lightning/totallynotpixels_lightning_fx_3/*", {
-        eager: true,
-    }) as ViteGlob,
-    15,
-)
-const LightningEffect3Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/vfx/lightning/totallynotpixels_lightning_fx_4/*", {
-        eager: true,
-    }) as ViteGlob,
-    15,
-)
+const LightningEffect1Atlas = new ImageAtlas(LightningEffect1AtlasImg, LightningEffect1AtlasMeta, 15)
+const LightningEffect2Atlas = new ImageAtlas(LightningEffect2AtlasImg, LightningEffect2AtlasMeta, 15)
+const LightningEffect3Atlas = new ImageAtlas(LightningEffect3AtlasImg, LightningEffect3AtlasMeta, 15)
 
 const enemy_weapon_selector = ".weapon"
 
@@ -335,7 +325,7 @@ export class Enemy extends Character<Enemy> {
 
     animations = {
         lightning_strike: image_animation_def(
-            [LightningEffect1Seq, LightningEffect2Seq, LightningEffect3Seq],
+            [LightningEffect1Atlas, LightningEffect2Atlas, LightningEffect3Atlas],
             (enemy: Enemy) => enemy.game.animations_root_el,
             {
                 style: {

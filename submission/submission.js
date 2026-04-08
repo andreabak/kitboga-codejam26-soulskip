@@ -293,8 +293,52 @@ class ImageSequence {
   static from_frames_dir(frames_glob, fps) {
     const files = Object.entries(frames_glob);
     files.sort(([a], [b]) => a.localeCompare(b));
-    const frames = files.map(([, mod]) => mod.default);
-    return new ImageSequence(frames, fps);
+    const frames2 = files.map(([, mod]) => mod.default);
+    return new ImageSequence(frames2, fps);
+  }
+}
+class ImageAtlas {
+  constructor(atlas_src, atlas_meta, fps) {
+    __publicField(this, "FRAME_EL_CLS", "atlas-frame");
+    __publicField(this, "atlas_src");
+    __publicField(this, "atlas_meta");
+    __publicField(this, "fps");
+    if (!atlas_meta.frames.length) throw new Error("atlas_meta should have at least one frame");
+    this.atlas_src = atlas_src;
+    this.atlas_meta = atlas_meta;
+    this.fps = fps;
+  }
+  get duration() {
+    return 1e3 / this.fps * this.atlas_meta.frames.length;
+  }
+  _frame_at_progress(progress) {
+    if (progress < 0) {
+      return this.atlas_meta.frames[0];
+    } else if (progress < 1) {
+      return this.atlas_meta.frames[Math.floor(progress * this.atlas_meta.frames.length)];
+    } else {
+      return this.atlas_meta.frames.at(-1);
+    }
+  }
+  set_frame_at_progress(image_el, progress) {
+    let frame_el = image_el.querySelector(`.${this.FRAME_EL_CLS}`);
+    if (!frame_el) {
+      frame_el = document.createElement("div");
+      frame_el.classList.add(this.FRAME_EL_CLS);
+      frame_el.style.position = "absolute";
+      frame_el.style.top = "50%";
+      frame_el.style.left = "50%";
+      frame_el.style.backgroundImage = `url("${this.atlas_src}")`;
+      image_el.appendChild(frame_el);
+    }
+    const frame = this._frame_at_progress(progress);
+    if (frame_el.dataset.index && parseInt(frame_el.dataset.index) === frame.index) return;
+    frame_el.dataset.index = frame.index.toString();
+    frame_el.style.width = `${frame.w}px`;
+    frame_el.style.height = `${frame.h}px`;
+    frame_el.style.backgroundPosition = `${-frame.x}px ${-frame.y}px`;
+    const scale = Math.min(image_el.offsetWidth / frame.w, image_el.offsetHeight / frame.h);
+    frame_el.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
 }
 function delay_anim(callback, delay2) {
@@ -303,19 +347,19 @@ function delay_anim(callback, delay2) {
     duration: delay2
   };
 }
-function image_animation_def(image_src, element, { duration, remove, position, size, image_size = "contain", style } = {}, init) {
+function image_animation_def(image_src, element, { duration, remove, position, size, style } = {}, init) {
   function factory(component, params_override, init_override, ...rest) {
-    const params = { ...{ duration, remove, position, size, image_size, style }, ...params_override ?? {} };
+    const params = { ...{ duration, remove, position, size, style }, ...params_override ?? {} };
     const randid = "img-" + Math.random().toString(36);
-    const _img = typeof image_src === "string" || image_src instanceof ImageSequence ? image_src : random_pick(image_src);
-    const _img_src = typeof _img === "string" ? _img : _img.frame_at_progress(0);
+    const _img = typeof image_src === "string" || image_src instanceof ImageSequence || image_src instanceof ImageAtlas ? image_src : random_pick(image_src);
+    const _img_src = typeof _img === "string" ? _img : _img instanceof ImageSequence ? _img.frame_at_progress(0) : null;
     const image_el = document.createElement("div");
     image_el.id = randid;
-    image_el.style = `
-            position: absolute;
-            background-image: url('${_img_src}');
-            background-size: ${params.image_size};
-        `;
+    image_el.style.position = "absolute";
+    if (_img_src != null) {
+      image_el.style.backgroundImage = `url('${_img_src}')`;
+      image_el.style.backgroundSize = "contain";
+    }
     if (params.position) {
       image_el.style.top = `${params.position.y}px`;
       image_el.style.left = `${params.position.x}px`;
@@ -337,19 +381,22 @@ function image_animation_def(image_src, element, { duration, remove, position, s
     }
     const update = (progress) => {
       if (sub_update != null) sub_update(progress);
-      if (_img instanceof ImageSequence)
+      if (_img instanceof ImageSequence) {
         image_el.style.backgroundImage = `url('${_img.frame_at_progress(progress)}')`;
+      } else if (_img instanceof ImageAtlas) {
+        _img.set_frame_at_progress(image_el, progress);
+      }
     };
     const end = () => {
       if (sub_end != null) sub_end();
       if (params.remove == null || params.remove === true) image_el.remove();
     };
     update(0);
-    const _duration = params.duration ?? (_img instanceof ImageSequence ? _img.duration : void 0);
+    const _duration = params.duration ?? (_img instanceof ImageSequence || _img instanceof ImageAtlas ? _img.duration : void 0);
     if (_duration != null) return { duration: _duration, update, end };
     else return { update, end };
   }
-  factory.image_src = (Array.isArray(image_src) ? image_src : [image_src]).map((i) => i instanceof ImageSequence ? i.frames_src : i).flat();
+  factory.image_src = (Array.isArray(image_src) ? image_src : [image_src]).map((i) => i instanceof ImageSequence ? i.frames_src : i instanceof ImageAtlas ? i.atlas_src : i).flat();
   return factory;
 }
 function multi_animation_def(defs, { duration } = {}, init) {
@@ -681,290 +728,38 @@ function add_shell_events_listener(listener) {
 function send_shell_request(request) {
   window.top.postMessage(request, "*");
 }
-const _00000$3 = "" + new URL("assets/00000-DVIn6pJe.png", import.meta.url).href;
-const __vite_glob_0_0$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00000$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00001$6 = "" + new URL("assets/00001-B2sqO7TY.png", import.meta.url).href;
-const __vite_glob_0_1$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00001$6
-}, Symbol.toStringTag, { value: "Module" }));
-const _00002$6 = "" + new URL("assets/00002-r5-hxNHx.png", import.meta.url).href;
-const __vite_glob_0_2$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00002$6
-}, Symbol.toStringTag, { value: "Module" }));
-const _00003$6 = "" + new URL("assets/00003-DF1jXa8_.png", import.meta.url).href;
-const __vite_glob_0_3$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00003$6
-}, Symbol.toStringTag, { value: "Module" }));
-const _00004$6 = "" + new URL("assets/00004-D38e-WWq.png", import.meta.url).href;
-const __vite_glob_0_4$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00004$6
-}, Symbol.toStringTag, { value: "Module" }));
-const _00005$6 = "" + new URL("assets/00005-DNAvbWOk.png", import.meta.url).href;
-const __vite_glob_0_5$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00005$6
-}, Symbol.toStringTag, { value: "Module" }));
-const _00006$6 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
-const __vite_glob_0_6$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00006$6
-}, Symbol.toStringTag, { value: "Module" }));
-const _00007$6 = "" + new URL("assets/00006-DmHFPIMz.png", import.meta.url).href;
-const __vite_glob_0_7$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00007$6
-}, Symbol.toStringTag, { value: "Module" }));
-const _00008$6 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
-const __vite_glob_0_8$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00008$6
-}, Symbol.toStringTag, { value: "Module" }));
-const _00009$2 = "" + new URL("assets/00008-66836pTu.png", import.meta.url).href;
-const __vite_glob_0_9$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00009$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00010$2 = "" + new URL("assets/00010-B22DGBYY.png", import.meta.url).href;
-const __vite_glob_0_10$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00010$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00011$1 = "" + new URL("assets/00011-CZNL5YpN.png", import.meta.url).href;
-const __vite_glob_0_11$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00011$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00000$2 = "" + new URL("assets/00000-C6sK4okU.png", import.meta.url).href;
-const __vite_glob_1_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00000$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00001$5 = "" + new URL("assets/00001-hEuYavQz.png", import.meta.url).href;
-const __vite_glob_1_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00001$5
-}, Symbol.toStringTag, { value: "Module" }));
-const _00002$5 = "" + new URL("assets/00002-SAyEZ-7F.png", import.meta.url).href;
-const __vite_glob_1_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00002$5
-}, Symbol.toStringTag, { value: "Module" }));
-const _00003$5 = "" + new URL("assets/00003-hTnEsyx5.png", import.meta.url).href;
-const __vite_glob_1_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00003$5
-}, Symbol.toStringTag, { value: "Module" }));
-const _00004$5 = "" + new URL("assets/00004-DjYrpe7S.png", import.meta.url).href;
-const __vite_glob_1_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00004$5
-}, Symbol.toStringTag, { value: "Module" }));
-const _00005$5 = "" + new URL("assets/00005-rC81hARk.png", import.meta.url).href;
-const __vite_glob_1_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00005$5
-}, Symbol.toStringTag, { value: "Module" }));
-const _00006$5 = "" + new URL("assets/00006-hyIaIVM-.png", import.meta.url).href;
-const __vite_glob_1_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00006$5
-}, Symbol.toStringTag, { value: "Module" }));
-const _00007$5 = "" + new URL("assets/00007-OcmvWCeY.png", import.meta.url).href;
-const __vite_glob_1_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00007$5
-}, Symbol.toStringTag, { value: "Module" }));
-const _00008$5 = "" + new URL("assets/00008-CO2AqBPY.png", import.meta.url).href;
-const __vite_glob_1_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00008$5
-}, Symbol.toStringTag, { value: "Module" }));
-const _00009$1 = "" + new URL("assets/00009-CI5KcvTw.png", import.meta.url).href;
-const __vite_glob_1_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00009$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00010$1 = "" + new URL("assets/00010-CR9BTB3z.png", import.meta.url).href;
-const __vite_glob_1_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00010$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00000$1 = "" + new URL("assets/00000-C_Air7S2.png", import.meta.url).href;
-const __vite_glob_2_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00000$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00001$4 = "" + new URL("assets/00001-BPvKz2Fw.png", import.meta.url).href;
-const __vite_glob_2_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00001$4
-}, Symbol.toStringTag, { value: "Module" }));
-const _00002$4 = "" + new URL("assets/00002-DEittHlw.png", import.meta.url).href;
-const __vite_glob_2_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00002$4
-}, Symbol.toStringTag, { value: "Module" }));
-const _00003$4 = "" + new URL("assets/00003-DfCXBao8.png", import.meta.url).href;
-const __vite_glob_2_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00003$4
-}, Symbol.toStringTag, { value: "Module" }));
-const _00004$4 = "" + new URL("assets/00004-CSPXiBSG.png", import.meta.url).href;
-const __vite_glob_2_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00004$4
-}, Symbol.toStringTag, { value: "Module" }));
-const _00005$4 = "" + new URL("assets/00005-Du55AuEC.png", import.meta.url).href;
-const __vite_glob_2_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00005$4
-}, Symbol.toStringTag, { value: "Module" }));
-const _00006$4 = "" + new URL("assets/00006-_pA0hi7H.png", import.meta.url).href;
-const __vite_glob_2_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00006$4
-}, Symbol.toStringTag, { value: "Module" }));
-const _00007$4 = "" + new URL("assets/00007-BhSZvq0y.png", import.meta.url).href;
-const __vite_glob_2_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00007$4
-}, Symbol.toStringTag, { value: "Module" }));
-const _00008$4 = "" + new URL("assets/00008-vETwGEjf.png", import.meta.url).href;
-const __vite_glob_2_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00008$4
-}, Symbol.toStringTag, { value: "Module" }));
-const _00000 = "" + new URL("assets/00000-DdBvVkDm.png", import.meta.url).href;
-const __vite_glob_3_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00000
-}, Symbol.toStringTag, { value: "Module" }));
-const _00001$3 = "" + new URL("assets/00001-D3H-pS9T.png", import.meta.url).href;
-const __vite_glob_3_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00001$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00002$3 = "" + new URL("assets/00002-DK-WjgSW.png", import.meta.url).href;
-const __vite_glob_3_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00002$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00003$3 = "" + new URL("assets/00003-CN1thLM5.png", import.meta.url).href;
-const __vite_glob_3_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00003$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00004$3 = "" + new URL("assets/00004-XeNPVGXA.png", import.meta.url).href;
-const __vite_glob_3_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00004$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00005$3 = "" + new URL("assets/00005-CxsMJnpC.png", import.meta.url).href;
-const __vite_glob_3_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00005$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00006$3 = "" + new URL("assets/00006-CtyiahLX.png", import.meta.url).href;
-const __vite_glob_3_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00006$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00007$3 = "" + new URL("assets/00006-CtyiahLX.png", import.meta.url).href;
-const __vite_glob_3_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00007$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00008$3 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
-const __vite_glob_3_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00008$3
-}, Symbol.toStringTag, { value: "Module" }));
-const _00009 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
-const __vite_glob_3_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00009
-}, Symbol.toStringTag, { value: "Module" }));
-const _00010 = "" + new URL("assets/00008-sS62zj2C.png", import.meta.url).href;
-const __vite_glob_3_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00010
-}, Symbol.toStringTag, { value: "Module" }));
-const _00011 = "" + new URL("assets/00011-T6ymNxoq.png", import.meta.url).href;
-const __vite_glob_3_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00011
-}, Symbol.toStringTag, { value: "Module" }));
-const BloodEffect1Seq = ImageSequence.from_frames_dir(
-  /* @__PURE__ */ Object.assign({
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00000.png": __vite_glob_0_0$2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00001.png": __vite_glob_0_1$2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00002.png": __vite_glob_0_2$2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00003.png": __vite_glob_0_3$2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00004.png": __vite_glob_0_4$2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00005.png": __vite_glob_0_5$2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00006.png": __vite_glob_0_6$2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00007.png": __vite_glob_0_7$2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00008.png": __vite_glob_0_8$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00009.png": __vite_glob_0_9$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00010.png": __vite_glob_0_10$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_2/00011.png": __vite_glob_0_11$1
-  }),
-  15
-);
-const BloodEffect2Seq = ImageSequence.from_frames_dir(
-  /* @__PURE__ */ Object.assign({
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00000.png": __vite_glob_1_0$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00001.png": __vite_glob_1_1$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00002.png": __vite_glob_1_2$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00003.png": __vite_glob_1_3$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00004.png": __vite_glob_1_4$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00005.png": __vite_glob_1_5$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00006.png": __vite_glob_1_6$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00007.png": __vite_glob_1_7$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00008.png": __vite_glob_1_8,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00009.png": __vite_glob_1_9,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_4/00010.png": __vite_glob_1_10
-  }),
-  15
-);
-const BloodEffect3Seq = ImageSequence.from_frames_dir(
-  /* @__PURE__ */ Object.assign({
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00000.png": __vite_glob_2_0$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00001.png": __vite_glob_2_1$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00002.png": __vite_glob_2_2$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00003.png": __vite_glob_2_3$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00004.png": __vite_glob_2_4$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00005.png": __vite_glob_2_5$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00006.png": __vite_glob_2_6$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00007.png": __vite_glob_2_7$1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_5/00008.png": __vite_glob_2_8
-  }),
-  15
-);
-const BloodEffect4Seq = ImageSequence.from_frames_dir(
-  /* @__PURE__ */ Object.assign({
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00000.png": __vite_glob_3_0,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00001.png": __vite_glob_3_1,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00002.png": __vite_glob_3_2,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00003.png": __vite_glob_3_3,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00004.png": __vite_glob_3_4,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00005.png": __vite_glob_3_5,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00006.png": __vite_glob_3_6,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00007.png": __vite_glob_3_7,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00008.png": __vite_glob_3_8,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00009.png": __vite_glob_3_9,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00010.png": __vite_glob_3_10,
-    "/assets/vfx/blood/jasontomlee_vfx_blood_6/00011.png": __vite_glob_3_11
-  }),
-  15
-);
+const frames$7 = [{ "index": 0, "x": 0, "y": 0, "w": 110, "h": 93 }, { "index": 1, "x": 110, "y": 0, "w": 110, "h": 93 }, { "index": 2, "x": 220, "y": 0, "w": 110, "h": 93 }, { "index": 3, "x": 0, "y": 93, "w": 110, "h": 93 }, { "index": 4, "x": 110, "y": 93, "w": 110, "h": 93 }, { "index": 5, "x": 220, "y": 93, "w": 110, "h": 93 }, { "index": 6, "x": 0, "y": 186, "w": 110, "h": 93 }, { "index": 7, "x": 110, "y": 186, "w": 110, "h": 93 }, { "index": 8, "x": 220, "y": 186, "w": 110, "h": 93 }, { "index": 9, "x": 0, "y": 279, "w": 110, "h": 93 }, { "index": 10, "x": 110, "y": 279, "w": 110, "h": 93 }, { "index": 11, "x": 220, "y": 279, "w": 110, "h": 93 }];
+const atlas$7 = { "image_src": "jasontomlee_vfx_blood_2_atlas.png", "size": { "width": 330, "height": 372 } };
+const BloodEffect1AtlasMeta = {
+  frames: frames$7,
+  atlas: atlas$7
+};
+const BloodEffect1AtlasImg = "" + new URL("assets/jasontomlee_vfx_blood_2_atlas-CZLlR8_a.png", import.meta.url).href;
+const frames$6 = [{ "index": 0, "x": 0, "y": 0, "w": 110, "h": 93 }, { "index": 1, "x": 110, "y": 0, "w": 110, "h": 93 }, { "index": 2, "x": 220, "y": 0, "w": 110, "h": 93 }, { "index": 3, "x": 0, "y": 93, "w": 110, "h": 93 }, { "index": 4, "x": 110, "y": 93, "w": 110, "h": 93 }, { "index": 5, "x": 220, "y": 93, "w": 110, "h": 93 }, { "index": 6, "x": 0, "y": 186, "w": 110, "h": 93 }, { "index": 7, "x": 110, "y": 186, "w": 110, "h": 93 }, { "index": 8, "x": 220, "y": 186, "w": 110, "h": 93 }, { "index": 9, "x": 0, "y": 279, "w": 110, "h": 93 }, { "index": 10, "x": 110, "y": 279, "w": 110, "h": 93 }];
+const atlas$6 = { "image_src": "jasontomlee_vfx_blood_4_atlas.png", "size": { "width": 330, "height": 372 } };
+const BloodEffect2AtlasMeta = {
+  frames: frames$6,
+  atlas: atlas$6
+};
+const BloodEffect2AtlasImg = "" + new URL("assets/jasontomlee_vfx_blood_4_atlas-BCyzHAMh.png", import.meta.url).href;
+const frames$5 = [{ "index": 0, "x": 0, "y": 0, "w": 110, "h": 93 }, { "index": 1, "x": 110, "y": 0, "w": 110, "h": 93 }, { "index": 2, "x": 220, "y": 0, "w": 110, "h": 93 }, { "index": 3, "x": 0, "y": 93, "w": 110, "h": 93 }, { "index": 4, "x": 110, "y": 93, "w": 110, "h": 93 }, { "index": 5, "x": 220, "y": 93, "w": 110, "h": 93 }, { "index": 6, "x": 0, "y": 186, "w": 110, "h": 93 }, { "index": 7, "x": 110, "y": 186, "w": 110, "h": 93 }, { "index": 8, "x": 220, "y": 186, "w": 110, "h": 93 }];
+const atlas$5 = { "image_src": "jasontomlee_vfx_blood_5_atlas.png", "size": { "width": 330, "height": 279 } };
+const BloodEffect3AtlasMeta = {
+  frames: frames$5,
+  atlas: atlas$5
+};
+const BloodEffect3AtlasImg = "" + new URL("assets/jasontomlee_vfx_blood_5_atlas-DYIqhrxV.png", import.meta.url).href;
+const frames$4 = [{ "index": 0, "x": 0, "y": 0, "w": 110, "h": 93 }, { "index": 1, "x": 110, "y": 0, "w": 110, "h": 93 }, { "index": 2, "x": 220, "y": 0, "w": 110, "h": 93 }, { "index": 3, "x": 0, "y": 93, "w": 110, "h": 93 }, { "index": 4, "x": 110, "y": 93, "w": 110, "h": 93 }, { "index": 5, "x": 220, "y": 93, "w": 110, "h": 93 }, { "index": 6, "x": 0, "y": 186, "w": 110, "h": 93 }, { "index": 7, "x": 110, "y": 186, "w": 110, "h": 93 }, { "index": 8, "x": 220, "y": 186, "w": 110, "h": 93 }, { "index": 9, "x": 0, "y": 279, "w": 110, "h": 93 }, { "index": 10, "x": 110, "y": 279, "w": 110, "h": 93 }, { "index": 11, "x": 220, "y": 279, "w": 110, "h": 93 }];
+const atlas$4 = { "image_src": "jasontomlee_vfx_blood_6_atlas.png", "size": { "width": 330, "height": 372 } };
+const BloodEffect4AtlasMeta = {
+  frames: frames$4,
+  atlas: atlas$4
+};
+const BloodEffect4AtlasImg = "" + new URL("assets/jasontomlee_vfx_blood_6_atlas-pX1w9_sG.png", import.meta.url).href;
+const BloodEffect1Atlas = new ImageAtlas(BloodEffect1AtlasImg, BloodEffect1AtlasMeta, 15);
+const BloodEffect2Atlas = new ImageAtlas(BloodEffect2AtlasImg, BloodEffect2AtlasMeta, 15);
+const BloodEffect3Atlas = new ImageAtlas(BloodEffect3AtlasImg, BloodEffect3AtlasMeta, 15);
+const BloodEffect4Atlas = new ImageAtlas(BloodEffect4AtlasImg, BloodEffect4AtlasMeta, 15);
 function attack_image_animation_def(image_src, params, init) {
   const image_factory = image_animation_def(image_src, (character) => character.root_el);
   const factory = (character, attack, phase) => {
@@ -1015,7 +810,7 @@ function attack_swing_animation_def(image_src, {
 }
 function blood_splat_animation_def(params) {
   return image_animation_def(
-    [BloodEffect1Seq, BloodEffect2Seq, BloodEffect3Seq, BloodEffect4Seq],
+    [BloodEffect1Atlas, BloodEffect2Atlas, BloodEffect3Atlas, BloodEffect4Atlas],
     (character) => character.game.animations_root_el,
     params,
     (character, image_el, { attacking_character } = {}) => {
@@ -1469,66 +1264,6 @@ class Character extends Actor {
     this.consume_health(health_damage, { context });
   }
 }
-const Priest_skill3_frame1 = "" + new URL("assets/Priest_skill3_frame1-CKZBdEXY.png", import.meta.url).href;
-const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame1
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame10 = "" + new URL("assets/Priest_skill3_frame10-D-ml8_BN.png", import.meta.url).href;
-const __vite_glob_0_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame10
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame11 = "" + new URL("assets/Priest_skill3_frame11-BtjaiNes.png", import.meta.url).href;
-const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame11
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame12 = "" + new URL("assets/Priest_skill3_frame12-BTxxtnly.png", import.meta.url).href;
-const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame12
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame2 = "" + new URL("assets/Priest_skill3_frame2-CJ-MPro4.png", import.meta.url).href;
-const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame2
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame3 = "" + new URL("assets/Priest_skill3_frame3-CB6wZIG8.png", import.meta.url).href;
-const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame3
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame4 = "" + new URL("assets/Priest_skill3_frame4-Bjw_NCp-.png", import.meta.url).href;
-const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame4
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame5 = "" + new URL("assets/Priest_skill3_frame5-5mbwMl--.png", import.meta.url).href;
-const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame5
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame6 = "" + new URL("assets/Priest_skill3_frame6-Csa4lrJA.png", import.meta.url).href;
-const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame6
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame7 = "" + new URL("assets/Priest_skill3_frame7-Ctjou_-B.png", import.meta.url).href;
-const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame7
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame8 = "" + new URL("assets/Priest_skill3_frame8-CMsU2JjN.png", import.meta.url).href;
-const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame8
-}, Symbol.toStringTag, { value: "Module" }));
-const Priest_skill3_frame9 = "" + new URL("assets/Priest_skill3_frame9-BwCsAGBG.png", import.meta.url).href;
-const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: Priest_skill3_frame9
-}, Symbol.toStringTag, { value: "Module" }));
 const gestures_cfg = config.gestures;
 class GestureManager {
   constructor(element) {
@@ -1700,6 +1435,13 @@ class GestureManager {
 }
 const FlaskIcon = "" + new URL("assets/flask-BvVRJMc3.webp", import.meta.url).href;
 const PlayerAttackSwing = "" + new URL("assets/attack-swing-CdgiMrLK.png", import.meta.url).href;
+const frames$3 = [{ "index": 0, "x": 0, "y": 0, "w": 128, "h": 128 }, { "index": 1, "x": 128, "y": 0, "w": 128, "h": 128 }, { "index": 2, "x": 256, "y": 0, "w": 128, "h": 128 }, { "index": 3, "x": 0, "y": 128, "w": 128, "h": 128 }, { "index": 4, "x": 128, "y": 128, "w": 128, "h": 128 }, { "index": 5, "x": 256, "y": 128, "w": 128, "h": 128 }, { "index": 6, "x": 0, "y": 256, "w": 128, "h": 128 }, { "index": 7, "x": 128, "y": 256, "w": 128, "h": 128 }, { "index": 8, "x": 256, "y": 256, "w": 128, "h": 128 }, { "index": 9, "x": 0, "y": 384, "w": 128, "h": 128 }, { "index": 10, "x": 128, "y": 384, "w": 128, "h": 128 }, { "index": 11, "x": 256, "y": 384, "w": 128, "h": 128 }];
+const atlas$3 = { "image_src": "frostwindz-pixel-art-vfx-priest_skill3_atlas.png", "size": { "width": 384, "height": 512 } };
+const FlaskUseAtlasMeta = {
+  frames: frames$3,
+  atlas: atlas$3
+};
+const FlaskUseAtlasImg = "" + new URL("assets/frostwindz-pixel-art-vfx-priest_skill3_atlas-CXz6e8yG.png", import.meta.url).href;
 const PlayerParryStar1 = "" + new URL("assets/parry-star_1-Cc74ESjR.svg", import.meta.url).href;
 const PlayerParryStar2 = "" + new URL("assets/parry-star_2-RmFvRpRf.svg", import.meta.url).href;
 const PlayerParryStar3 = "" + new URL("assets/parry-star_3-boNRjX5D.svg", import.meta.url).href;
@@ -1722,23 +1464,7 @@ const PlayerDefendSound3 = "" + new URL("assets/574043-4LNviDK-.opus", import.me
 const PlayerParrySound1 = "" + new URL("assets/448009-BeBOc5Yw.opus", import.meta.url).href;
 const PlayerParrySound2 = "" + new URL("assets/591155-CmvEOVys.opus", import.meta.url).href;
 const SwordIcon = "" + new URL("assets/sword-B4u20JoA.svg", import.meta.url).href;
-const FlaskUseSeq = ImageSequence.from_frames_dir(
-  /* @__PURE__ */ Object.assign({
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame1.png": __vite_glob_0_0$1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame10.png": __vite_glob_0_1$1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame11.png": __vite_glob_0_2$1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame12.png": __vite_glob_0_3$1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame2.png": __vite_glob_0_4$1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame3.png": __vite_glob_0_5$1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame4.png": __vite_glob_0_6$1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame5.png": __vite_glob_0_7$1,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame6.png": __vite_glob_0_8,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame7.png": __vite_glob_0_9,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame8.png": __vite_glob_0_10,
-    "/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/Priest_skill3_frame9.png": __vite_glob_0_11
-  }),
-  15
-);
+const FlaskUseAtlas = new ImageAtlas(FlaskUseAtlasImg, FlaskUseAtlasMeta, 15);
 const player_shield_selector = ".shield";
 class PlayerShield extends GameComponent {
   constructor(game2, player) {
@@ -1861,7 +1587,7 @@ const _Player = class _Player extends Character {
       damage: blood_splat_animation_def({
         style: { width: "32px", height: "32px", filter: "brightness(0.7) contrast(1.2)" }
       }),
-      cure: image_animation_def(FlaskUseSeq, (player) => player.player_root_el, {
+      cure: image_animation_def(FlaskUseAtlas, (player) => player.player_root_el, {
         style: {
           top: "65%",
           left: "50%",
@@ -2126,126 +1852,6 @@ __publicField(_Player, "stars_animation_def", (stars_imgs, params) => multi_anim
   }
 ));
 let Player = _Player;
-const _00001$2 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
-const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00001$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00002$2 = "" + new URL("assets/00002-mmjNPP5z.png", import.meta.url).href;
-const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00002$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00003$2 = "" + new URL("assets/00003-r0vHGIOF.png", import.meta.url).href;
-const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00003$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00004$2 = "" + new URL("assets/00004-CfcPlTdR.png", import.meta.url).href;
-const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00004$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00005$2 = "" + new URL("assets/00005-nACbHHm7.png", import.meta.url).href;
-const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00005$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00006$2 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
-const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00006$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00007$2 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
-const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00007$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00008$2 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
-const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00008$2
-}, Symbol.toStringTag, { value: "Module" }));
-const _00001$1 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
-const __vite_glob_1_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00001$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00002$1 = "" + new URL("assets/00002-CNnuEjfw.png", import.meta.url).href;
-const __vite_glob_1_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00002$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00003$1 = "" + new URL("assets/00003-jN21BVS6.png", import.meta.url).href;
-const __vite_glob_1_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00003$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00004$1 = "" + new URL("assets/00004-DGZ92_j8.png", import.meta.url).href;
-const __vite_glob_1_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00004$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00005$1 = "" + new URL("assets/00005-CqEDkofg.png", import.meta.url).href;
-const __vite_glob_1_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00005$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00006$1 = "" + new URL("assets/00006-CORsZqeP.png", import.meta.url).href;
-const __vite_glob_1_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00006$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00007$1 = "" + new URL("assets/00007-zlAp7xcC.png", import.meta.url).href;
-const __vite_glob_1_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00007$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00008$1 = "" + new URL("assets/00008-CLdVAuVq.png", import.meta.url).href;
-const __vite_glob_1_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00008$1
-}, Symbol.toStringTag, { value: "Module" }));
-const _00001 = "" + new URL("assets/00001-CVt1IIBv.png", import.meta.url).href;
-const __vite_glob_2_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00001
-}, Symbol.toStringTag, { value: "Module" }));
-const _00002 = "" + new URL("assets/00002-BI6fBOQv.png", import.meta.url).href;
-const __vite_glob_2_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00002
-}, Symbol.toStringTag, { value: "Module" }));
-const _00003 = "" + new URL("assets/00003-Cqdgw0fG.png", import.meta.url).href;
-const __vite_glob_2_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00003
-}, Symbol.toStringTag, { value: "Module" }));
-const _00004 = "" + new URL("assets/00004-C9cBOR9m.png", import.meta.url).href;
-const __vite_glob_2_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00004
-}, Symbol.toStringTag, { value: "Module" }));
-const _00005 = "" + new URL("assets/00005-Dh-0x6TK.png", import.meta.url).href;
-const __vite_glob_2_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00005
-}, Symbol.toStringTag, { value: "Module" }));
-const _00006 = "" + new URL("assets/00006-CYC9HDnM.png", import.meta.url).href;
-const __vite_glob_2_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00006
-}, Symbol.toStringTag, { value: "Module" }));
-const _00007 = "" + new URL("assets/00007-xz5YAmv5.png", import.meta.url).href;
-const __vite_glob_2_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00007
-}, Symbol.toStringTag, { value: "Module" }));
-const _00008 = "" + new URL("assets/00008-OCy3ADuG.png", import.meta.url).href;
-const __vite_glob_2_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: _00008
-}, Symbol.toStringTag, { value: "Module" }));
 const EnemyAttackSwing = "" + new URL("assets/attack-swing-CSc3417C.png", import.meta.url).href;
 const VineLongImage1 = "" + new URL("assets/vine_long1-lHN96wLs.png", import.meta.url).href;
 const VineLongImage2 = "" + new URL("assets/vine_long2-D4fMA12J.png", import.meta.url).href;
@@ -2277,45 +1883,30 @@ const EnemyDamageSound8 = "" + new URL("assets/770124_6-DLz-fyHo.opus", import.m
 const EnemyDamageSound9 = "" + new URL("assets/770124_7-Dp4st_mJ.opus", import.meta.url).href;
 const EnemyDeathSound = "" + new URL("assets/369005-DTznyUNM.opus", import.meta.url).href;
 const EnemyIntroSpeechSound = "" + new URL("assets/intro-abk-CU5JZ-mG.opus", import.meta.url).href;
-const LightningEffect1Seq = ImageSequence.from_frames_dir(
-  /* @__PURE__ */ Object.assign({
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00001.png": __vite_glob_0_0,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00002.png": __vite_glob_0_1,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00003.png": __vite_glob_0_2,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00004.png": __vite_glob_0_3,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00005.png": __vite_glob_0_4,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00006.png": __vite_glob_0_5,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00007.png": __vite_glob_0_6,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_2/00008.png": __vite_glob_0_7
-  }),
-  15
-);
-const LightningEffect2Seq = ImageSequence.from_frames_dir(
-  /* @__PURE__ */ Object.assign({
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00001.png": __vite_glob_1_0,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00002.png": __vite_glob_1_1,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00003.png": __vite_glob_1_2,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00004.png": __vite_glob_1_3,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00005.png": __vite_glob_1_4,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00006.png": __vite_glob_1_5,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00007.png": __vite_glob_1_6,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_3/00008.png": __vite_glob_1_7
-  }),
-  15
-);
-const LightningEffect3Seq = ImageSequence.from_frames_dir(
-  /* @__PURE__ */ Object.assign({
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00001.png": __vite_glob_2_0,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00002.png": __vite_glob_2_1,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00003.png": __vite_glob_2_2,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00004.png": __vite_glob_2_3,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00005.png": __vite_glob_2_4,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00006.png": __vite_glob_2_5,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00007.png": __vite_glob_2_6,
-    "/assets/vfx/lightning/totallynotpixels_lightning_fx_4/00008.png": __vite_glob_2_7
-  }),
-  15
-);
+const frames$2 = [{ "index": 0, "x": 0, "y": 0, "w": 120, "h": 120 }, { "index": 1, "x": 120, "y": 0, "w": 120, "h": 120 }, { "index": 2, "x": 240, "y": 0, "w": 120, "h": 120 }, { "index": 3, "x": 0, "y": 120, "w": 120, "h": 120 }, { "index": 4, "x": 120, "y": 120, "w": 120, "h": 120 }, { "index": 5, "x": 240, "y": 120, "w": 120, "h": 120 }, { "index": 6, "x": 0, "y": 240, "w": 120, "h": 120 }, { "index": 7, "x": 120, "y": 240, "w": 120, "h": 120 }];
+const atlas$2 = { "image_src": "totallynotpixels_lightning_fx_2_atlas.png", "size": { "width": 360, "height": 360 } };
+const LightningEffect1AtlasMeta = {
+  frames: frames$2,
+  atlas: atlas$2
+};
+const LightningEffect1AtlasImg = "" + new URL("assets/totallynotpixels_lightning_fx_2_atlas-CycCfbGU.png", import.meta.url).href;
+const frames$1 = [{ "index": 0, "x": 0, "y": 0, "w": 120, "h": 120 }, { "index": 1, "x": 120, "y": 0, "w": 120, "h": 120 }, { "index": 2, "x": 240, "y": 0, "w": 120, "h": 120 }, { "index": 3, "x": 0, "y": 120, "w": 120, "h": 120 }, { "index": 4, "x": 120, "y": 120, "w": 120, "h": 120 }, { "index": 5, "x": 240, "y": 120, "w": 120, "h": 120 }, { "index": 6, "x": 0, "y": 240, "w": 120, "h": 120 }, { "index": 7, "x": 120, "y": 240, "w": 120, "h": 120 }];
+const atlas$1 = { "image_src": "totallynotpixels_lightning_fx_3_atlas.png", "size": { "width": 360, "height": 360 } };
+const LightningEffect2AtlasMeta = {
+  frames: frames$1,
+  atlas: atlas$1
+};
+const LightningEffect2AtlasImg = "" + new URL("assets/totallynotpixels_lightning_fx_3_atlas-DiO8BA7C.png", import.meta.url).href;
+const frames = [{ "index": 0, "x": 0, "y": 0, "w": 120, "h": 120 }, { "index": 1, "x": 120, "y": 0, "w": 120, "h": 120 }, { "index": 2, "x": 240, "y": 0, "w": 120, "h": 120 }, { "index": 3, "x": 0, "y": 120, "w": 120, "h": 120 }, { "index": 4, "x": 120, "y": 120, "w": 120, "h": 120 }, { "index": 5, "x": 240, "y": 120, "w": 120, "h": 120 }, { "index": 6, "x": 0, "y": 240, "w": 120, "h": 120 }, { "index": 7, "x": 120, "y": 240, "w": 120, "h": 120 }];
+const atlas = { "image_src": "totallynotpixels_lightning_fx_4_atlas.png", "size": { "width": 360, "height": 360 } };
+const LightningEffect3AtlasMeta = {
+  frames,
+  atlas
+};
+const LightningEffect3AtlasImg = "" + new URL("assets/totallynotpixels_lightning_fx_4_atlas-DD7YRd_Q.png", import.meta.url).href;
+const LightningEffect1Atlas = new ImageAtlas(LightningEffect1AtlasImg, LightningEffect1AtlasMeta, 15);
+const LightningEffect2Atlas = new ImageAtlas(LightningEffect2AtlasImg, LightningEffect2AtlasMeta, 15);
+const LightningEffect3Atlas = new ImageAtlas(LightningEffect3AtlasImg, LightningEffect3AtlasMeta, 15);
 const enemy_weapon_selector = ".weapon";
 const _EnemyWeapon = class _EnemyWeapon extends GameComponent {
   constructor(game2, enemy) {
@@ -2551,7 +2142,7 @@ class Enemy extends Character {
     __publicField(this, "auto_attack_interval", enemy_cfg.auto_attack_interval);
     __publicField(this, "animations", {
       lightning_strike: image_animation_def(
-        [LightningEffect1Seq, LightningEffect2Seq, LightningEffect3Seq],
+        [LightningEffect1Atlas, LightningEffect2Atlas, LightningEffect3Atlas],
         (enemy) => enemy.game.animations_root_el,
         {
           style: {

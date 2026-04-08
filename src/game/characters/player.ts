@@ -1,7 +1,7 @@
 import {config} from "@/config"
 import {deg2rad, get_element, Point, rad2deg} from "@/utils"
 
-import {image_animation_def, ImageAnimationParams, ImageSequence, multi_animation_def, ViteGlob} from "../animations"
+import {image_animation_def, ImageAnimationParams, ImageAtlas, multi_animation_def} from "../animations"
 import {GameComponent, GameUpdateContext} from "../core"
 import type {Game} from "../game"
 import {GestureManager} from "../gestures"
@@ -18,6 +18,8 @@ import {
 
 import FlaskIcon from "@/assets/flask.webp"
 import PlayerAttackSwing from "@/assets/player/attack-swing.png"
+import FlaskUseAtlasMeta from "@/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3_atlas.json"
+import FlaskUseAtlasImg from "@/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3_atlas.png"
 import PlayerParryStar1 from "@/assets/player/parry-star_1.svg"
 import PlayerParryStar2 from "@/assets/player/parry-star_2.svg"
 import PlayerParryStar3 from "@/assets/player/parry-star_3.svg"
@@ -41,12 +43,7 @@ import PlayerParrySound1 from "@/assets/sounds/player-parry/448009.opus"
 import PlayerParrySound2 from "@/assets/sounds/player-parry/591155.opus"
 import SwordIcon from "@/assets/sword.svg"
 
-const FlaskUseSeq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/player/cure/frostwindz-pixel-art-vfx-priest_skill3/*", {
-        eager: true,
-    }) as ViteGlob,
-    15,
-)
+const FlaskUseAtlas = new ImageAtlas(FlaskUseAtlasImg, FlaskUseAtlasMeta, 15)
 
 export type PlayerItemName = "flask" | "shield" | "sword"
 export type PlayerItemBase = {
@@ -226,7 +223,7 @@ class Player extends Character<Player> {
         damage: blood_splat_animation_def({
             style: {width: "32px", height: "32px", filter: "brightness(0.7) contrast(1.2)"},
         }),
-        cure: image_animation_def(FlaskUseSeq, (player: Player) => player.player_root_el, {
+        cure: image_animation_def(FlaskUseAtlas, (player: Player) => player.player_root_el, {
             style: {
                 top: "65%",
                 left: "50%",

@@ -35,6 +35,69 @@ export class ImageSequence {
     }
 }
 
+type ImageAtlasFrame = {
+    index: number
+    x: number
+    y: number
+    w: number
+    h: number
+}
+export type ImageAtlasMeta = {
+    frames: Array<ImageAtlasFrame>
+    atlas: {
+        image_src: string
+        size: {width: number; height: number}
+    }
+}
+export class ImageAtlas {
+    readonly FRAME_EL_CLS = "atlas-frame"
+    atlas_src: string
+    atlas_meta: ImageAtlasMeta
+    fps: number
+
+    constructor(atlas_src: string, atlas_meta: ImageAtlasMeta, fps: number) {
+        if (!atlas_meta.frames.length) throw new Error("atlas_meta should have at least one frame")
+        this.atlas_src = atlas_src
+        this.atlas_meta = atlas_meta
+        this.fps = fps
+    }
+
+    get duration(): number {
+        return (1000 / this.fps) * this.atlas_meta.frames.length
+    }
+
+    _frame_at_progress(progress: number): ImageAtlasFrame {
+        if (progress < 0) {
+            return this.atlas_meta.frames[0]
+        } else if (progress < 1) {
+            return this.atlas_meta.frames[Math.floor(progress * this.atlas_meta.frames.length)]
+        } else {
+            return this.atlas_meta.frames.at(-1) as ImageAtlasFrame
+        }
+    }
+
+    set_frame_at_progress(image_el: HTMLElement, progress: number) {
+        let frame_el: HTMLElement | undefined = image_el.querySelector(`.${this.FRAME_EL_CLS}`) as HTMLElement
+        if (!frame_el) {
+            frame_el = document.createElement("div")
+            frame_el.classList.add(this.FRAME_EL_CLS)
+            frame_el.style.position = "absolute"
+            frame_el.style.top = "50%"
+            frame_el.style.left = "50%"
+            frame_el.style.backgroundImage = `url("${this.atlas_src}")`
+            image_el.appendChild(frame_el)
+        }
+        const frame = this._frame_at_progress(progress)
+        if (frame_el.dataset.index && parseInt(frame_el.dataset.index) === frame.index) return
+        frame_el.dataset.index = frame.index.toString()
+        frame_el.style.width = `${frame.w}px`
+        frame_el.style.height = `${frame.h}px`
+        frame_el.style.backgroundPosition = `${-frame.x}px ${-frame.y}px`
+        const scale = Math.min(image_el.offsetWidth / frame.w, image_el.offsetHeight / frame.h)
+        frame_el.style.transform = `translate(-50%, -50%) scale(${scale})`
+    }
+}
+
 export type AnimationHandle = {
     update?: ((progress: number) => void) | null
     end?: (() => void) | null
@@ -72,7 +135,6 @@ export type ImageAnimationParams = {
     remove?: boolean
     position?: Point
     size?: Point
-    image_size?: string
     style?: Partial<CSSStyleDeclaration>
 }
 export function image_animation_def<C extends Component<object>>(
@@ -82,21 +144,21 @@ export function image_animation_def<C extends Component<object>>(
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
 ): ImagesAnimationDef<C>
 export function image_animation_def<C extends Component<object>>(
-    image_src: ImageSequence | Array<ImageSequence>,
+    image_src: ImageSequence | ImageAtlas | Array<ImageSequence | ImageAtlas>,
     element: HTMLElement | ((component: C) => HTMLElement),
     params?: Omit<ImageAnimationParams, "duration">,
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
 ): TimedImagesAnimationDef<C>
 export function image_animation_def<C extends Component<object>>(
-    image_src: string | ImageSequence | Array<string | ImageSequence>,
+    image_src: string | ImageSequence | ImageAtlas | Array<string | ImageSequence | ImageAtlas>,
     element: HTMLElement | ((component: C) => HTMLElement),
     params: ImageAnimationParams & {duration: number},
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
 ): TimedImagesAnimationDef<C>
 export function image_animation_def<C extends Component<object>>(
-    image_src: string | ImageSequence | Array<string | ImageSequence>,
+    image_src: string | ImageSequence | ImageAtlas | Array<string | ImageSequence | ImageAtlas>,
     element: HTMLElement | ((component: C) => HTMLElement),
-    {duration, remove, position, size, image_size = "contain", style}: ImageAnimationParams = {},
+    {duration, remove, position, size, style}: ImageAnimationParams = {},
     init?: (component: C, image_el: HTMLElement) => AnimationHandle,
 ): ImagesAnimationDef<C> | TimedImagesAnimationDef<C> {
     function factory(
@@ -105,19 +167,22 @@ export function image_animation_def<C extends Component<object>>(
         init_override?: (component: C, image_el: HTMLElement, ...rest: unknown[]) => AnimationHandle,
         ...rest: unknown[]
     ): AnimationHandle {
-        const params = {...{duration, remove, position, size, image_size, style}, ...(params_override ?? {})}
+        const params = {...{duration, remove, position, size, style}, ...(params_override ?? {})}
         const randid = "img-" + Math.random().toString(36)
         const _img =
-            typeof image_src === "string" || image_src instanceof ImageSequence ? image_src : random_pick(image_src)
-        const _img_src = typeof _img === "string" ? _img : _img.frame_at_progress(0)
+            typeof image_src === "string" || image_src instanceof ImageSequence || image_src instanceof ImageAtlas
+                ? image_src
+                : random_pick(image_src)
+        const _img_src =
+            typeof _img === "string" ? _img : _img instanceof ImageSequence ? _img.frame_at_progress(0) : null
         // using div + background-image prevents further browser HEAD requests
         const image_el = document.createElement("div")
         image_el.id = randid
-        image_el.style = `
-            position: absolute;
-            background-image: url('${_img_src}');
-            background-size: ${params.image_size};
-        `
+        image_el.style.position = "absolute"
+        if (_img_src != null) {
+            image_el.style.backgroundImage = `url('${_img_src}')`
+            image_el.style.backgroundSize = "contain"
+        }
         if (params.position) {
             image_el.style.top = `${params.position.y}px`
             image_el.style.left = `${params.position.x}px`
@@ -139,20 +204,24 @@ export function image_animation_def<C extends Component<object>>(
         }
         const update = (progress: number) => {
             if (sub_update != null) sub_update(progress)
-            if (_img instanceof ImageSequence)
+            if (_img instanceof ImageSequence) {
                 image_el.style.backgroundImage = `url('${_img.frame_at_progress(progress)}')`
+            } else if (_img instanceof ImageAtlas) {
+                _img.set_frame_at_progress(image_el, progress)
+            }
         }
         const end = () => {
             if (sub_end != null) sub_end()
             if (params.remove == null || params.remove === true) image_el.remove()
         }
         update(0)
-        const _duration = params.duration ?? (_img instanceof ImageSequence ? _img.duration : undefined)
+        const _duration =
+            params.duration ?? (_img instanceof ImageSequence || _img instanceof ImageAtlas ? _img.duration : undefined)
         if (_duration != null) return {duration: _duration, update, end} as TimedAnimationHandle
         else return {update, end} as AnimationHandle
     }
     factory.image_src = (Array.isArray(image_src) ? image_src : [image_src])
-        .map((i) => (i instanceof ImageSequence ? i.frames_src : i))
+        .map((i) => (i instanceof ImageSequence ? i.frames_src : i instanceof ImageAtlas ? i.atlas_src : i))
         .flat()
     return factory
 }

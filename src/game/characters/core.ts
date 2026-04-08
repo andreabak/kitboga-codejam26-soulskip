@@ -20,37 +20,25 @@ import {
     AnimationHandle,
     image_animation_def,
     ImageAnimationParams,
+    ImageAtlas,
     ImagesAnimationDefMixin,
-    ImageSequence,
-    ViteGlob,
 } from "../animations"
 import {Actor, GameUpdateContext} from "../core"
 import type {Game} from "../game"
 
-const BloodEffect1Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/vfx/blood/jasontomlee_vfx_blood_2/*", {
-        eager: true,
-    }) as ViteGlob,
-    15,
-)
-const BloodEffect2Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/vfx/blood/jasontomlee_vfx_blood_4/*", {
-        eager: true,
-    }) as ViteGlob,
-    15,
-)
-const BloodEffect3Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/vfx/blood/jasontomlee_vfx_blood_5/*", {
-        eager: true,
-    }) as ViteGlob,
-    15,
-)
-const BloodEffect4Seq = ImageSequence.from_frames_dir(
-    import.meta.glob("@/assets/vfx/blood/jasontomlee_vfx_blood_6/*", {
-        eager: true,
-    }) as ViteGlob,
-    15,
-)
+import BloodEffect1AtlasMeta from "@/assets/vfx/blood/jasontomlee_vfx_blood_2_atlas.json"
+import BloodEffect1AtlasImg from "@/assets/vfx/blood/jasontomlee_vfx_blood_2_atlas.png"
+import BloodEffect2AtlasMeta from "@/assets/vfx/blood/jasontomlee_vfx_blood_4_atlas.json"
+import BloodEffect2AtlasImg from "@/assets/vfx/blood/jasontomlee_vfx_blood_4_atlas.png"
+import BloodEffect3AtlasMeta from "@/assets/vfx/blood/jasontomlee_vfx_blood_5_atlas.json"
+import BloodEffect3AtlasImg from "@/assets/vfx/blood/jasontomlee_vfx_blood_5_atlas.png"
+import BloodEffect4AtlasMeta from "@/assets/vfx/blood/jasontomlee_vfx_blood_6_atlas.json"
+import BloodEffect4AtlasImg from "@/assets/vfx/blood/jasontomlee_vfx_blood_6_atlas.png"
+
+const BloodEffect1Atlas = new ImageAtlas(BloodEffect1AtlasImg, BloodEffect1AtlasMeta, 15)
+const BloodEffect2Atlas = new ImageAtlas(BloodEffect2AtlasImg, BloodEffect2AtlasMeta, 15)
+const BloodEffect3Atlas = new ImageAtlas(BloodEffect3AtlasImg, BloodEffect3AtlasMeta, 15)
+const BloodEffect4Atlas = new ImageAtlas(BloodEffect4AtlasImg, BloodEffect4AtlasMeta, 15)
 
 export type HitBox = {
     shape: Shape | Rect
@@ -138,7 +126,7 @@ export function attack_swing_animation_def<C extends Character>(
 
 export function blood_splat_animation_def(params: ImageAnimationParams) {
     return image_animation_def(
-        [BloodEffect1Seq, BloodEffect2Seq, BloodEffect3Seq, BloodEffect4Seq],
+        [BloodEffect1Atlas, BloodEffect2Atlas, BloodEffect3Atlas, BloodEffect4Atlas],
         (character: Character) => character.game.animations_root_el,
         params,
         (
