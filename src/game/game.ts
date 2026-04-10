@@ -100,6 +100,7 @@ export class Game extends Component<GameUpdateContext> {
 
         this.game_root_el = get_element(game_root_selector) as HTMLDivElement
         this.game_root_el.classList.toggle("hidden", false)
+        this.game_root_el.style.display = ""
 
         this.animations_root_el = get_element(animations_root_selector, this.game_root_el) as HTMLDivElement
 
